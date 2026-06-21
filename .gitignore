@@ -1,0 +1,15 @@
+# Build/analysis artifacts — not part of the deployed site
+.scrape/
+.playwright-mcp/
+.claude/
+home-hero.*
+home-full.*
+mobile-hero.*
+mobile-nav.*
+qa-*.jpeg
+page-*.jpeg
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
