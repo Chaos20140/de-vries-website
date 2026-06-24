@@ -188,7 +188,7 @@
       if (!consent) return fail("Bitte stimmen Sie der Datenschutzerklärung zu.");
       var subject = encodeURIComponent("Kontaktanfrage über die Website – " + name);
       var body = encodeURIComponent("Name: " + name + "\nE-Mail: " + email + "\n\nNachricht:\n" + msg);
-      window.location.href = "mailto:info@andreasdevries.de?subject=" + subject + "&body=" + body;
+      window.location.href = "mailto:tolunayusul@gmail.com?subject=" + subject + "&body=" + body;
       status.textContent = "Ihr E-Mail-Programm wird geöffnet. Vielen Dank für Ihre Anfrage!";
       status.className = "form__status ok";
       form.reset();
@@ -283,7 +283,7 @@
         "Name: " + name + "\nTelefon: " + tel + "\nE-Mail: " + email + "\n\n" +
         "Nachricht:\n" + (msg || "-")
       );
-      window.location.href = "mailto:info@andreasdevries.de?subject=" + subject + "&body=" + body;
+      window.location.href = "mailto:tolunayusul@gmail.com?subject=" + subject + "&body=" + body;
       status.textContent = "Ihr E-Mail-Programm wird geöffnet. Wir bestätigen Ihren Wunschtermin schnellstmöglich!";
       status.className = "form__status ok";
     });
