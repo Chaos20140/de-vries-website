@@ -466,7 +466,7 @@ em { font-style: italic; }
 .footer__social svg { width: 18px; height: 18px; }
 .footer__bottom { display:flex; align-items:center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.12); margin-top: clamp(2.5rem,1.5rem + 3vw,4rem); padding-block: 1.6rem; position: relative; z-index: 1; font-size: 0.84rem; }
 .footer__bottom a:hover { color: #fff; }
-@media (max-width: 860px){ .footer__grid { grid-template-columns: 1fr 1fr; } .footer__brand { grid-column: 1 / -1; } .footer__giant { bottom: 5.5rem; } }
+@media (max-width: 860px){ .footer__grid { grid-template-columns: 1fr 1fr; } .footer__brand { grid-column: 1 / -1; } .footer__giant { display: none; } }
 @media (max-width: 480px){ .footer__grid { grid-template-columns: 1fr; } }
 
 /* ---------- 18. COOKIE ---------- */
