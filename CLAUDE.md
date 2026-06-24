@@ -19,7 +19,7 @@
 - **Kunde**: „de Vries" (Andreas de Vries), Familienbetrieb seit **01. März 1998**, **Salzhemmendorf**.
 - **Drei Säulen**: **Garten- & Landschaftsbau**, **Seniorenbetreuung** (ambulant + stationär), **Haushaltshilfe / hauswirtschaftliche Versorgung**.
 - **USP**: anerkannt nach **§§ 45a Abs. 1 und 45b Abs. 1 SGB XI** → direkte Abrechnung mit der Pflegekasse, ab Pflegegrad 1.
-- **Logo**: DV-Monogramm (feine weiße Linien D+V auf Rot). Original geladen: `assets/img/DeVries_Hauptlogo_4c.jpg`. Im UI als **inline-SVG** nachgebaut (`.brand__mark`, auch `favicon.svg`) — nicht das JPG einbinden.
+- **Logo**: DV-Monogramm (feine weiße Linien D+V auf Rot). **Im UI wird das ECHTE Logo-Bild 1:1 eingebunden**: `<img class="brand__mark" src="assets/img/DeVries_Hauptlogo_4c.jpg">` (in Nav + Footer jeder Seite, 50×50, `border-radius:9px`). NICHT durch ein nachgebautes SVG ersetzen — der Nutzer will das Original-Logo (das frühere SVG-Monogramm sah „nicht zugehörig" aus). `favicon.svg` bleibt die SVG-Variante (nur Favicon).
 - **Vorlage des Redesigns**: die alte WordPress-Seite https://andreasdevries.de (komplett analysiert, verbatim-Texte + Bilder unter `.scrape/`).
 
 ### Stamm-Kontaktdaten (überall identisch halten — bei Änderung global grep'en)
@@ -129,6 +129,12 @@ CSS-System-Tokens (NICHT umbenennen): `--red --red-deep --green --blue --ink --p
 ## 8. Code-Hygiene
 **❌ nicht erlaubt:** neue CSS-Datei oder `<style>`-Blöcke in Seiten · CSS-Variablen umbenennen · Inter/Roboto/Arial laden · Body solide kühle Farbe · Inline-`style=` (außer `--i` der Mobile-Nav) · Texte umschreiben · absolute `andreasdevries.de/<slug>/`-Links (immer relative `.html`) · `scroll`-Listener ohne rAF-Gate · `setInterval` ohne Off-Screen-Gate.
 **✅ Pflicht:** Shared Blocks auf allen Seiten synchron halten · `prefers-reduced-motion` ehren · Bilder lazy + `alt` deutsch · relative Pfade (`assets/...`) · vor Commit eigenen Diff lesen · neue interaktive Klasse → ggf. in `main.js`-Selektoren ergänzen.
+
+**Wichtige technische Lehren (nicht zurückdrehen):**
+- **Cache-Busting**: CSS/JS werden mit Query-Version eingebunden (`style.css?v=2`, `main.js?v=2`). Bei jeder CSS/JS-Änderung die Version auf ALLEN Seiten hochzählen (sonst sehen wiederkehrende Besucher altes CSS — genau das war ein Bug). 
+- **`html { overflow-x: clip }`** ist gesetzt (zusätzlich zu `body`), weil das rotierende Hero-Spin-Badge je nach Drehwinkel kurzzeitig die Dokumentbreite aufblähte → horizontaler Scroll-Flacker auf Mobile. `clip` (nicht `hidden`) → Sticky-Nav + Lenis bleiben funktionsfähig (verifiziert).
+- **`.section__head`** nutzt `align-items: start` (NICHT `end`) — sonst rutscht die `.section__index`-Nummer (01/02…) bei mehrzeiligem Inhalt nach unten und kollidiert mit dem Lead-Text („01fühlen").
+- **Reveal-Richtungen**: `[data-reveal="left|right"]` MÜSSEN `:not(.is-in)` haben, sonst bleibt der `translateX(±40px)`-Versatz dauerhaft (Overflow). Horizontale Reveals NIE in schmalen Spalten (z. B. sticky `.booking__summary` nutzt nur `data-reveal`, kein `="right"`).
 
 ---
 

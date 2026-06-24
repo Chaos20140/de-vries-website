@@ -62,6 +62,7 @@ html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
   background: var(--ink);
+  overflow-x: clip;
 }
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
@@ -181,9 +182,7 @@ em { font-style: italic; }
 .nav.is-scrolled { background: rgba(250,246,240,0.94); border-color: var(--line); box-shadow: 0 10px 40px -28px rgba(28,23,20,0.5); }
 .nav__inner { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; padding-block: 0.85rem; }
 .brand { display: inline-flex; align-items: center; gap: 0.7rem; }
-.brand__mark { width: 42px; height: 42px; flex: none; }
-.brand__mark rect { fill: var(--red); }
-.brand__mark path { stroke: #fff; }
+.brand__mark { width: 50px; height: 50px; flex: none; border-radius: 9px; display: block; object-fit: cover; box-shadow: 0 3px 12px -5px rgba(215,18,10,0.55); }
 .brand__name { font-family: var(--display); font-weight: 600; font-size: 1.35rem; letter-spacing: 0.02em; line-height: 1; color: var(--ink); }
 .brand__name small { display:block; font-family: var(--body); font-size: 0.6rem; letter-spacing: 0.34em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-top: 3px; }
 
@@ -280,10 +279,10 @@ em { font-style: italic; }
 @media (max-width: 460px){ .statstrip__grid { grid-template-columns: 1fr 1fr; } }
 
 /* ---------- 7. SECTION HEAD ---------- */
-.section__head { display: grid; grid-template-columns: auto 1fr; gap: clamp(1rem,0.5rem+2vw,2.5rem); align-items: end; margin-bottom: clamp(2rem,1rem+3vw,4rem); }
-.section__index { font-family: var(--display); font-size: clamp(1.2rem,0.9rem+1vw,1.8rem); color: var(--red); font-feature-settings: "tnum"; padding-top: 0.4rem; }
-.section__head h2 { max-width: 18ch; }
-.section__head .lead { margin-top: 1.2rem; max-width: 52ch; }
+.section__head { display: grid; grid-template-columns: auto 1fr; gap: clamp(1.2rem,0.6rem+2vw,3rem); align-items: start; margin-bottom: clamp(2.4rem,1.4rem+3vw,4.5rem); }
+.section__index { font-family: var(--display); font-size: clamp(1.4rem,1rem+1.2vw,2.2rem); color: var(--red); font-feature-settings: "tnum"; line-height: 1; padding-top: 0.15em; }
+.section__head h2 { max-width: 20ch; }
+.section__head .lead { margin-top: 1.4rem; max-width: 56ch; }
 .section__head--center { grid-template-columns: 1fr; justify-items: center; text-align: center; }
 .section__head--center h2 { margin-inline: auto; }
 
