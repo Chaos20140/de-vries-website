@@ -237,8 +237,8 @@ em { font-style: italic; }
 .hero { position: relative; padding-top: clamp(2.5rem, 1rem + 5vw, 5rem); padding-bottom: clamp(2rem,1rem + 3vw,4rem); overflow: clip; }
 .hero__grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: clamp(1.5rem, 1rem + 3vw, 4rem); align-items: center; }
 .hero__title { font-size: var(--fs-mega); line-height: 0.92; letter-spacing: -0.03em; }
-.hero__title .line { display: block; overflow: hidden; }
-.hero__title .line > span { display: block; transform: translateY(110%); }
+.hero__title .line { display: block; overflow: hidden; padding-bottom: 0.2em; margin-bottom: -0.12em; }
+.hero__title .line > span { display: block; transform: translateY(118%); }
 .hero.is-in .hero__title .line > span { transform: translateY(0); transition: transform 1s var(--ease); }
 .hero__title .line:nth-child(2) > span { transition-delay: 0.08s; }
 .hero__title .line:nth-child(3) > span { transition-delay: 0.16s; }
