@@ -61,6 +61,7 @@ CSS-System-Tokens (NICHT umbenennen): `--red --red-deep --green --blue --ink --p
 ├── haushaltshilfe.html
 ├── referenzen.html           # Galerie-Showcase
 ├── kontakt.html              # Formular (#contactForm, mailto) + Info-Card + Google-Maps-iframe
+├── termin.html               # Terminbuchung: Leistung-Chips + eigener Kalender + Zeit-Slots → mailto (#bookingForm)
 ├── stellenangebote.html      # Karriere + „Aktuell keine Stellen" + Initiativbewerbung
 ├── impressum.html            # .prose, kein CTA-Band
 ├── datenschutz.html          # .prose, kein CTA-Band
@@ -77,13 +78,15 @@ CSS-System-Tokens (NICHT umbenennen): `--red --red-deep --green --blue --ink --p
 
 **Shared Blocks** (head/topbar/`header.nav`/`.mobile-nav`/footer/cookie/scripts) sind auf JEDER Seite **identisch**. Quelle der Wahrheit = `index.html`. Ändert sich Nav/Footer/Kontakt → auf ALLEN 11 Seiten nachziehen (sind kopiert, kein Include). Komponenten-Vokabular: `.scrape/COMPONENTS.md`.
 
-**Nav-Rubriken**: Start · Garten & Landschaftsbau · Seniorenbetreuung ▸ (Entlastungsbetrag · Pflegesachleistungen) · Haushaltshilfe · Referenzen · Stellenangebote · [Kontakt-CTA]. Aktiver Link wird **automatisch** per JS gesetzt (`aria-current` aus `location.pathname`) — nicht hardcoden.
+**Nav-Rubriken**: Start · Garten & Landschaftsbau · Seniorenbetreuung ▸ (Entlastungsbetrag · Pflegesachleistungen) · Haushaltshilfe · Referenzen · Stellenangebote · **[Termin-buchen-CTA → termin.html]**. Aktiver Link wird **automatisch** per JS gesetzt (`aria-current` aus `location.pathname`) — nicht hardcoden.
+- **„Kontakt" steht NICHT in der Desktop-Nav** (Platzgründe: 6 Links + CTA passen sonst nicht in `--wrap` 1280px). Kontakt ist erreichbar über Topbar (Tel/Mail), Footer und das **Mobile-Menü** (dort: … Stellenangebote · Kontakt · Termin buchen). Wer einen Desktop-Nav-Link hinzufügt: erst Breite prüfen (Burger-Breakpoint ist **1240px**; volle Nav nur ≥1241px), CTA hat `flex:none` + `overflow:hidden` → bei zu wenig Platz wird der CTA-Text sonst abgeschnitten.
 
 ---
 
 ## 4. Seiten-Sektionen (Reihenfolge nicht ohne Grund ändern)
 **index.html**: Hero (Mega-Typo „Garten. Pflege. Zuhause.", Foto, Spin-Badge, „25+"-Counter) → Stat-Strip → Intro-Split (verbatim §45a/b-Absätze) → Leistungen (4 `.scard`) → Referenzen-Teaser (`.gallery`) → Timeline (1998→2024, scroll-progress) → CTA-Band → Footer.
 **Unterseiten**: `.phero` (Crumb + Eyebrow + H1 + Lead + Foto) → alternierende `.section` / `.section.bg-paper-2` mit `.section__head` (01/02/…) → Inhalt (`.feature`, `.tick-list`, `.table-card/.ptable`, `.gallery`, `.scard`) → CTA-Band → Footer. **Ausnahme**: Impressum/Datenschutz = `.prose`, KEIN CTA-Band.
+**termin.html**: `.phero` → `.section` mit `<form id="bookingForm">` umschließt `.booking-grid` (links 4 `.bstep`: Leistung-`.chip-group` · `.calendar` · `.slot-group` · Kontaktfelder; rechts sticky `.booking__summary` mit Live-Werten + Submit) → `.section.bg-paper-2` „So einfach geht's" (`.how-grid` 3 `.how-step`) → Footer (KEIN CTA-Band, die Seite IST der CTA).
 
 ---
 
@@ -98,6 +101,7 @@ CSS-System-Tokens (NICHT umbenennen): `--red --red-deep --green --blue --ink --p
 - **Mobile-Nav**: `#navBurger` öffnet `#mobileNav` (clip-path-circle reveal, per-Link `--i`-Stagger), sperrt Body-Scroll + `lenis.stop()`. Esc/Close/Linkklick schließt.
 - **Cookie**: `#cookie` nach 1.4s ein, `localStorage 'dv-cookie-ok'` merkt Zustimmung.
 - **Kontaktformular**: `#contactForm` → Validierung (Name/E-Mail/Nachricht/Consent) → **`mailto:`-Fallback** an info@andreasdevries.de. Kein Backend.
+- **Terminbuchung** (`#bookingForm`, nur termin.html, im JS via `if(!form) return` gegated): selbst gebauter **Kalender** (vanilla `Date`, Monatsnavigation, Wochenenden + Vergangenes gesperrt, Prev gesperrt im aktuellen Monat, Montag-basiert), **Service-Chips** (`.chip[data-service]`) und **Zeit-Slots** (`.slot[data-time]`, Mo–Fr 8–16 Uhr) sind Single-Select; Auswahl füllt Hidden-Inputs (`service/date/time`) + Live-`.booking__summary`. Submit → **`mailto:`** an info@andreasdevries.de mit allen Feldern. Kein Backend, keine echte Verfügbarkeitsprüfung → es ist eine **Anfrage**, die de Vries bestätigt (so auch im UI getextet). Calendar-Grid wird per `createElement` gebaut (kein User-`innerHTML`).
 - **DV-Monogramm-Draw**: `.dv-draw path` mit `stroke-dasharray` (Länge per `getTotalLength()`), zeichnet sich bei `.is-in`. (Derzeit optionales Element.)
 
 ---

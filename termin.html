@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kontakt – de Vries Salzhemmendorf · 05153 1552</title>
-<meta name="description" content="Kontakt zu de Vries: An den Flachsrotten 2, 31020 Salzhemmendorf. Tel 05153 1552, info@andreasdevries.de. Mo–Fr 8:00–16:00 Uhr.">
+<title>Termin buchen – de Vries · Garten, Pflege &amp; Haushalt</title>
+<meta name="description" content="Buchen Sie online einen Termin bei de Vries: Leistung, Wunschdatum und Uhrzeit (Mo–Fr 8–16 Uhr) wählen – wir bestätigen Ihren Termin schnellstmöglich. Kostenlos & unverbindlich.">
 <meta name="theme-color" content="#d7120a">
-<meta property="og:title" content="de Vries – Garten Landschaftsbau · Seniorenbetreuung · Haushaltshilfe">
-<meta property="og:description" content="Seit über 25 Jahren Ihr verlässlicher Partner in Salzhemmendorf. Garten- & Landschaftsbau, Seniorenbetreuung & Haushaltshilfe.">
+<meta property="og:title" content="Termin buchen – de Vries">
+<meta property="og:description" content="Online Wunschtermin anfragen für Garten- & Landschaftsbau, Seniorenbetreuung oder Haushaltshilfe.">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="de_DE">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
@@ -18,10 +18,8 @@
 </head>
 <body>
 
-<!-- scroll progress -->
 <div class="scroll-prog" id="scrollProg"></div>
 
-<!-- top bar -->
 <div class="topbar">
   <div class="wrap topbar__inner">
     <div class="topbar__contact">
@@ -36,7 +34,6 @@
   </div>
 </div>
 
-<!-- nav -->
 <header class="nav" id="nav">
   <div class="wrap nav__inner">
     <a class="brand" href="index.html" aria-label="de Vries Startseite">
@@ -70,7 +67,6 @@
   </div>
 </header>
 
-<!-- mobile nav -->
 <div class="mobile-nav" id="mobileNav">
   <div class="mobile-nav__top">
     <span class="brand__name" style="color:#fff">de Vries</span>
@@ -97,104 +93,110 @@
 
 <main>
 
-<!-- HERO -->
 <section class="phero">
   <div class="wrap">
-    <p class="phero__crumb"><a href="index.html">Start</a> / Kontakt</p>
-    <span class="eyebrow">Kontakt</span>
-    <h1 class="mt-s">Sprechen Sie uns an</h1>
-    <p class="lead">Kontakt bei dringenden Anliegen — Für dringende Anliegen stehen wir Ihnen von Montag bis Freitag zwischen 08:00 Uhr und 16:00 Uhr telefonisch unter 05153- 1552 zur Verfügung.</p>
-    <p class="lead">Alternativ können Sie uns jederzeit per E-Mail kontaktieren. Wir bemühen uns, Ihnen so schnell wie möglich eine Rückmeldung zu geben.</p>
+    <p class="phero__crumb"><a href="index.html">Start</a> / Termin buchen</p>
+    <span class="eyebrow">Terminbuchung</span>
+    <h1 class="mt-s">Termin direkt online anfragen</h1>
+    <p class="lead">Wählen Sie Ihre Leistung, ein Wunschdatum und eine Uhrzeit – wir bestätigen Ihren Termin schnellstmöglich telefonisch oder per E-Mail. Kostenlos und unverbindlich.</p>
   </div>
 </section>
 
-<!-- KONTAKT -->
 <section class="section">
   <div class="wrap">
-    <div class="section__head">
-      <div class="section__index">01</div>
-      <div>
-        <span class="eyebrow">Kontaktformular</span>
-        <h2 class="mt-s reveal-words">Schreiben Sie uns</h2>
-      </div>
-    </div>
+    <form id="bookingForm">
+      <input type="hidden" name="service">
+      <input type="hidden" name="date">
+      <input type="hidden" name="time">
+      <div class="booking-grid">
+        <div class="booking-steps">
 
-    <div class="contact-grid">
-      <form class="form" id="contactForm" data-reveal>
-        <div class="field">
-          <label for="name">Name *</label>
-          <input type="text" id="name" name="name" required>
-        </div>
-        <div class="field">
-          <label for="email">E-Mail *</label>
-          <input type="email" id="email" name="email" required>
-        </div>
-        <div class="field">
-          <label for="message">Ihre Nachricht</label>
-          <textarea id="message" name="message"></textarea>
-        </div>
-        <label class="consent">
-          <input type="checkbox" name="consent">
-          <span>Ich stimme der Verarbeitung meiner Daten gemäß der <a href="datenschutz.html">Datenschutzerklärung</a> zu.</span>
-        </label>
-        <button type="submit" class="btn" data-magnetic="0.3">Absenden
-          <svg class="btn__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></button>
-        <p class="form__status" id="formStatus"></p>
-      </form>
+          <div class="bstep" data-reveal>
+            <div class="bstep__head"><span class="bstep__num">1</span><div><h3>Leistung wählen</h3><p class="bstep__hint">Worum geht es?</p></div></div>
+            <div class="chip-group">
+              <button type="button" class="chip" data-accent="green" data-service="Garten- & Landschaftsbau"><span class="dot"></span>Garten- &amp; Landschaftsbau</button>
+              <button type="button" class="chip" data-accent="blue" data-service="Ambulante Seniorenbetreuung"><span class="dot"></span>Ambulante Seniorenbetreuung</button>
+              <button type="button" class="chip" data-accent="blue" data-service="Stationäre Seniorenbetreuung"><span class="dot"></span>Stationäre Seniorenbetreuung</button>
+              <button type="button" class="chip" data-service="Haushaltshilfe"><span class="dot"></span>Haushaltshilfe</button>
+              <button type="button" class="chip" data-service="Kostenloses Erstgespräch"><span class="dot"></span>Kostenloses Erstgespräch</button>
+            </div>
+          </div>
 
-      <div class="info-card" data-reveal="right">
-        <div class="info-item">
-          <div class="info-item__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-          <div>
-            <h4>Adresse</h4>
-            <p>An den Flachsrotten 2<br>31020 Salzhemmendorf</p>
+          <div class="bstep" data-reveal>
+            <div class="bstep__head"><span class="bstep__num">2</span><div><h3>Wunschdatum</h3><p class="bstep__hint">Montag bis Freitag verfügbar</p></div></div>
+            <div class="calendar">
+              <div class="cal__head">
+                <button type="button" class="cal__nav" id="calPrev" aria-label="Vorheriger Monat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+                <span class="cal__title" id="calTitle"></span>
+                <button type="button" class="cal__nav" id="calNext" aria-label="Nächster Monat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+              </div>
+              <div class="cal__grid" id="calGrid"></div>
+            </div>
           </div>
-        </div>
-        <div class="info-item">
-          <div class="info-item__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-          <div>
-            <h4>Öffnungszeiten</h4>
-            <p>Montag – Freitag<br>8:00 bis 16:00 Uhr</p>
+
+          <div class="bstep" data-reveal>
+            <div class="bstep__head"><span class="bstep__num">3</span><div><h3>Uhrzeit</h3><p class="bstep__hint">Montag – Freitag, 8:00 bis 16:00 Uhr</p></div></div>
+            <div class="slot-group" id="slotGroup">
+              <button type="button" class="slot" data-time="08:00">08:00</button>
+              <button type="button" class="slot" data-time="09:00">09:00</button>
+              <button type="button" class="slot" data-time="10:00">10:00</button>
+              <button type="button" class="slot" data-time="11:00">11:00</button>
+              <button type="button" class="slot" data-time="12:00">12:00</button>
+              <button type="button" class="slot" data-time="13:00">13:00</button>
+              <button type="button" class="slot" data-time="14:00">14:00</button>
+              <button type="button" class="slot" data-time="15:00">15:00</button>
+            </div>
           </div>
-        </div>
-        <div class="info-item">
-          <div class="info-item__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
-          <div>
-            <h4>Telefon</h4>
-            <p><a href="tel:051531552">05153 - 1552</a></p>
+
+          <div class="bstep" data-reveal>
+            <div class="bstep__head"><span class="bstep__num">4</span><div><h3>Ihre Kontaktdaten</h3><p class="bstep__hint">Damit wir Sie erreichen können</p></div></div>
+            <div class="form">
+              <div class="form__row">
+                <div class="field"><label for="bf-name">Name *</label><input id="bf-name" name="name" type="text" autocomplete="name" placeholder="Ihr Name"></div>
+                <div class="field"><label for="bf-phone">Telefon *</label><input id="bf-phone" name="phone" type="tel" autocomplete="tel" placeholder="Ihre Telefonnummer"></div>
+              </div>
+              <div class="field"><label for="bf-email">E-Mail *</label><input id="bf-email" name="email" type="email" autocomplete="email" placeholder="ihre@email.de"></div>
+              <div class="field"><label for="bf-msg">Nachricht (optional)</label><textarea id="bf-msg" name="message" placeholder="Haben Sie Wünsche oder Anmerkungen?"></textarea></div>
+              <label class="consent"><input type="checkbox" name="consent"> Ich stimme der Verarbeitung meiner Daten gemäß der <a href="datenschutz.html">Datenschutzerklärung</a> zu.</label>
+            </div>
           </div>
+
         </div>
-        <div class="info-item">
-          <div class="info-item__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></div>
-          <div>
-            <h4>E-Mail</h4>
-            <p><a href="mailto:info@andreasdevries.de">info@andreasdevries.de</a></p>
-          </div>
-        </div>
+
+        <aside class="booking__summary" data-reveal="right">
+          <h3>Ihre Terminanfrage</h3>
+          <div class="summary-row"><span class="lbl">Leistung</span><span class="val empty" id="sumService">Noch nicht gewählt</span></div>
+          <div class="summary-row"><span class="lbl">Datum</span><span class="val empty" id="sumDate">Noch nicht gewählt</span></div>
+          <div class="summary-row"><span class="lbl">Uhrzeit</span><span class="val empty" id="sumTime">Noch nicht gewählt</span></div>
+          <button type="submit" class="btn btn--light">Terminanfrage senden
+            <svg class="btn__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
+          </button>
+          <p class="form__status" id="bookingStatus"></p>
+          <p class="booking__note">Unverbindliche Terminanfrage – wir bestätigen Ihren Wunschtermin schnellstmöglich.<br>Lieber persönlich? <a class="booking__call" href="tel:051531552">05153 - 1552</a></p>
+        </aside>
       </div>
-    </div>
+    </form>
   </div>
 </section>
 
-<!-- WEG ZU UNS -->
 <section class="section bg-paper-2">
   <div class="wrap">
-    <div class="section__head">
-      <div class="section__index">02</div>
+    <div class="section__head section__head--center">
       <div>
-        <span class="eyebrow">Anfahrt</span>
-        <h2 class="mt-s reveal-words">Ihr Weg zu uns</h2>
+        <span class="eyebrow is-center">So einfach geht's</span>
+        <h2 class="mt-s reveal-words">In drei Schritten zum Termin</h2>
       </div>
     </div>
-    <div class="map-wrap" data-reveal>
-      <iframe src="https://www.google.com/maps?q=An+den+Flachsrotten+2,+31020+Salzhemmendorf&output=embed" loading="lazy" title="Standort de Vries – An den Flachsrotten 2, 31020 Salzhemmendorf"></iframe>
+    <div class="how-grid" data-stagger>
+      <div class="how-step"><div class="how-step__num">01</div><h4>Anfrage senden</h4><p>Wählen Sie Leistung, Wunschdatum und Uhrzeit und schicken Sie uns Ihre Terminanfrage – in unter einer Minute.</p></div>
+      <div class="how-step"><div class="how-step__num">02</div><h4>Wir melden uns</h4><p>Wir prüfen Ihren Wunschtermin und bestätigen ihn schnellstmöglich telefonisch oder per E-Mail.</p></div>
+      <div class="how-step"><div class="how-step__num">03</div><h4>Termin wahrnehmen</h4><p>Wir kommen zu Ihnen, hören zu und finden gemeinsam die beste Unterstützung – ganz unkompliziert.</p></div>
     </div>
   </div>
 </section>
 
 </main>
 
-<!-- FOOTER -->
 <footer class="footer">
   <div class="footer__giant" aria-hidden="true">de Vries</div>
   <div class="wrap">
@@ -247,7 +249,6 @@
   </div>
 </footer>
 
-<!-- cookie -->
 <div class="cookie" id="cookie">
   <p>Diese Website verwendet Cookies, um Ihre Erfahrung zu verbessern. Notwendige Cookies sind für die grundlegenden Funktionen der Website unerlässlich.</p>
   <div class="cookie__row">

@@ -198,6 +198,99 @@
   /* ---------- footer year ---------- */
   $$("[data-year]").forEach(function (el) { el.textContent = new Date().getFullYear(); });
 
+  /* ---------- booking (termin.html) ---------- */
+  (function () {
+    var form = $("#bookingForm");
+    if (!form) return;
+    var MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+    var WD = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+    var calTitle = $("#calTitle"), calGrid = $("#calGrid"), calPrev = $("#calPrev"), calNext = $("#calNext");
+    var sumService = $("#sumService"), sumDate = $("#sumDate"), sumTime = $("#sumTime");
+    var status = $("#bookingStatus");
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var view = new Date(today.getFullYear(), today.getMonth(), 1);
+    var selISO = "";
+
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+    function iso(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+    function fmt(d) { return WD[(d.getDay() + 6) % 7] + ". " + d.getDate() + ". " + MONTHS[d.getMonth()] + " " + d.getFullYear(); }
+
+    function renderCal() {
+      calTitle.textContent = MONTHS[view.getMonth()] + " " + view.getFullYear();
+      calPrev.disabled = (view.getFullYear() === today.getFullYear() && view.getMonth() === today.getMonth());
+      calGrid.innerHTML = "";
+      WD.forEach(function (w) { var el = document.createElement("div"); el.className = "cal__wd"; el.textContent = w; calGrid.appendChild(el); });
+      var first = new Date(view.getFullYear(), view.getMonth(), 1);
+      var offset = (first.getDay() + 6) % 7;
+      var dim = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+      for (var i = 0; i < offset; i++) { var e = document.createElement("div"); e.className = "cal__day is-empty"; calGrid.appendChild(e); }
+      for (var d = 1; d <= dim; d++) {
+        var date = new Date(view.getFullYear(), view.getMonth(), d);
+        var btn = document.createElement("button");
+        btn.type = "button"; btn.className = "cal__day"; btn.textContent = d;
+        if (date.getDay() === 0 || date.getDay() === 6 || date < today) btn.disabled = true;
+        if (iso(date) === iso(today)) btn.classList.add("is-today");
+        if (selISO && iso(date) === selISO) btn.classList.add("is-selected");
+        (function (date) {
+          btn.addEventListener("click", function () {
+            selISO = iso(date); form.date.value = fmt(date);
+            renderCal(); updateSummary();
+          });
+        })(date);
+        calGrid.appendChild(btn);
+      }
+    }
+    calPrev.addEventListener("click", function () { view.setMonth(view.getMonth() - 1); renderCal(); });
+    calNext.addEventListener("click", function () { view.setMonth(view.getMonth() + 1); renderCal(); });
+
+    $$(".chip[data-service]").forEach(function (c) {
+      c.addEventListener("click", function () {
+        $$(".chip[data-service]").forEach(function (x) { x.classList.remove("is-active"); });
+        c.classList.add("is-active"); form.service.value = c.getAttribute("data-service"); updateSummary();
+      });
+    });
+    $$(".slot[data-time]").forEach(function (s) {
+      s.addEventListener("click", function () {
+        $$(".slot[data-time]").forEach(function (x) { x.classList.remove("is-active"); });
+        s.classList.add("is-active"); form.time.value = s.getAttribute("data-time"); updateSummary();
+      });
+    });
+
+    function setSum(el, val) { if (!el) return; if (val) { el.textContent = val; el.classList.remove("empty"); } else { el.textContent = "Noch nicht gewählt"; el.classList.add("empty"); } }
+    function updateSummary() {
+      setSum(sumService, form.service.value);
+      setSum(sumDate, form.date.value);
+      setSum(sumTime, form.time.value ? form.time.value + " Uhr" : "");
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      function fail(t) { status.textContent = t; status.className = "form__status err"; }
+      if (!form.service.value) return fail("Bitte wählen Sie eine Leistung.");
+      if (!form.date.value) return fail("Bitte wählen Sie ein Wunschdatum.");
+      if (!form.time.value) return fail("Bitte wählen Sie eine Uhrzeit.");
+      var name = form.name.value.trim(), tel = form.phone.value.trim(), email = form.email.value.trim();
+      if (!name || !tel || !email) return fail("Bitte füllen Sie Name, Telefon und E-Mail aus.");
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail("Bitte geben Sie eine gültige E-Mail-Adresse an.");
+      if (form.consent && !form.consent.checked) return fail("Bitte stimmen Sie der Datenschutzerklärung zu.");
+      var msg = form.message ? form.message.value.trim() : "";
+      var subject = encodeURIComponent("Terminanfrage: " + form.service.value + " am " + form.date.value);
+      var body = encodeURIComponent(
+        "Terminanfrage über die Website\n\n" +
+        "Leistung: " + form.service.value + "\n" +
+        "Wunschdatum: " + form.date.value + "\n" +
+        "Uhrzeit: " + form.time.value + " Uhr\n\n" +
+        "Name: " + name + "\nTelefon: " + tel + "\nE-Mail: " + email + "\n\n" +
+        "Nachricht:\n" + (msg || "-")
+      );
+      window.location.href = "mailto:info@andreasdevries.de?subject=" + subject + "&body=" + body;
+      status.textContent = "Ihr E-Mail-Programm wird geöffnet. Wir bestätigen Ihren Wunschtermin schnellstmöglich!";
+      status.className = "form__status ok";
+    });
+
+    renderCal(); updateSummary();
+  })();
+
   /* ---------- boot ---------- */
   initLenis();
   applyScroll();
