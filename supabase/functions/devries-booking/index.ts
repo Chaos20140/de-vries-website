@@ -12,6 +12,7 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM    = Deno.env.get("RESEND_FROM") || "de Vries <onboarding@resend.dev>";
 const OWNER_EMAIL    = Deno.env.get("OWNER_EMAIL") || "tolunayusul@gmail.com";
 const FUNCTION_BASE  = Deno.env.get("FUNCTION_BASE") || `${SUPABASE_URL}/functions/v1/devries-booking`;
+const SITE_URL       = Deno.env.get("SITE_URL") || "https://chaos20140.github.io/de-vries-website";
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
@@ -26,6 +27,9 @@ const CORS = {
 };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+// /confirm leitet auf eine echte Status-Seite der Website um (rendert garantiert als HTML,
+// anders als Function-Antworten, die Supabase als text/plain ausliefert).
+const redirect = (s: string) => new Response(null, { status: 302, headers: { ...CORS, "Location": `${SITE_URL}/termin-status.html?s=${s}` } });
 
 function fmtDate(iso: string) {
   const d = new Date(iso + "T00:00:00");
@@ -139,24 +143,21 @@ Deno.serve(async (req) => {
   if (path === "/confirm" && req.method === "GET") {
     const token = url.searchParams.get("token") || "";
     const action = url.searchParams.get("action") || "";
-    if (!/^[0-9a-f-]{36}$/i.test(token) || (action !== "confirm" && action !== "decline"))
-      return page("Ungültiger Link", "Dieser Bestätigungslink ist ungültig.", false);
+    if (!/^[0-9a-f-]{36}$/i.test(token) || (action !== "confirm" && action !== "decline")) return redirect("invalid");
 
     const { data: bk } = await admin.from("devries_bookings").select("*").eq("token", token).single();
-    if (!bk) return page("Nicht gefunden", "Diese Terminanfrage wurde nicht gefunden.", false);
-    if (bk.status !== "pending")
-      return page("Bereits bearbeitet", `Diese Anfrage wurde bereits als „${bk.status === "confirmed" ? "bestätigt" : "abgelehnt"}" markiert.`, bk.status === "confirmed");
+    if (!bk) return redirect("notfound");
+    if (bk.status !== "pending") return redirect(bk.status === "confirmed" ? "already-confirmed" : "already-declined");
 
     if (action === "confirm") {
       const { data: taken } = await admin.from("devries_bookings")
         .select("id").eq("status", "confirmed").eq("appt_date", bk.appt_date).eq("appt_time", bk.appt_time).limit(1);
-      if (taken && taken.length)
-        return page("Slot bereits belegt", "Für diese Uhrzeit ist bereits ein anderer Termin bestätigt. Bitte den Kunden direkt kontaktieren.", false);
+      if (taken && taken.length) return redirect("taken");
       await admin.from("devries_bookings").update({ status: "confirmed" }).eq("id", bk.id);
-      return page("Termin bestätigt", `<strong>${esc(bk.service)}</strong> am ${esc(bk.appt_date_de)} um ${esc(bk.appt_time)} Uhr für ${esc(bk.name)} (${esc(bk.phone)}) ist bestätigt. Der Zeit-Slot ist jetzt auf der Website gesperrt.`);
+      return redirect("confirmed");
     } else {
       await admin.from("devries_bookings").update({ status: "declined" }).eq("id", bk.id);
-      return page("Termin abgelehnt", `Die Anfrage von ${esc(bk.name)} (${esc(bk.appt_date_de)}, ${esc(bk.appt_time)} Uhr) wurde abgelehnt. Der Slot bleibt frei.`, false);
+      return redirect("declined");
     }
   }
 
