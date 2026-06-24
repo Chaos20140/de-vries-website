@@ -210,6 +210,9 @@
     var today = new Date(); today.setHours(0, 0, 0, 0);
     var view = new Date(today.getFullYear(), today.getMonth(), 1);
     var selISO = "";
+    var cfg = window.DV_BOOKING || {};
+    var backendOn = !!(cfg.url && cfg.anonKey && cfg.url.indexOf("DEIN-") < 0 && cfg.anonKey.indexOf("DEIN-") < 0);
+    var bookedMap = {}; // { "2026-06-24": ["10:00", ...] } — bestätigte (gesperrte) Slots
 
     function pad(n) { return (n < 10 ? "0" : "") + n; }
     function iso(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
@@ -234,7 +237,7 @@
         (function (date) {
           btn.addEventListener("click", function () {
             selISO = iso(date); form.date.value = fmt(date);
-            renderCal(); updateSummary();
+            renderCal(); updateSummary(); refreshSlots();
           });
         })(date);
         calGrid.appendChild(btn);
@@ -251,10 +254,22 @@
     });
     $$(".slot[data-time]").forEach(function (s) {
       s.addEventListener("click", function () {
+        if (s.disabled) return;
         $$(".slot[data-time]").forEach(function (x) { x.classList.remove("is-active"); });
         s.classList.add("is-active"); form.time.value = s.getAttribute("data-time"); updateSummary();
       });
     });
+
+    // grey out time slots that are already confirmed for the selected date
+    function refreshSlots() {
+      var taken = bookedMap[selISO] || [];
+      $$(".slot[data-time]").forEach(function (s) {
+        var isTaken = taken.indexOf(s.getAttribute("data-time")) > -1;
+        s.disabled = isTaken;
+        s.classList.toggle("is-taken", isTaken);
+        if (isTaken && s.classList.contains("is-active")) { s.classList.remove("is-active"); form.time.value = ""; updateSummary(); }
+      });
+    }
 
     function setSum(el, val) { if (!el) return; if (val) { el.textContent = val; el.classList.remove("empty"); } else { el.textContent = "Noch nicht gewählt"; el.classList.add("empty"); } }
     function updateSummary() {
@@ -266,6 +281,7 @@
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       function fail(t) { status.textContent = t; status.className = "form__status err"; }
+      function ok(t) { status.textContent = t; status.className = "form__status ok"; }
       if (!form.service.value) return fail("Bitte wählen Sie eine Leistung.");
       if (!form.date.value) return fail("Bitte wählen Sie ein Wunschdatum.");
       if (!form.time.value) return fail("Bitte wählen Sie eine Uhrzeit.");
@@ -274,6 +290,38 @@
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail("Bitte geben Sie eine gültige E-Mail-Adresse an.");
       if (form.consent && !form.consent.checked) return fail("Bitte stimmen Sie der Datenschutzerklärung zu.");
       var msg = form.message ? form.message.value.trim() : "";
+
+      // --- mit Backend: speichern + Inhaber benachrichtigen ---
+      if (backendOn) {
+        var btn = form.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        status.textContent = "Wird gesendet …"; status.className = "form__status";
+        fetch(cfg.url + "/booking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + cfg.anonKey },
+          body: JSON.stringify({ service: form.service.value, date: form.date.value, dateISO: selISO, time: form.time.value, name: name, phone: tel, email: email, message: msg })
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (d) { return { s: r.status, ok: r.ok, d: d }; });
+        }).then(function (res) {
+          if (btn) btn.disabled = false;
+          if (res.ok) {
+            ok("Vielen Dank! Ihre Terminanfrage ist eingegangen – wir bestätigen sie schnellstmöglich.");
+            $$(".chip[data-service],.slot[data-time]").forEach(function (x) { x.classList.remove("is-active"); });
+            form.reset(); form.service.value = ""; form.date.value = ""; form.time.value = ""; selISO = "";
+            updateSummary();
+          } else if (res.s === 409) {
+            fail("Dieser Zeit-Slot ist leider gerade vergeben. Bitte wählen Sie eine andere Uhrzeit.");
+          } else {
+            fail("Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut oder rufen Sie uns an: 05153 - 1552.");
+          }
+        }).catch(function () {
+          if (btn) btn.disabled = false;
+          fail("Verbindung fehlgeschlagen. Bitte später erneut versuchen oder rufen Sie uns an: 05153 - 1552.");
+        });
+        return;
+      }
+
+      // --- Fallback ohne Backend: mailto ---
       var subject = encodeURIComponent("Terminanfrage: " + form.service.value + " am " + form.date.value);
       var body = encodeURIComponent(
         "Terminanfrage über die Website\n\n" +
@@ -284,9 +332,16 @@
         "Nachricht:\n" + (msg || "-")
       );
       window.location.href = "mailto:tolunayusul@gmail.com?subject=" + subject + "&body=" + body;
-      status.textContent = "Ihr E-Mail-Programm wird geöffnet. Wir bestätigen Ihren Wunschtermin schnellstmöglich!";
-      status.className = "form__status ok";
+      ok("Ihr E-Mail-Programm wird geöffnet. Wir bestätigen Ihren Wunschtermin schnellstmöglich!");
     });
+
+    // belegte (bestätigte) Slots laden und sperren
+    if (backendOn) {
+      fetch(cfg.url + "/booked-slots", { headers: { "Authorization": "Bearer " + cfg.anonKey } })
+        .then(function (r) { return r.ok ? r.json() : { slots: [] }; })
+        .then(function (d) { (d.slots || []).forEach(function (s) { (bookedMap[s.date] = bookedMap[s.date] || []).push(s.time); }); refreshSlots(); })
+        .catch(function () {});
+    }
 
     renderCal(); updateSummary();
   })();
