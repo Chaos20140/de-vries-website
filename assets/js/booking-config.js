@@ -1,15 +1,14 @@
 /* ============================================================
    de Vries — Terminbuchung: Backend-Konfiguration
    ------------------------------------------------------------
-   Solange hier "DEIN-..."-Platzhalter stehen, nutzt die Terminseite
-   automatisch den mailto-Fallback (öffnet das E-Mail-Programm).
+   Supabase-Backend AKTIV. Solange hier echte Werte stehen, nutzt die
+   Terminseite das Backend (Anfrage speichern + Inhaber benachrichtigen +
+   bestätigte Slots sperren). Bei "DEIN-…"-Platzhaltern → mailto-Fallback.
 
-   Nach dem Supabase-Setup (siehe SETUP-BUCHUNG.md) hier eintragen:
-   - url:     deine Function-URL, endet auf /devries-booking
-   - anonKey: dein Supabase "anon public" Key (ist öffentlich, das ist ok)
-   Danach: echtes Buchungssystem aktiv (Bestätigen-Button + Slots sperren).
+   Hinweis: anonKey ist ein öffentlicher Client-Key (by design sichtbar);
+   die Daten schützt Row Level Security + die Edge Function (Service-Role).
    ============================================================ */
 window.DV_BOOKING = {
-  url: "https://DEIN-PROJEKT.supabase.co/functions/v1/devries-booking",
-  anonKey: "DEIN-ANON-PUBLIC-KEY"
+  url: "https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-booking",
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4d2pneGRsbndoYXRuYmhqYWJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNDI4MjAsImV4cCI6MjA5NzkxODgyMH0.ab3MxBbEFuswqh-nM3XxOIIBAzLuZoLtR1rEI79aNhw"
 };

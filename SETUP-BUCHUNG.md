@@ -7,6 +7,25 @@ Termine sperren automatisch den Zeit-Slot auf der Website.
 > Solange Schritt 6 nicht erledigt ist, läuft alles weiter über `mailto`
 > (öffnet dein E-Mail-Programm). Es geht also nichts kaputt, während du einrichtest.
 
+## ✅ Status (von Claude bereits erledigt am 25.06.2026)
+Projekt **de-vries** (`vxwjgxdlnwhatnbhjabw`, Frankfurt) angelegt, Tabelle migriert,
+Edge Function `devries-booking` deployed (`--no-verify-jwt`), `OWNER_EMAIL` gesetzt,
+`booking-config.js` mit URL+anon-Key gefüllt → **Backend ist live und getestet**
+(Anfrage speichern, Bestätigen/Ablehnen, Slot-Sperre – alles geprüft).
+
+**Es fehlt nur noch EINE Sache von dir: der Resend-API-Key**, damit die
+Benachrichtigungs-E-Mail wirklich verschickt wird. Bis dahin wird jede Anfrage zwar
+gespeichert (siehst du in Supabase → Table Editor → `devries_bookings`), aber du
+bekommst noch keine Mail. So aktivierst du die Mail:
+1. Auf https://resend.com einloggen → **API Keys** → Key erstellen & kopieren.
+2. Im Terminal (irgendwo):
+   ```bash
+   supabase secrets set RESEND_API_KEY=DEIN_KEY --project-ref vxwjgxdlnwhatnbhjabw
+   ```
+   Fertig – ab dann kommt bei jeder Anfrage die E-Mail mit Bestätigen/Ablehnen.
+   (Resend Free-Tarif schickt ohne verifizierte Domain nur an die E-Mail deines
+   Resend-Kontos – das passt, weil `OWNER_EMAIL` darauf zeigt.)
+
 ---
 
 ## 1. Supabase-Projekt anlegen
