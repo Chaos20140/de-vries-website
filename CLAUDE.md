@@ -135,6 +135,13 @@ CSS-System-Tokens (NICHT umbenennen): `--red --red-deep --green --blue --ink --p
 - **`html { overflow-x: clip }`** ist gesetzt (zusätzlich zu `body`), weil das rotierende Hero-Spin-Badge je nach Drehwinkel kurzzeitig die Dokumentbreite aufblähte → horizontaler Scroll-Flacker auf Mobile. `clip` (nicht `hidden`) → Sticky-Nav + Lenis bleiben funktionsfähig (verifiziert).
 - **`.section__head`** nutzt `align-items: start` (NICHT `end`) — sonst rutscht die `.section__index`-Nummer (01/02…) bei mehrzeiligem Inhalt nach unten und kollidiert mit dem Lead-Text („01fühlen").
 - **Reveal-Richtungen**: `[data-reveal="left|right"]` MÜSSEN `:not(.is-in)` haben, sonst bleibt der `translateX(±40px)`-Versatz dauerhaft (Overflow). Horizontale Reveals NIE in schmalen Spalten (z. B. sticky `.booking__summary` nutzt nur `data-reveal`, kein `="right"`).
+- **`.reveal-words`** (Wort-Reveal-Headlines): das `.word` hat `padding/margin: 0.22em 0.06em` (positiv/negativ) — sonst schneidet `overflow:hidden` Umlaut-Punkte (Ü/Ö/Ä) und Unterlängen ab. Nicht entfernen.
+- **`.section__head`**: `align-items: start` (Index 01/02 oben), NICHT `end`.
+- **Galerie = CSS-Spalten-Masonry** (`.gallery { columns }`, `.gitem { break-inside: avoid }`), KEIN 12-col-Grid mehr → nie Raster-Lücken, Bilder in natürlichem Seitenverhältnis. `gitem--wide/half/tall` sind tote No-Ops.
+- **Feature-Sektionen = EINE Überschrift**: nur der `.section__head` (Index + Eyebrow + h2). Im `.feature`-Textblock KEIN zweiter Eyebrow/h3 (war redundant + kollidierte) — erster Absatz ist `<p class="lead-tight">`.
+- **Service-Karten** (`.scard__list`): Häkchen-Liste (2-spaltig), KEINE Pillen — passt zum Editorial-Look. Akzent-Häkchen grün/blau je `scard--accent-*`.
+- **Logo-Bilder & Original-Downloads**: Original-WP-URLs mit Umlaut (ä/ö, z. B. `tätigkeiten`, `Wellenförmig`) brechen curl-Downloads → kamen als HTML-Fehlerseite an (`file` zeigt „HTML document"). Beim Bild-Nachladen IMMER `file -b` prüfen. Das `allgemeine-tätigkeiten`-Bild ist serverseitig 404 → ersetzt.
+- **Bilder-Check**: `for f in assets/img/*; do file -b "$f"; done` — alles muss image/* sein. Bei Bild-Tausch immer verifizieren.
 
 ---
 

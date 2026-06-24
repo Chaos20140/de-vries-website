@@ -10,6 +10,8 @@ qa-*.jpeg
 page-*.jpeg
 diag-*.jpeg
 orig-*.jpeg
+v[0-9]*.jpeg
+*-screenshot.jpeg
 
 # OS / editor
 .DS_Store
