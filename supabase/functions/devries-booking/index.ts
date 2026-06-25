@@ -13,6 +13,7 @@ const RESEND_FROM    = Deno.env.get("RESEND_FROM") || "de Vries <onboarding@rese
 const OWNER_EMAIL    = Deno.env.get("OWNER_EMAIL") || "tolunayusul@gmail.com";
 const FUNCTION_BASE  = Deno.env.get("FUNCTION_BASE") || `${SUPABASE_URL}/functions/v1/devries-booking`;
 const SITE_URL       = Deno.env.get("SITE_URL") || "https://chaos20140.github.io/de-vries-website";
+const REPLY_TO       = Deno.env.get("REPLY_TO") || "info@andreasdevries.de";
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
@@ -86,6 +87,34 @@ async function mailOwner(b: Record<string, string>) {
   } catch { return false; }
 }
 
+// Bestätigungs-Mail an den Kunden (nach „Bestätigen"). Funktioniert nur mit
+// verifizierter Resend-Absender-Domain (RESEND_FROM); sonst lehnt Resend den
+// Versand an fremde Adressen ab → Bestätigung läuft trotzdem durch.
+async function mailCustomer(b: Record<string, string>) {
+  if (!RESEND_API_KEY) return false;
+  const body = `
+<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:auto;color:#1c1714">
+  <div style="width:46px;height:46px;border-radius:9px;background:#d7120a;color:#fff;font-weight:800;font-size:20px;line-height:46px;text-align:center;letter-spacing:1px">DV</div>
+  <h2 style="margin:1rem 0 .5rem">Ihr Termin ist bestätigt ✅</h2>
+  <p style="color:#4a423c;line-height:1.6;margin:0 0 1rem">Guten Tag ${esc(b.name)},<br>vielen Dank für Ihre Anfrage – wir freuen uns, Ihren Wunschtermin zu bestätigen:</p>
+  <table style="width:100%;border-collapse:collapse;font-size:15px;background:#faf6f0;border-radius:12px;overflow:hidden">
+    <tr><td style="padding:12px 14px;color:#756a60">Leistung</td><td style="padding:12px 14px;font-weight:700;text-align:right">${esc(b.service)}</td></tr>
+    <tr><td style="padding:12px 14px;color:#756a60">Datum</td><td style="padding:12px 14px;font-weight:700;text-align:right">${esc(b.appt_date_de)}</td></tr>
+    <tr><td style="padding:12px 14px;color:#756a60">Uhrzeit</td><td style="padding:12px 14px;font-weight:700;text-align:right">${esc(b.appt_time)} Uhr</td></tr>
+  </table>
+  <p style="color:#4a423c;line-height:1.6;margin:1.2rem 0 0">Müssen Sie den Termin verschieben oder absagen? Melden Sie sich gerne unter <strong>05153 - 1552</strong> oder ${esc(REPLY_TO)}.</p>
+  <p style="color:#4a423c;line-height:1.6;margin:1rem 0 0">Herzliche Grüße<br><strong>Ihr de Vries Team</strong><br><span style="color:#756a60">An den Flachsrotten 2 · 31020 Salzhemmendorf</span></p>
+</div>`;
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: RESEND_FROM, to: [b.email], reply_to: REPLY_TO, subject: `Ihr Termin bei de Vries ist bestätigt – ${b.appt_date_de}, ${b.appt_time} Uhr`, html: body }),
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const url = new URL(req.url);
@@ -154,6 +183,7 @@ Deno.serve(async (req) => {
         .select("id").eq("status", "confirmed").eq("appt_date", bk.appt_date).eq("appt_time", bk.appt_time).limit(1);
       if (taken && taken.length) return redirect("taken");
       await admin.from("devries_bookings").update({ status: "confirmed" }).eq("id", bk.id);
+      await mailCustomer(bk);
       return redirect("confirmed");
     } else {
       await admin.from("devries_bookings").update({ status: "declined" }).eq("id", bk.id);
