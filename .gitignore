@@ -17,3 +17,6 @@ v[0-9]*.jpeg
 .DS_Store
 Thumbs.db
 *.log
+
+# Test-Screenshots im Repo-Root (Playwright/QA) nie deployen
+/*.jpeg
