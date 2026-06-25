@@ -260,14 +260,19 @@
       });
     });
 
-    // grey out time slots that are already confirmed for the selected date
+    // grey out time slots that are already confirmed OR already in the past (today)
     function refreshSlots() {
       var taken = bookedMap[selISO] || [];
+      var now = new Date();
+      var isToday = selISO === iso(now);
+      var nowMin = now.getHours() * 60 + now.getMinutes();
       $$(".slot[data-time]").forEach(function (s) {
-        var isTaken = taken.indexOf(s.getAttribute("data-time")) > -1;
-        s.disabled = isTaken;
-        s.classList.toggle("is-taken", isTaken);
-        if (isTaken && s.classList.contains("is-active")) { s.classList.remove("is-active"); form.time.value = ""; updateSummary(); }
+        var t = s.getAttribute("data-time"), p = t.split(":");
+        var past = isToday && (parseInt(p[0], 10) * 60 + parseInt(p[1], 10)) <= nowMin;
+        var dis = taken.indexOf(t) > -1 || past;
+        s.disabled = dis;
+        s.classList.toggle("is-taken", dis);
+        if (dis && s.classList.contains("is-active")) { s.classList.remove("is-active"); form.time.value = ""; updateSummary(); }
       });
     }
 
@@ -277,6 +282,12 @@
       setSum(sumDate, form.date.value);
       setSum(sumTime, form.time.value ? form.time.value + " Uhr" : "");
     }
+
+    // Senden erst möglich, wenn der Datenschutz-Haken gesetzt ist
+    var submitBtn = form.querySelector('button[type="submit"]');
+    function syncConsent() { if (submitBtn && form.consent) submitBtn.disabled = !form.consent.checked; }
+    if (form.consent) form.consent.addEventListener("change", syncConsent);
+    syncConsent();
 
     form.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -308,7 +319,7 @@
             ok("Vielen Dank! Ihre Terminanfrage ist eingegangen – wir bestätigen sie schnellstmöglich.");
             $$(".chip[data-service],.slot[data-time]").forEach(function (x) { x.classList.remove("is-active"); });
             form.reset(); form.service.value = ""; form.date.value = ""; form.time.value = ""; selISO = "";
-            updateSummary();
+            updateSummary(); renderCal(); syncConsent();
           } else if (res.s === 409) {
             fail("Dieser Zeit-Slot ist leider gerade vergeben. Bitte wählen Sie eine andere Uhrzeit.");
           } else {

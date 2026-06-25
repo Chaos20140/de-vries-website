@@ -141,6 +141,7 @@ em { font-style: italic; }
 .btn:hover::before { transform: translateY(0); }
 .btn .btn__arrow { transition: transform var(--t) var(--ease); }
 .btn:hover .btn__arrow { transform: translate(4px, -4px); }
+.btn:disabled, .btn[disabled] { opacity: 0.5; cursor: not-allowed; pointer-events: none; filter: grayscale(0.35); }
 .btn--ghost { --bg: transparent; --fg: var(--ink); border: 1px solid var(--line-strong); }
 .btn--ghost::before { background: var(--ink); }
 .btn--ghost:hover { color: #fff; box-shadow: none; }
