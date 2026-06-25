@@ -147,6 +147,7 @@ Deno.serve(async (req) => {
     const fields: string[] = [];
     if (!service || service.length > 120) fields.push("service");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) fields.push("date");
+    else if (dateISO < new Date().toISOString().slice(0, 10)) fields.push("date"); // keine Termine in der Vergangenheit
     if (SLOTS.indexOf(time) < 0) fields.push("time");
     if (!name || name.length > 120) fields.push("name");
     if (!phone || phone.length > 60) fields.push("phone");
