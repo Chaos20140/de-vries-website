@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=17">
+<link rel="stylesheet" href="assets/css/style.css?v=19">
 </head>
 <body>
 
@@ -79,8 +79,11 @@
     <a class="mnav__link" href="index.html" style="--i:0">Start</a>
     <p class="mnav__label" style="--i:1">Leistungen</p>
     <a class="mnav__link" href="garten-landschaftsbau.html" style="--i:2">Garten &amp; Landschaftsbau</a>
-    <a class="mnav__link" href="seniorenbetreuung.html" style="--i:3">Seniorenbetreuung</a>
-    <div class="mnav__sub" style="--i:4">
+    <button type="button" class="mnav__link mnav__toggle" aria-expanded="false" aria-controls="mnavSenioren" style="--i:3">Seniorenbetreuung
+      <svg class="mnav__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="mnav__sub" id="mnavSenioren" style="--i:4">
+      <a href="seniorenbetreuung.html">Übersicht</a>
       <a href="entlastungsbetrag.html">Entlastungsbetrag</a>
       <a href="pflegeleistungen.html">Pflegesachleistungen</a>
     </div>
@@ -95,7 +98,6 @@
       <svg class="btn__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
     </a>
     <div class="mnav__contact" style="--i:11">
-      <a href="tel:051531552"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>05153 1552</a>
       <a href="mailto:info@andreasdevries.de"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>info@andreasdevries.de</a>
       <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>An den Flachsrotten 2 · 31020 Salzhemmendorf</span>
     </div>
@@ -285,6 +287,6 @@
 </div>
 
 <script src="assets/js/lenis.min.js"></script>
-<script src="assets/js/main.js?v=17"></script>
+<script src="assets/js/main.js?v=19"></script>
 </body>
 </html>

@@ -35,6 +35,15 @@
   if (mobileNav) {
     $("#mobileClose", mobileNav) && $("#mobileClose", mobileNav).addEventListener("click", function () { setMobile(false); });
     $$("a[href]", mobileNav).forEach(function (a) { a.addEventListener("click", function () { setMobile(false); }); });
+    // aufklappbare Einträge (z. B. Seniorenbetreuung)
+    $$(".mnav__toggle", mobileNav).forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var sub = document.getElementById(btn.getAttribute("aria-controls"));
+        var open = btn.getAttribute("aria-expanded") === "true";
+        btn.setAttribute("aria-expanded", open ? "false" : "true");
+        if (sub) sub.classList.toggle("is-open", !open);
+      });
+    });
   }
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") setMobile(false); });
 
