@@ -4,6 +4,14 @@
 > Vor jeder größeren Änderung **erst diese Datei lesen**, dann den eigenen Code hinterfragen.
 > Geschwisterprojekte mit eigenem Stil/eigener CLAUDE.md: `Tolu MainPage` (aggressiv schwarz/rot, F1/Cyber) und `CuraDoma` (React/Vite, soft teal). **de Vries hat einen EIGENEN Look — nicht mit denen vermischen.**
 
+> ## ⚠️ PIVOT (27.06.2026): Nur noch BETREUUNG
+> Die Seite ist jetzt **ausschließlich für Seniorenbetreuung + Haushaltshilfe** (inkl. Entlastungsbetrag, Pflegesachleistungen). **Garten-/Landschaftsbau und die Referenzen-Seite wurden KOMPLETT entfernt** (`garten-landschaftsbau.html` + `referenzen.html` gelöscht, alle Garten-Bilder gelöscht, Nav/Footer/Index/Termin bereinigt, Hero = „Betreuung. Haushalt. Zuhause." mit Pflege-Bild). Garten NICHT wieder einführen.
+> - **Wortmarke** ist nur noch `de Vries` (das `<small>Dienstleistungen</small>` wurde überall entfernt). Logo (`.brand__mark`) ist bewusst größer/kräftiger (Nav 60px, Mobile 48px).
+> - **Nav** jetzt: Start · Seniorenbetreuung ▾ (Übersicht/Entlastungsbetrag/Pflegesachleistungen) · Haushaltshilfe · Stellenangebote · [Termin].
+> - **SEO** ist eingebaut: pro Seite Title/Description/Canonical/OG/Twitter, JSON-LD `LocalBusiness` auf index, `sitemap.xml` + `robots.txt` (Domain: `chaos20140.github.io/de-vries-website/`). Bei neuen Seiten mitpflegen.
+> - **Dropdown-Hover-Fix:** `.has-sub::after` ist eine unsichtbare Brücke über die 12px-Lücke (sonst verschwindet das Untermenü). Nicht entfernen.
+> - **NEUE Bilder** für Senioren/Haushalt sollen noch von einem Pinterest-Account des Nutzers kommen (stand offen). Aktuell nur die vorhandenen `senioren-*`/`haushalt-*`-Bilder.
+
 ---
 
 ## 0. Selbstcheck vor jeder Änderung
