@@ -182,7 +182,7 @@ em { font-style: italic; }
 }
 .nav.is-scrolled { background: rgba(250,246,240,0.94); border-color: var(--line); box-shadow: 0 10px 40px -28px rgba(28,23,20,0.5); }
 .nav__inner { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; padding-block: 1.15rem; }
-.brand { display: inline-flex; align-items: center; gap: 0.7rem; }
+.brand { display: inline-flex; align-items: center; gap: 1.05rem; }
 .brand__mark { width: 60px; height: 60px; flex: none; border-radius: 11px; display: block; object-fit: cover; box-shadow: 0 6px 18px -6px rgba(215,18,10,0.6); }
 .brand__name { font-family: var(--display); font-weight: 700; font-size: 1.5rem; letter-spacing: 0.01em; line-height: 1; color: var(--ink); }
 .brand__name small { display:block; font-family: var(--body); font-size: 0.6rem; letter-spacing: 0.34em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-top: 3px; }
