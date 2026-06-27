@@ -228,23 +228,20 @@ em { font-style: italic; }
 .mobile-nav__close:hover { background: rgba(255,255,255,0.08); }
 
 /* scrollable link area */
-.mobile-nav__body { flex: 1; min-height: 0; overflow: hidden auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.25) transparent; display: flex; flex-direction: column; padding: 1rem 0 1.2rem; }
-.mobile-nav__body::-webkit-scrollbar { width: 5px; }
-.mobile-nav__body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 4px; }
-.mnav__label { font-family: var(--body); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.22em; color: var(--red); margin: 1.15rem 0 0.35rem; }
+.mobile-nav__body { flex: 1; min-height: 0; overflow: hidden auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent; display: flex; flex-direction: column; padding: 0.9rem 0; }
+.mobile-nav__body::-webkit-scrollbar { width: 4px; }
+.mobile-nav__body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+.mnav__label { font-family: var(--body); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.24em; color: rgba(215,18,10,0.85); margin: 1.35rem 0 0.5rem; }
+.mnav__label:first-of-type { margin-top: 0.4rem; }
 
-/* top-level rows */
-.mnav__link { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; font-family: var(--display); font-size: clamp(1.25rem, 4.6vw, 1.5rem); font-weight: 500; color: var(--paper); padding: 0.55rem 0; border-bottom: 1px solid rgba(255,255,255,0.08); transition: color var(--t-fast), padding-left var(--t-fast); }
-.mnav__link::after { content: ""; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); opacity: 0.35; transition: opacity var(--t-fast), transform var(--t-fast); flex: none; }
-.mnav__link:hover, .mnav__link:focus-visible { color: #ff6f63; padding-left: 0.35rem; }
-.mnav__link:hover::after { opacity: 0.9; }
+/* top-level links — ruhig, ohne Trennlinien/Chevrons */
+.mnav__link { font-family: var(--display); font-size: clamp(1.3rem, 4.8vw, 1.55rem); font-weight: 500; color: var(--paper); padding: 0.5rem 0; transition: color var(--t-fast), transform var(--t-fast); transform-origin: left center; }
+.mnav__link:hover, .mnav__link:focus-visible { color: #ff6f63; transform: translateX(5px); }
 .mnav__link[aria-current="page"] { color: var(--red); }
-.mnav__link[aria-current="page"]::after { opacity: 0; }
 
-/* sub-group (Seniorenbetreuung) */
-.mnav__sub { display: flex; flex-direction: column; margin: 0.15rem 0 0.35rem 0.15rem; padding: 0.1rem 0 0.1rem 0.95rem; border-left: 2px solid rgba(255,255,255,0.15); }
-.mnav__sub a { display: flex; align-items: center; font-family: var(--body); font-size: 0.97rem; font-weight: 600; color: rgba(250,246,240,0.7); padding: 0.4rem 0; transition: color var(--t-fast); }
-.mnav__sub a::before { content: "\203A"; margin-right: 0.5rem; color: var(--red); font-size: 1.1em; }
+/* sub-group (Seniorenbetreuung) — nur dezente Einrückung */
+.mnav__sub { display: flex; flex-direction: column; margin: 0.05rem 0 0.2rem; padding-left: 1.15rem; }
+.mnav__sub a { font-family: var(--body); font-size: 1rem; font-weight: 500; color: rgba(250,246,240,0.58); padding: 0.45rem 0; transition: color var(--t-fast); }
 .mnav__sub a:hover, .mnav__sub a:focus-visible { color: var(--paper); }
 .mnav__sub a[aria-current="page"] { color: var(--red); }
 
