@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="de Vries Logo">
+  <rect width="100" height="100" rx="14" fill="#d7120a"/>
+  <g fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- D: Stamm + Bogen -->
+    <path d="M27 15 V61 M27 15 H43 C61 15 61 61 43 61 H27"/>
+    <!-- V: langer rechter Arm bis oben rechts, Spitze unten, kurzer linker Arm -->
+    <path d="M82 13 L59 69 L47 39"/>
+  </g>
+  <text x="50" y="84" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" letter-spacing="2" text-anchor="middle">DE VRIES</text>
+</svg>
