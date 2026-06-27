@@ -34,14 +34,14 @@
   if (burger) burger.addEventListener("click", function () { setMobile(true); });
   if (mobileNav) {
     $("#mobileClose", mobileNav) && $("#mobileClose", mobileNav).addEventListener("click", function () { setMobile(false); });
-    $$(".mobile-nav__links a", mobileNav).forEach(function (a) { a.addEventListener("click", function () { setMobile(false); }); });
+    $$("a[href]", mobileNav).forEach(function (a) { a.addEventListener("click", function () { setMobile(false); }); });
   }
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") setMobile(false); });
 
   /* ---------- active nav link ---------- */
   (function () {
     var here = location.pathname.split("/").pop() || "index.html";
-    $$(".nav__links a, .mobile-nav__links a").forEach(function (a) {
+    $$(".nav__links a, #mobileNav a[href]").forEach(function (a) {
       var href = (a.getAttribute("href") || "").split("/").pop();
       if (href && href === here) a.setAttribute("aria-current", "page");
     });
