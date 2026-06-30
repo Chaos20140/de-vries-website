@@ -1,0 +1,20 @@
+# Jekyll-Konfiguration (nötig, damit GitHub Pages + das CMS funktionieren).
+# Bestehende HTML-Seiten haben KEIN Front-Matter -> Jekyll kopiert sie 1:1
+# (Design/SEO bleiben unverändert). Nur Dateien, die ich bewusst aufs CMS
+# umstelle, werden später von Jekyll verarbeitet.
+
+title: "de Vries"
+description: "Seniorenbetreuung & Haushaltshilfe in Salzhemmendorf"
+
+# Diese Dateien/Ordner NICHT mit veröffentlichen:
+exclude:
+  - CLAUDE.md
+  - README.md
+  - SETUP-BUCHUNG.md
+  - SETUP-CMS.md
+  - supabase
+  - Gemfile
+  - Gemfile.lock
+  - "*.jpeg"
+  - ".scrape"
+  - "vendor"
