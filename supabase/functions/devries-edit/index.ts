@@ -70,13 +70,20 @@ Deno.serve(async (req) => {
   if (!GH_TOKEN || !EDIT_PW) return json({ error: "not_configured" }, 503);
 
   const admin = createClient(SB_URL, SB_SR);
-  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
+  // Echte Client-IP = LETZTER X-Forwarded-For-Eintrag (vom vertrauenswürdigen Edge-Proxy
+  // angehängt). Vom Client selbst gespoofte Werte stehen weiter links -> werden ignoriert.
+  const xff = (req.headers.get("x-forwarded-for") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const ip = xff[xff.length - 1] || "unknown";
 
-  // Rate-Limit: >= 10 Fehlversuche je IP in 15 Min -> sperren
+  // Rate-Limit (Brute-Force-Schutz): pro IP >=10 ODER global >=60 Fehlversuche in 15 Min -> 429.
+  // Der globale Zähler fängt verteilte Versuche ab (IP-Rotation); harte Sperre nur 15 Min und
+  // betrifft nur den Editor, nie die öffentliche Seite.
   const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-  const { count } = await admin.from("devries_edit_log")
-    .select("*", { count: "exact", head: true }).eq("ip", ip).eq("ok", false).gte("created_at", since);
-  if ((count || 0) >= 10) return json({ error: "rate_limited" }, 429);
+  const [perIp, global] = await Promise.all([
+    admin.from("devries_edit_log").select("*", { count: "exact", head: true }).eq("ip", ip).eq("ok", false).gte("created_at", since),
+    admin.from("devries_edit_log").select("*", { count: "exact", head: true }).eq("ok", false).gte("created_at", since),
+  ]);
+  if ((perIp.count || 0) >= 10 || (global.count || 0) >= 60) return json({ error: "rate_limited" }, 429);
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "bad_json" }, 400); }
