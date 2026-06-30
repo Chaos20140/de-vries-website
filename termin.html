@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=29">
+<link rel="stylesheet" href="assets/css/style.css?v=30">
 </head>
 <body>
 
@@ -51,19 +51,19 @@
     </a>
     <nav aria-label="Hauptmenü">
       <ul class="nav__links">
-        <li><a href="index.html">Start</a></li>
-        <li class="has-sub"><a href="seniorenbetreuung.html">Seniorenbetreuung</a>
+        <li><a href="index.html" data-eds="lbl-start">Start</a></li>
+        <li class="has-sub"><a href="seniorenbetreuung.html" data-eds="lbl-senioren">Seniorenbetreuung</a>
           <ul class="subnav">
-            <li><a href="seniorenbetreuung.html">Seniorenbetreuung</a></li>
-            <li><a href="entlastungsbetrag.html">Entlastungsbetrag</a></li>
-            <li><a href="pflegeleistungen.html">Pflegesachleistungen</a></li>
+            <li><a href="seniorenbetreuung.html" data-eds="lbl-senioren">Seniorenbetreuung</a></li>
+            <li><a href="entlastungsbetrag.html" data-eds="lbl-entlastung">Entlastungsbetrag</a></li>
+            <li><a href="pflegeleistungen.html" data-eds="lbl-pflege">Pflegesachleistungen</a></li>
           </ul>
         </li>
-        <li><a href="haushaltshilfe.html">Haushaltshilfe</a></li>
-        <li><a href="stellenangebote.html">Stellenangebote</a></li>
+        <li><a href="haushaltshilfe.html" data-eds="lbl-haushalt">Haushaltshilfe</a></li>
+        <li><a href="stellenangebote.html" data-eds="lbl-stellen">Stellenangebote</a></li>
       </ul>
     </nav>
-    <a href="termin.html" class="btn nav__cta nav__cta--desktop" data-magnetic="0.25">Termin buchen
+    <a href="termin.html" class="btn nav__cta nav__cta--desktop" data-magnetic="0.25"><span data-eds="lbl-termin">Termin buchen</span>
       <svg class="btn__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
     </a>
     <button class="nav__burger" id="navBurger" aria-label="Menü öffnen"><span></span><span></span><span></span></button>
@@ -79,23 +79,23 @@
     <button class="mobile-nav__close" id="mobileClose" aria-label="Menü schließen">×</button>
   </div>
   <nav class="mobile-nav__body" aria-label="Mobiles Hauptmenü">
-    <a class="mnav__link" href="index.html" style="--i:0">Start</a>
-    <p class="mnav__label" style="--i:1">Leistungen</p>
-    <button type="button" class="mnav__link mnav__toggle" aria-expanded="false" aria-controls="mnavSenioren" style="--i:3">Seniorenbetreuung
+    <a class="mnav__link" href="index.html" style="--i:0" data-eds="lbl-start">Start</a>
+    <p class="mnav__label" style="--i:1" data-eds="lbl-grp-leistungen">Leistungen</p>
+    <button type="button" class="mnav__link mnav__toggle" aria-expanded="false" aria-controls="mnavSenioren" style="--i:3"><span data-eds="lbl-senioren">Seniorenbetreuung</span>
       <svg class="mnav__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
     </button>
     <div class="mnav__sub" id="mnavSenioren" style="--i:4">
-      <a href="seniorenbetreuung.html">Übersicht</a>
-      <a href="entlastungsbetrag.html">Entlastungsbetrag</a>
-      <a href="pflegeleistungen.html">Pflegesachleistungen</a>
+      <a href="seniorenbetreuung.html" data-eds="lbl-uebersicht">Übersicht</a>
+      <a href="entlastungsbetrag.html" data-eds="lbl-entlastung">Entlastungsbetrag</a>
+      <a href="pflegeleistungen.html" data-eds="lbl-pflege">Pflegesachleistungen</a>
     </div>
-    <a class="mnav__link" href="haushaltshilfe.html" style="--i:5">Haushaltshilfe</a>
-    <p class="mnav__label" style="--i:6">Mehr</p>
-    <a class="mnav__link" href="stellenangebote.html" style="--i:8">Stellenangebote</a>
-    <a class="mnav__link" href="kontakt.html" style="--i:9">Kontakt</a>
+    <a class="mnav__link" href="haushaltshilfe.html" style="--i:5" data-eds="lbl-haushalt">Haushaltshilfe</a>
+    <p class="mnav__label" style="--i:6" data-eds="lbl-grp-mehr">Mehr</p>
+    <a class="mnav__link" href="stellenangebote.html" style="--i:8" data-eds="lbl-stellen">Stellenangebote</a>
+    <a class="mnav__link" href="kontakt.html" style="--i:9" data-eds="lbl-kontakt">Kontakt</a>
   </nav>
   <div class="mobile-nav__foot">
-    <a class="btn mnav__cta" href="termin.html" style="--i:10">Termin buchen
+    <a class="btn mnav__cta" href="termin.html" style="--i:10"><span data-eds="lbl-termin">Termin buchen</span>
       <svg class="btn__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
     </a>
     <div class="mnav__contact" style="--i:11">
@@ -228,29 +228,30 @@
         </div>
       </div>
       <div class="footer__col">
-        <h4>Leistungen</h4>
-        <a href="seniorenbetreuung.html">Seniorenbetreuung</a>
-        <a href="entlastungsbetrag.html">Entlastungsbetrag</a>
-        <a href="pflegeleistungen.html">Pflegesachleistungen</a>
-        <a href="haushaltshilfe.html">Haushaltshilfe</a>
+        <h4 data-eds="lbl-foot-leistungen">Leistungen</h4>
+        <a href="seniorenbetreuung.html" data-eds="lbl-senioren">Seniorenbetreuung</a>
+        <a href="entlastungsbetrag.html" data-eds="lbl-entlastung">Entlastungsbetrag</a>
+        <a href="pflegeleistungen.html" data-eds="lbl-pflege">Pflegesachleistungen</a>
+        <a href="haushaltshilfe.html" data-eds="lbl-haushalt">Haushaltshilfe</a>
       </div>
       <div class="footer__col">
-        <h4>Informationen</h4>
-        <a href="impressum.html">Impressum</a>
-        <a href="datenschutz.html">Datenschutz</a>
-        <a href="stellenangebote.html">Stellenangebote</a>
+        <h4 data-eds="lbl-foot-informationen">Informationen</h4>
+        <a href="impressum.html" data-eds="lbl-impressum">Impressum</a>
+        <a href="datenschutz.html" data-eds="lbl-datenschutz">Datenschutz</a>
+        <a href="stellenangebote.html" data-eds="lbl-stellen">Stellenangebote</a>
       </div>
       <div class="footer__col">
-        <h4>Kontakt</h4>
-        <a href="termin.html">Termin buchen</a>
+        <h4 data-eds="lbl-foot-kontakt">Kontakt</h4>
+        <a href="termin.html" data-eds="lbl-termin">Termin buchen</a>
         <a href="tel:051531552">05153 1552</a>
         <a href="mailto:info@andreasdevries.de">info@andreasdevries.de</a>
-        <a href="kontakt.html">Kontaktformular</a>
+        <a href="kontakt.html" data-eds="lbl-kontaktformular">Kontaktformular</a>
       </div>
     </div>
     <div class="footer__bottom">
       <span>© <span data-year>2026</span> de Vries · Salzhemmendorf</span>
       <span>Seniorenbetreuung · Haushaltshilfe</span>
+      <span class="footer__credit">Erstellt &amp; designed von <a href="https://axion-studio.de/index.html" target="_blank" rel="noopener">Axion Studio</a></span>
     </div>
   </div>
 </footer>
@@ -264,7 +265,7 @@
 </div>
 
 <script src="assets/js/lenis.min.js"></script>
-<script src="assets/js/booking-config.js?v=29"></script>
-<script src="assets/js/main.js?v=29"></script>
+<script src="assets/js/booking-config.js?v=30"></script>
+<script src="assets/js/main.js?v=30"></script>
 </body>
 </html>

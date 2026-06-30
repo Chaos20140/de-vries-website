@@ -105,6 +105,28 @@ function putFile(path: string, contentB64: string, sha: string | undefined, mess
   return gh(`contents/${path}`, { method: "PUT",
     body: JSON.stringify({ message, content: contentB64, sha, branch: GH_BRANCH }) });
 }
+// Mehrere Dateien in EINEM Commit ändern (Git Data API) – für geteilte Blöcke (Menü/Footer),
+// damit alle Seiten konsistent in einem einzigen Build aktualisiert werden.
+async function commitMulti(files: { path: string; contentB64: string }[], message: string): Promise<boolean> {
+  const refR = await gh(`git/ref/heads/${GH_BRANCH}`);
+  if (!refR.ok) return false;
+  const headSha = (await refR.json()).object.sha;
+  const commitR = await gh(`git/commits/${headSha}`);
+  if (!commitR.ok) return false;
+  const baseTree = (await commitR.json()).tree.sha;
+  const tree: unknown[] = [];
+  for (const f of files) {
+    const bR = await gh(`git/blobs`, { method: "POST", body: JSON.stringify({ content: f.contentB64, encoding: "base64" }) });
+    if (!bR.ok) return false;
+    tree.push({ path: f.path, mode: "100644", type: "blob", sha: (await bR.json()).sha });
+  }
+  const treeR = await gh(`git/trees`, { method: "POST", body: JSON.stringify({ base_tree: baseTree, tree }) });
+  if (!treeR.ok) return false;
+  const ncR = await gh(`git/commits`, { method: "POST", body: JSON.stringify({ message, tree: (await treeR.json()).sha, parents: [headSha] }) });
+  if (!ncR.ok) return false;
+  const updR = await gh(`git/refs/heads/${GH_BRANCH}`, { method: "PATCH", body: JSON.stringify({ sha: (await ncR.json()).sha }) });
+  return updR.ok;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -199,6 +221,32 @@ Deno.serve(async (req) => {
       try { sha = (await getFile(path)).sha; } catch { sha = undefined; }
       const r = await putFile(path, data, sha, "Editor: Bild aktualisiert (" + slot + ")");
       return r.ok ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
+    }
+
+    if (body.action === "save-shared") {
+      // Geteilte Menü-/Footer-Beschriftungen (data-eds="…") – auf ALLEN Seiten gleich.
+      const shared = (body.shared || {}) as Record<string, string>;
+      const keys = Object.keys(shared);
+      if (!keys.length) return json({ error: "empty" }, 400);
+      for (const k of keys) {
+        if (!/^[a-z0-9-]{1,48}$/.test(k)) return json({ error: "bad_key", field: k }, 400);
+        if (typeof shared[k] !== "string" || shared[k].length > 200) return json({ error: "too_long", field: k }, 400);
+      }
+      const changedFiles: { path: string; contentB64: string }[] = [];
+      for (const page of PAGES) {
+        const f = await getFile(page);
+        let html = f.text, changed = false;
+        for (const k of keys) {
+          const re = new RegExp('(data-eds="' + k + '"[^>]*>)([^<]*)(</)', "g"); // global: jedes Vorkommen pro Seite
+          const nv = esc(shared[k]);
+          const nh = html.replace(re, (_m, a, _b, c) => a + nv + c);
+          if (nh !== html) { html = nh; changed = true; }
+        }
+        if (changed) changedFiles.push({ path: page, contentB64: utf8B64(html) });
+      }
+      if (!changedFiles.length) return json({ error: "marker_missing" }, 400);
+      const okShared = await commitMulti(changedFiles, "Editor: Menü/Footer aktualisiert");
+      return okShared ? json({ ok: true, updated: changedFiles.length }) : json({ error: "commit_failed" }, 500);
     }
 
     return json({ error: "bad_action" }, 400);

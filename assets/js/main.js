@@ -404,7 +404,16 @@
       + '#dvBar{position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#1c1714;color:#fff;display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;justify-content:center;padding:.6rem 1rem;font:14px system-ui,-apple-system,sans-serif;box-shadow:0 -10px 30px rgba(0,0,0,.35)}'
       + '#dvBar button{border:0;border-radius:999px;padding:.55em 1.25em;font-weight:700;cursor:pointer;font-size:.92rem}'
       + '#dvBar .s{background:#d7120a;color:#fff}#dvBar .x{background:#fff;color:#1c1714}'
-      + '#dvBar .m{font-size:.82rem;opacity:.85;flex:1 1 100%;text-align:center;order:-1}';
+      + '#dvBar .m{font-size:.82rem;opacity:.85;flex:1 1 100%;text-align:center;order:-1}'
+      + '#dvPanel{position:fixed;inset:0;z-index:2147483646;background:rgba(28,23,20,.55);display:flex;align-items:center;justify-content:center;padding:1rem;font:14px system-ui,-apple-system,sans-serif}'
+      + '#dvPanel .box{background:#fff;color:#1c1714;border-radius:14px;max-width:520px;width:100%;max-height:85vh;overflow:auto;padding:1.4rem 1.5rem;box-shadow:0 40px 90px -40px rgba(0,0,0,.6)}'
+      + '#dvPanel h3{margin:0 0 .15rem;font-size:1.2rem}#dvPanel .sub{color:#756a60;font-size:.85rem;margin:0 0 .3rem}'
+      + '#dvPanel .grp{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#a50d07;margin:1.1rem 0 .2rem}'
+      + '#dvPanel label{display:block;font-size:.78rem;color:#756a60;margin:.5rem 0 .12rem}'
+      + '#dvPanel input{width:100%;padding:.5rem .6rem;border:1px solid rgba(28,23,20,.18);border-radius:8px;font:inherit}'
+      + '#dvPanel .row{display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.2rem;position:sticky;bottom:-1px;background:#fff;padding:.7rem 0}'
+      + '#dvPanel button{border:0;border-radius:999px;padding:.6em 1.3em;font-weight:700;cursor:pointer}'
+      + '#dvPanel .ok{background:#d7120a;color:#fff}#dvPanel .cancel{background:#eee;color:#1c1714}';
     document.head.appendChild(st);
 
     var picker = document.createElement("input");
@@ -464,10 +473,12 @@
     var bar = document.createElement("div"); bar.id = "dvBar";
     bar.innerHTML = '<span class="m" id="dvMsg">Bearbeitungsmodus aktiv · Text/Bild anklicken & ändern · andere Seiten normal über das Menü</span>'
       + '<button class="s" id="dvSave">💾 Diese Seite speichern</button>'
+      + '<button class="x" id="dvShared">🧭 Menü &amp; Footer</button>'
       + '<button class="x" id="dvReload">🔄 Aktualisieren</button>'
       + '<button class="x" id="dvExit">🚪 Verlassen</button>';
     document.body.appendChild(bar);
     document.getElementById("dvSave").addEventListener("click", save);
+    document.getElementById("dvShared").addEventListener("click", openShared);
     // Cache umgehen + frisch laden (GitHub Pages cached Seiten einige Minuten)
     document.getElementById("dvReload").addEventListener("click", function () {
       location.href = location.pathname + "?r=" + Date.now();
@@ -475,6 +486,48 @@
     document.getElementById("dvExit").addEventListener("click", function () {
       localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK);
       location.href = location.pathname; // ohne Cache-Buster, normaler Stand
+    });
+  }
+
+  // Geteilte Menü-/Footer-Beschriftungen bearbeiten (Panel) -> save-shared -> alle Seiten
+  var SHARED_ORDER = [
+    ["Menü", ["lbl-start", "Start"], ["lbl-senioren", "Seniorenbetreuung"], ["lbl-haushalt", "Haushaltshilfe"], ["lbl-stellen", "Stellenangebote"], ["lbl-kontakt", "Kontakt (mobil)"]],
+    ["Menü-Dropdown", ["lbl-uebersicht", "Übersicht"], ["lbl-entlastung", "Entlastungsbetrag"], ["lbl-pflege", "Pflegesachleistungen"]],
+    ["Buttons", ["lbl-termin", "Termin buchen"]],
+    ["Footer-Überschriften", ["lbl-foot-leistungen", "Leistungen"], ["lbl-foot-informationen", "Informationen"], ["lbl-foot-kontakt", "Kontakt"]],
+    ["Footer-Links", ["lbl-impressum", "Impressum"], ["lbl-datenschutz", "Datenschutz"], ["lbl-kontaktformular", "Kontaktformular"]],
+    ["Menü-Gruppen (mobil)", ["lbl-grp-leistungen", "Gruppe: Leistungen"], ["lbl-grp-mehr", "Gruppe: Mehr"]]
+  ];
+  function openShared() {
+    if (document.getElementById("dvPanel")) return;
+    var vals = {};
+    var nodes = document.querySelectorAll("[data-eds]");
+    for (var i = 0; i < nodes.length; i++) { var k = nodes[i].getAttribute("data-eds"); if (!(k in vals)) vals[k] = nodes[i].textContent.trim(); }
+    var html = '<div class="box"><h3>Menü &amp; Footer bearbeiten</h3><p class="sub">Änderungen gelten automatisch auf <b>allen Seiten</b>.</p>';
+    for (var g = 0; g < SHARED_ORDER.length; g++) {
+      var grp = SHARED_ORDER[g], shown = "";
+      for (var j = 1; j < grp.length; j++) {
+        var key = grp[j][0]; if (!(key in vals)) continue;
+        if (!shown) { html += '<div class="grp">' + grp[0] + "</div>"; shown = "1"; }
+        html += '<label>' + grp[j][1] + '</label><input data-k="' + key + '">';
+      }
+    }
+    html += '<div class="row"><button class="cancel" id="dvPx">Abbrechen</button><button class="ok" id="dvPok">Übernehmen</button></div></div>';
+    var wrap = document.createElement("div"); wrap.id = "dvPanel"; wrap.innerHTML = html;
+    document.body.appendChild(wrap);
+    var inputs = wrap.querySelectorAll("input[data-k]");
+    for (var n = 0; n < inputs.length; n++) { inputs[n].value = vals[inputs[n].getAttribute("data-k")] || ""; }
+    function close() { wrap.remove(); }
+    document.getElementById("dvPx").addEventListener("click", close);
+    wrap.addEventListener("click", function (e) { if (e.target === wrap) close(); });
+    document.getElementById("dvPok").addEventListener("click", function () {
+      var shared = {}, ins = wrap.querySelectorAll("input[data-k]");
+      for (var m = 0; m < ins.length; m++) { shared[ins[m].getAttribute("data-k")] = ins[m].value.replace(/\s+/g, " ").trim(); }
+      var ok = document.getElementById("dvPok"); ok.disabled = true; ok.textContent = "Speichert …";
+      call({ action: "save-shared", shared: shared }).then(function (res) {
+        if (res.ok) { close(); msg("✓ Menü/Footer gespeichert (alle Seiten) – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); }
+        else { ok.disabled = false; ok.textContent = "Übernehmen"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); }
+      }).catch(function () { ok.disabled = false; ok.textContent = "Übernehmen"; msg("Verbindungsfehler."); });
     });
   }
 
