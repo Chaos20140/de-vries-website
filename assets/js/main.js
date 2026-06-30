@@ -445,11 +445,17 @@
     var bar = document.createElement("div"); bar.id = "dvBar";
     bar.innerHTML = '<span class="m" id="dvMsg">Bearbeitungsmodus aktiv · Text/Bild anklicken & ändern · andere Seiten normal über das Menü</span>'
       + '<button class="s" id="dvSave">💾 Diese Seite speichern</button>'
+      + '<button class="x" id="dvReload">🔄 Aktualisieren</button>'
       + '<button class="x" id="dvExit">🚪 Verlassen</button>';
     document.body.appendChild(bar);
     document.getElementById("dvSave").addEventListener("click", save);
+    // Cache umgehen + frisch laden (GitHub Pages cached Seiten einige Minuten)
+    document.getElementById("dvReload").addEventListener("click", function () {
+      location.href = location.pathname + "?r=" + Date.now();
+    });
     document.getElementById("dvExit").addEventListener("click", function () {
-      localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK); location.reload();
+      localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK);
+      location.href = location.pathname; // ohne Cache-Buster, normaler Stand
     });
   }
 
@@ -465,7 +471,7 @@
       }
       var slots = Object.keys(pending);
       (function next(k) {
-        if (k >= slots.length) { msg("✓ Gespeichert – in 1–2 Min live!"); if (btn) btn.disabled = false; return; }
+        if (k >= slots.length) { msg("✓ Gespeichert! Seite wird neu gebaut (~1–3 Min) – danach „🔄 Aktualisieren" klicken."); if (btn) btn.disabled = false; return; }
         msg("Bild wird gespeichert …");
         call({ action: "upload-image", slot: slots[k], dataBase64: pending[slots[k]] }).then(function (r2) {
           if (r2.ok) delete pending[slots[k]]; next(k + 1);
