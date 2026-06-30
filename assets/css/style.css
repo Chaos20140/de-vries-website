@@ -37,7 +37,7 @@
   --fs-h3: clamp(1.5rem, 1.2rem + 1.4vw, 2.4rem);
   --fs-h2: clamp(2rem, 1.4rem + 3vw, 4rem);
   --fs-h1: clamp(2.8rem, 1.6rem + 6vw, 8rem);
-  --fs-mega: clamp(3.4rem, 1.5rem + 9vw, 11rem);
+  --fs-mega: clamp(2.4rem, 1.1rem + 5.5vw, 6.5rem);
 
   /* spacing */
   --gap: clamp(1rem, 0.6rem + 2vw, 2rem);
