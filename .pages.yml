@@ -1,0 +1,25 @@
+# Konfiguration für Pages CMS (https://pagescms.org) – der Komfort-Editor.
+# Login: app.pagescms.org -> "Sign in with GitHub" -> dieses Repo freigeben.
+# Bearbeiten -> Speichern -> GitHub Pages baut automatisch neu (1-2 Min).
+
+media:
+  input: assets/img        # wo die Bilder im Repo liegen
+  output: assets/img       # wie sie auf der Seite verlinkt werden (relativ)
+  categories: [image]
+
+content:
+  # ── Kontaktdaten (werden in Stufe 2 in alle Seiten eingebunden) ──
+  - name: kontakt
+    label: "Kontaktdaten & Öffnungszeiten"
+    type: file
+    path: _data/site.yml
+    icon: phone
+    fields:
+      - { name: telefon, label: "Telefon (angezeigt)", type: string }
+      - { name: telefon_link, label: "Telefon-Link (nur Ziffern, z. B. 051531552)", type: string }
+      - { name: email, label: "E-Mail", type: string }
+      - { name: strasse, label: "Straße", type: string }
+      - { name: plz_ort, label: "PLZ & Ort", type: string }
+      - { name: oeffnungszeiten, label: "Öffnungszeiten", type: text }
+  # Bilder werden über die eingebaute Medien-Verwaltung hochgeladen/ersetzt
+  # (oben unter "media:" konfiguriert) – keine eigene Inhalts-Sektion nötig.
