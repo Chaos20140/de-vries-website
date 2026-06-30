@@ -471,7 +471,7 @@
       }
       var slots = Object.keys(pending);
       (function next(k) {
-        if (k >= slots.length) { msg("✓ Gespeichert! Seite wird neu gebaut (~1–3 Min) – danach „🔄 Aktualisieren" klicken."); if (btn) btn.disabled = false; return; }
+        if (k >= slots.length) { msg("✓ Gespeichert! Seite wird neu gebaut (~1–3 Min) – danach auf Aktualisieren klicken."); if (btn) btn.disabled = false; return; }
         msg("Bild wird gespeichert …");
         call({ action: "upload-image", slot: slots[k], dataBase64: pending[slots[k]] }).then(function (r2) {
           if (r2.ok) delete pending[slots[k]]; next(k + 1);
