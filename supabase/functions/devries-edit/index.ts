@@ -180,6 +180,7 @@ Deno.serve(async (req) => {
       if (!PAGES.has(file)) return json({ error: "bad_file" }, 400);
       const fields = (body.fields || {}) as Record<string, string>;
       const rich   = (body.rich   || {}) as Record<string, string>;
+      const positions = (body.positions || {}) as Record<string, string>;
       for (const k of Object.keys(fields)) {
         if (!/^[a-z0-9-]{1,48}$/.test(k)) return json({ error: "bad_key", field: k }, 400); // verhindert Regex-Injection
         if (typeof fields[k] !== "string" || fields[k].length > 3000) return json({ error: "too_long", field: k }, 400);
@@ -188,8 +189,22 @@ Deno.serve(async (req) => {
         if (!/^[a-z0-9-]{1,48}$/.test(k)) return json({ error: "bad_key", field: k }, 400);
         if (typeof rich[k] !== "string" || rich[k].length > 8000) return json({ error: "too_long", field: k }, 400);
       }
+      for (const slot of Object.keys(positions)) {
+        if (!(slot in IMG_SLOTS)) return json({ error: "bad_slot", field: slot }, 400);
+        const m = /^(\d{1,3})% (\d{1,3})%$/.exec(positions[slot]);
+        if (!m || +m[1] > 100 || +m[2] > 100) return json({ error: "bad_pos", field: slot }, 400);
+      }
       const f = await getFile(file);
       let html = f.text;
+      // 0) Bildausschnitt (object-position) als Inline-Style am passenden <img data-ed-img="slot">
+      for (const [slot, val] of Object.entries(positions)) {
+        const re = new RegExp('<img\\b[^>]*\\bdata-ed-img="' + slot + '"[^>]*>');
+        if (!re.test(html)) return json({ error: "marker_missing", field: slot }, 400);
+        html = html.replace(re, (tag) => {
+          const t = tag.replace(/\s*style="object-position:[^"]*"/i, ""); // alte Position raus
+          return t.replace(/>$/, ' style="object-position:' + val + '">');
+        });
+      }
       // 1) reine Text-Marker (data-ed) – Inhalt wird komplett escaped
       for (const [k, v] of Object.entries(fields)) {
         const re = new RegExp('(data-ed="' + k + '"[^>]*>)([^<]*)(</)');

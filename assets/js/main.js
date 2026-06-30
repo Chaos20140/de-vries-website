@@ -385,7 +385,8 @@
   var FN = "https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-edit";
   var pw = localStorage.getItem(PWK) || "";
   var file = (location.pathname.split("/").pop() || "index.html"); if (file.indexOf(".html") < 0) file = "index.html";
-  var pending = {}; // slot -> base64
+  var pending = {}; // slot -> base64 (neues Bild)
+  var pendingPos = {}; // slot -> "X% Y%" (Bildausschnitt/Position)
 
   function call(p) {
     p.password = pw;
@@ -448,15 +449,36 @@
       rel.setAttribute("contenteditable", "true"); rel.setAttribute("spellcheck", "false");
       rel.addEventListener("keydown", noEnter);
     }
-    // Bilder klickbar – NUR echte Nutzer-Klicks öffnen die Dateiauswahl (isTrusted),
-    // damit kein automatischer/synthetischer Klick den Dialog auslöst.
+    // Bilder: Tippen = ersetzen (nur echte Klicks, isTrusted), Ziehen = Ausschnitt verschieben.
+    function clampPct(v) { return v < 0 ? 0 : v > 100 ? 100 : v; }
     var imgs = document.querySelectorAll("[data-ed-img]");
     for (var j = 0; j < imgs.length; j++) {
       (function (img) {
-        img.title = "Klicken, um dieses Bild zu ersetzen";
+        img.title = "Tippen: Bild ersetzen · Ziehen: Ausschnitt positionieren";
+        img.style.cursor = "move"; img.style.touchAction = "none";
+        var sx, sy, px, py, dragging = false, didDrag = false;
+        img.addEventListener("pointerdown", function (e) {
+          if (!e.isTrusted) return;
+          dragging = true; didDrag = false; sx = e.clientX; sy = e.clientY;
+          var p = (img.style.objectPosition || "50% 50%").split(/\s+/);
+          px = parseFloat(p[0]); py = parseFloat(p[1]); if (isNaN(px)) px = 50; if (isNaN(py)) py = 50;
+          try { img.setPointerCapture(e.pointerId); } catch (_e) {}
+        });
+        img.addEventListener("pointermove", function (e) {
+          if (!dragging) return;
+          var dx = e.clientX - sx, dy = e.clientY - sy;
+          if (!didDrag && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) didDrag = true;
+          if (!didDrag) return;
+          var nx = clampPct(px - dx / (img.clientWidth || 1) * 100);
+          var ny = clampPct(py - dy / (img.clientHeight || 1) * 100);
+          img.style.objectPosition = nx + "% " + ny + "%";
+          pendingPos[img.getAttribute("data-ed-img")] = Math.round(nx) + "% " + Math.round(ny) + "%";
+        });
+        img.addEventListener("pointerup", function () { if (dragging && didDrag) msg("Bildausschnitt geändert – bitte speichern."); dragging = false; });
         img.addEventListener("click", function (e) {
           if (!e.isTrusted) return;
           e.preventDefault(); e.stopPropagation();
+          if (didDrag) { didDrag = false; return; } // war ein Ziehen -> NICHT ersetzen
           target = img; slot = img.getAttribute("data-ed-img"); picker.value = ""; picker.click();
         });
       })(imgs[j]);
@@ -538,7 +560,7 @@
     for (var i = 0; i < eds.length; i++) { fields[eds[i].getAttribute("data-ed")] = eds[i].textContent.replace(/\s+/g, " ").trim(); }
     var rich = {}, rds = document.querySelectorAll("[data-ed-rich]");
     for (var ri = 0; ri < rds.length; ri++) { rich[rds[ri].getAttribute("data-ed-rich")] = rds[ri].innerHTML; }
-    call({ action: "save-page", file: file, fields: fields, rich: rich }).then(function (res) {
+    call({ action: "save-page", file: file, fields: fields, rich: rich, positions: pendingPos }).then(function (res) {
       if (!res.ok) {
         msg(res.status === 401 ? "Falsches Passwort – bitte über /admin neu anmelden." : (res.status === 429 ? "Zu viele Versuche – bitte später." : "Fehler: " + (res.d.error || res.status)));
         if (btn) btn.disabled = false; return;
