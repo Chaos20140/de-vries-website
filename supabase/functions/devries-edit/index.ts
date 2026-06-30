@@ -23,6 +23,34 @@ const json = (b: unknown, s = 200) =>
 const esc = (s: string) =>
   s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
 
+// Erlaubte Link-Ziele (kein javascript:, data: o.ä.)
+function safeHref(h: string): boolean {
+  h = (h || "").trim();
+  return /^https?:\/\//i.test(h) || /^mailto:/i.test(h) || /^tel:/i.test(h)
+      || /^[\w./-]+\.html(#[\w-]+)?$/i.test(h) || /^#[\w-]+$/.test(h);
+}
+// Rich-Text-Sanitizer (Escape-First-Allowlist): zuerst ALLES neutralisieren, dann
+// nur eine winzige Allowlist sicherer Inline-Tags + sichere Links wiederherstellen.
+// Alles andere (script, on*-Handler, style, beliebige Tags) bleibt neutralisierter
+// Text -> XSS ist konstruktionsbedingt ausgeschlossen.
+function sanitizeRich(html: string): string {
+  // Eingabe ist bereits HTML (innerHTML) -> nur nackte & escapen, bestehende
+  // Entities (&amp; &quot; &#39; …) NICHT doppelt-escapen.
+  let s = html
+    .replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;")
+    .replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  s = s.replace(/&lt;(\/?)(strong|b|em|i)&gt;/gi, "<$1$2>");
+  s = s.replace(/&lt;br\s*\/?&gt;/gi, "<br>");
+  s = s.replace(/&lt;a\b[\s\S]*?&gt;/gi, (m) => {
+    const hm = m.match(/href=(?:&quot;|&#39;)([\s\S]*?)(?:&quot;|&#39;)/i);
+    const href = hm ? hm[1] : "";
+    return safeHref(href) ? '<a href="' + href + '">' : "";
+  });
+  s = s.replace(/&lt;\/a&gt;/gi, "</a>");
+  s = s.replace(/&lt;\/?[a-z][\s\S]*?&gt;/gi, ""); // übrige (nicht erlaubte) Tags raus, Text bleibt
+  return s;
+}
+
 // Passwortvergleich in konstanter Zeit (gegen Timing-Angriffe)
 function ctEq(a: string, b: string): boolean {
   const ea = new TextEncoder().encode(a), eb = new TextEncoder().encode(b);
@@ -129,16 +157,28 @@ Deno.serve(async (req) => {
       const file = body.file as string;
       if (!PAGES.has(file)) return json({ error: "bad_file" }, 400);
       const fields = (body.fields || {}) as Record<string, string>;
+      const rich   = (body.rich   || {}) as Record<string, string>;
       for (const k of Object.keys(fields)) {
         if (!/^[a-z0-9-]{1,48}$/.test(k)) return json({ error: "bad_key", field: k }, 400); // verhindert Regex-Injection
         if (typeof fields[k] !== "string" || fields[k].length > 3000) return json({ error: "too_long", field: k }, 400);
       }
+      for (const k of Object.keys(rich)) {
+        if (!/^[a-z0-9-]{1,48}$/.test(k)) return json({ error: "bad_key", field: k }, 400);
+        if (typeof rich[k] !== "string" || rich[k].length > 8000) return json({ error: "too_long", field: k }, 400);
+      }
       const f = await getFile(file);
       let html = f.text;
+      // 1) reine Text-Marker (data-ed) – Inhalt wird komplett escaped
       for (const [k, v] of Object.entries(fields)) {
         const re = new RegExp('(data-ed="' + k + '"[^>]*>)([^<]*)(</)');
         if (!re.test(html)) return json({ error: "marker_missing", field: k }, 400);
         html = html.replace(re, (_m, a, _b, c) => a + esc(v) + c);
+      }
+      // 2) Rich-Marker (data-ed-rich) – Inhalt darf erlaubte Inline-Tags/Links, wird sanitized
+      for (const [k, v] of Object.entries(rich)) {
+        const re = new RegExp('(<([a-zA-Z0-9]+)\\b[^>]*\\bdata-ed-rich="' + k + '"[^>]*>)([\\s\\S]*?)(</\\2>)');
+        if (!re.test(html)) return json({ error: "marker_missing", field: k }, 400);
+        html = html.replace(re, (_m, open, _tag, _inner, close) => open + sanitizeRich(v) + close);
       }
       const r = await putFile(file, utf8B64(html), f.sha, "Editor: Inhalt aktualisiert (" + file + ")");
       return r.ok ? json({ ok: true }) : json({ error: "commit_failed" }, 500);

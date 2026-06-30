@@ -423,24 +423,43 @@
       im.src = url;
     });
 
-    // Texte editierbar machen (flatten entfernt Lauf-Spans wie reveal-words)
+    function noEnter(e) { if (e.key === "Enter") e.preventDefault(); }
+    // Reine Text-Felder editierbar machen (flatten entfernt Lauf-Spans wie reveal-words)
     var eds = document.querySelectorAll("[data-ed]");
     for (var i = 0; i < eds.length; i++) {
       var el = eds[i];
       try { el.textContent = el.textContent; } catch (e) {}
       el.setAttribute("contenteditable", "true"); el.setAttribute("spellcheck", "false");
-      el.addEventListener("keydown", function (e) { if (e.key === "Enter") e.preventDefault(); });
+      el.addEventListener("keydown", noEnter);
     }
-    // Bilder klickbar
+    // Rich-Felder (Absätze mit Links/Fett) editierbar machen – Tags bleiben erhalten
+    var rds = document.querySelectorAll("[data-ed-rich]");
+    for (var r0 = 0; r0 < rds.length; r0++) {
+      var rel = rds[r0];
+      rel.setAttribute("contenteditable", "true"); rel.setAttribute("spellcheck", "false");
+      rel.addEventListener("keydown", noEnter);
+    }
+    // Bilder klickbar – NUR echte Nutzer-Klicks öffnen die Dateiauswahl (isTrusted),
+    // damit kein automatischer/synthetischer Klick den Dialog auslöst.
     var imgs = document.querySelectorAll("[data-ed-img]");
     for (var j = 0; j < imgs.length; j++) {
       (function (img) {
         img.title = "Klicken, um dieses Bild zu ersetzen";
-        img.addEventListener("click", function (e) { e.preventDefault(); target = img; slot = img.getAttribute("data-ed-img"); picker.value = ""; picker.click(); });
+        img.addEventListener("click", function (e) {
+          if (!e.isTrusted) return;
+          e.preventDefault(); e.stopPropagation();
+          target = img; slot = img.getAttribute("data-ed-img"); picker.value = ""; picker.click();
+        });
       })(imgs[j]);
     }
-    // Klick auf editierbares Element soll nicht navigieren (z. B. in Karten-Links)
-    document.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("[data-ed],[data-ed-img]")) e.preventDefault(); }, true);
+    // Links sollen im Edit-Modus NICHT navigieren, wenn sie editierbaren Inhalt enthalten
+    // (Karten-Links) oder selbst in einem Rich-Feld liegen (Link-Text bearbeitbar).
+    // Echte Menü-/Nav-Links funktionieren weiter normal.
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest && e.target.closest("a[href]");
+      if (!a) return;
+      if (a.closest("[data-ed-rich]") || a.querySelector("[data-ed],[data-ed-img]")) e.preventDefault();
+    }, true);
 
     var bar = document.createElement("div"); bar.id = "dvBar";
     bar.innerHTML = '<span class="m" id="dvMsg">Bearbeitungsmodus aktiv · Text/Bild anklicken & ändern · andere Seiten normal über das Menü</span>'
@@ -464,7 +483,9 @@
     msg("Wird gespeichert …");
     var fields = {}, eds = document.querySelectorAll("[data-ed]");
     for (var i = 0; i < eds.length; i++) { fields[eds[i].getAttribute("data-ed")] = eds[i].textContent.replace(/\s+/g, " ").trim(); }
-    call({ action: "save-page", file: file, fields: fields }).then(function (res) {
+    var rich = {}, rds = document.querySelectorAll("[data-ed-rich]");
+    for (var ri = 0; ri < rds.length; ri++) { rich[rds[ri].getAttribute("data-ed-rich")] = rds[ri].innerHTML; }
+    call({ action: "save-page", file: file, fields: fields, rich: rich }).then(function (res) {
       if (!res.ok) {
         msg(res.status === 401 ? "Falsches Passwort – bitte über /admin neu anmelden." : (res.status === 429 ? "Zu viele Versuche – bitte später." : "Fehler: " + (res.d.error || res.status)));
         if (btn) btn.disabled = false; return;
