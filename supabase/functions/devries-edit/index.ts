@@ -37,7 +37,21 @@ const HOME_FIELDS: Record<string, number> = {
   "hero-eyebrow": 90, "hero-line1": 24, "hero-line2": 24, "hero-line3": 24, "hero-lead": 340,
 };
 // Whitelist: ersetzbare Bild-Slots -> feste Pfade (keine beliebigen Dateien!)
-const IMG_SLOTS: Record<string, string> = { "hero": "assets/img/senioren-zuhause.jpg" };
+const IMG_SLOTS: Record<string, string> = {
+  "hero": "assets/img/senioren-zuhause.jpg",
+  "senioren-zuhause": "assets/img/senioren-zuhause.jpg",
+  "senioren-familie": "assets/img/senioren-familie.jpg",
+  "senioren-pflege": "assets/img/senioren-pflege.jpg",
+  "senioren-entlastung": "assets/img/senioren-entlastung.jpg",
+  "haushalt-alltag": "assets/img/haushalt-alltag.jpg",
+  "haushalt-reinigung": "assets/img/haushalt-reinigung.jpg",
+};
+// Whitelist: bearbeitbare Seiten (keine beliebigen Pfade)
+const PAGES = new Set([
+  "index.html","seniorenbetreuung.html","haushaltshilfe.html","entlastungsbetrag.html",
+  "pflegeleistungen.html","kontakt.html","stellenangebote.html","impressum.html",
+  "datenschutz.html","termin.html",
+]);
 
 function gh(path: string, init: RequestInit = {}) {
   return fetch(`https://api.github.com/repos/${GH_REPO}/${path}`, {
@@ -108,6 +122,25 @@ Deno.serve(async (req) => {
         html = html.replace(re, (_m, a, _b, c) => a + esc(v) + c);
       }
       const r = await putFile("index.html", utf8B64(html), f.sha, "Editor: Startseiten-Texte aktualisiert");
+      return r.ok ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
+    }
+
+    if (body.action === "save-page") {
+      const file = body.file as string;
+      if (!PAGES.has(file)) return json({ error: "bad_file" }, 400);
+      const fields = (body.fields || {}) as Record<string, string>;
+      for (const k of Object.keys(fields)) {
+        if (!/^[a-z0-9-]{1,48}$/.test(k)) return json({ error: "bad_key", field: k }, 400); // verhindert Regex-Injection
+        if (typeof fields[k] !== "string" || fields[k].length > 3000) return json({ error: "too_long", field: k }, 400);
+      }
+      const f = await getFile(file);
+      let html = f.text;
+      for (const [k, v] of Object.entries(fields)) {
+        const re = new RegExp('(data-ed="' + k + '"[^>]*>)([^<]*)(</)');
+        if (!re.test(html)) return json({ error: "marker_missing", field: k }, 400);
+        html = html.replace(re, (_m, a, _b, c) => a + esc(v) + c);
+      }
+      const r = await putFile(file, utf8B64(html), f.sha, "Editor: Inhalt aktualisiert (" + file + ")");
       return r.ok ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
     }
 

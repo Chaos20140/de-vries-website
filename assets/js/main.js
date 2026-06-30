@@ -370,3 +370,110 @@
   initLenis();
   applyScroll();
 })();
+
+/* ============================================================
+   Inhalts-Editor (Bearbeitungsmodus) – läuft NUR, wenn über /admin
+   aktiviert (localStorage-Flag). Für normale Besucher: sofortiger Abbruch.
+   Speichern -> gehärtete Supabase-Function -> Commit -> GitHub Pages baut neu.
+   ============================================================ */
+(function () {
+  var FLAG = "dv_edit", PWK = "dv_edit_pw", TSK = "dv_edit_ts";
+  try { if (localStorage.getItem(FLAG) !== "1") return; } catch (e) { return; }
+  if (Date.now() - (parseInt(localStorage.getItem(TSK), 10) || 0) > 3 * 3600 * 1000) {
+    localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK); return;
+  }
+  var FN = "https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-edit";
+  var pw = localStorage.getItem(PWK) || "";
+  var file = (location.pathname.split("/").pop() || "index.html"); if (file.indexOf(".html") < 0) file = "index.html";
+  var pending = {}; // slot -> base64
+
+  function call(p) {
+    p.password = pw;
+    return fetch(FN, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, ok: r.ok, d: d }; }); });
+  }
+  function msg(m) { var e = document.getElementById("dvMsg"); if (e) e.textContent = m; }
+
+  function start() {
+    var st = document.createElement("style");
+    st.textContent =
+      '[data-ed],[data-ed-img]{outline:2px dashed rgba(215,18,10,.55);outline-offset:2px}'
+      + '[data-ed]:hover,[data-ed-img]:hover{outline-style:solid;outline-color:#d7120a}'
+      + '[data-ed]{cursor:text}[data-ed-img]{cursor:pointer}'
+      + '[data-ed][contenteditable]:focus{outline:2px solid #d7120a;background:rgba(215,18,10,.08)}'
+      + '#dvBar{position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#1c1714;color:#fff;display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;justify-content:center;padding:.6rem 1rem;font:14px system-ui,-apple-system,sans-serif;box-shadow:0 -10px 30px rgba(0,0,0,.35)}'
+      + '#dvBar button{border:0;border-radius:999px;padding:.55em 1.25em;font-weight:700;cursor:pointer;font-size:.92rem}'
+      + '#dvBar .s{background:#d7120a;color:#fff}#dvBar .x{background:#fff;color:#1c1714}'
+      + '#dvBar .m{font-size:.82rem;opacity:.85;flex:1 1 100%;text-align:center;order:-1}';
+    document.head.appendChild(st);
+
+    var picker = document.createElement("input");
+    picker.type = "file"; picker.accept = "image/jpeg,image/png,image/webp"; picker.style.display = "none";
+    document.body.appendChild(picker);
+    var target = null, slot = null;
+    picker.addEventListener("change", function () {
+      var f = picker.files[0]; if (!f || !target) return;
+      var im = new Image(), url = URL.createObjectURL(f);
+      im.onload = function () {
+        var max = 1400, w = im.width, h = im.height; if (w > max) { h = Math.round(h * max / w); w = max; }
+        var c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(im, 0, 0, w, h);
+        var du = c.toDataURL("image/jpeg", 0.82); target.src = du; pending[slot] = du.split(",")[1];
+        URL.revokeObjectURL(url); msg("Neues Bild gewählt – bitte speichern.");
+      };
+      im.src = url;
+    });
+
+    // Texte editierbar machen (flatten entfernt Lauf-Spans wie reveal-words)
+    var eds = document.querySelectorAll("[data-ed]");
+    for (var i = 0; i < eds.length; i++) {
+      var el = eds[i];
+      try { el.textContent = el.textContent; } catch (e) {}
+      el.setAttribute("contenteditable", "true"); el.setAttribute("spellcheck", "false");
+      el.addEventListener("keydown", function (e) { if (e.key === "Enter") e.preventDefault(); });
+    }
+    // Bilder klickbar
+    var imgs = document.querySelectorAll("[data-ed-img]");
+    for (var j = 0; j < imgs.length; j++) {
+      (function (img) {
+        img.title = "Klicken, um dieses Bild zu ersetzen";
+        img.addEventListener("click", function (e) { e.preventDefault(); target = img; slot = img.getAttribute("data-ed-img"); picker.value = ""; picker.click(); });
+      })(imgs[j]);
+    }
+    // Klick auf editierbares Element soll nicht navigieren (z. B. in Karten-Links)
+    document.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("[data-ed],[data-ed-img]")) e.preventDefault(); }, true);
+
+    var bar = document.createElement("div"); bar.id = "dvBar";
+    bar.innerHTML = '<span class="m" id="dvMsg">Bearbeitungsmodus aktiv · Text/Bild anklicken & ändern · andere Seiten normal über das Menü</span>'
+      + '<button class="s" id="dvSave">💾 Diese Seite speichern</button>'
+      + '<button class="x" id="dvExit">🚪 Verlassen</button>';
+    document.body.appendChild(bar);
+    document.getElementById("dvSave").addEventListener("click", save);
+    document.getElementById("dvExit").addEventListener("click", function () {
+      localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK); location.reload();
+    });
+  }
+
+  function save() {
+    var btn = document.getElementById("dvSave"); if (btn) btn.disabled = true;
+    msg("Wird gespeichert …");
+    var fields = {}, eds = document.querySelectorAll("[data-ed]");
+    for (var i = 0; i < eds.length; i++) { fields[eds[i].getAttribute("data-ed")] = eds[i].textContent.replace(/\s+/g, " ").trim(); }
+    call({ action: "save-page", file: file, fields: fields }).then(function (res) {
+      if (!res.ok) {
+        msg(res.status === 401 ? "Falsches Passwort – bitte über /admin neu anmelden." : (res.status === 429 ? "Zu viele Versuche – bitte später." : "Fehler: " + (res.d.error || res.status)));
+        if (btn) btn.disabled = false; return;
+      }
+      var slots = Object.keys(pending);
+      (function next(k) {
+        if (k >= slots.length) { msg("✓ Gespeichert – in 1–2 Min live!"); if (btn) btn.disabled = false; return; }
+        msg("Bild wird gespeichert …");
+        call({ action: "upload-image", slot: slots[k], dataBase64: pending[slots[k]] }).then(function (r2) {
+          if (r2.ok) delete pending[slots[k]]; next(k + 1);
+        });
+      })(0);
+    }).catch(function () { msg("Verbindungsfehler."); if (btn) btn.disabled = false; });
+  }
+
+  if (document.body) start();
+  else document.addEventListener("DOMContentLoaded", start);
+})();

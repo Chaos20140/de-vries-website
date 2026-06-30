@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=26">
+<link rel="stylesheet" href="assets/css/style.css?v=27">
 </head>
 <body>
 
@@ -110,9 +110,9 @@
 <section class="phero">
   <div class="wrap">
     <p class="phero__crumb"><a href="index.html">Start</a> / Termin buchen</p>
-    <span class="eyebrow">Terminbuchung</span>
-    <h1 class="mt-s">Termin direkt online anfragen</h1>
-    <p class="lead">Wählen Sie Ihre Leistung, ein Wunschdatum und eine Uhrzeit – wir bestätigen Ihren Termin schnellstmöglich telefonisch oder per E-Mail. Kostenlos und unverbindlich.</p>
+    <span class="eyebrow" data-ed="termin-16">Terminbuchung</span>
+    <h1 class="mt-s" data-ed="termin-1">Termin direkt online anfragen</h1>
+    <p class="lead" data-ed="termin-2">Wählen Sie Ihre Leistung, ein Wunschdatum und eine Uhrzeit – wir bestätigen Ihren Termin schnellstmöglich telefonisch oder per E-Mail. Kostenlos und unverbindlich.</p>
   </div>
 </section>
 
@@ -126,7 +126,7 @@
         <div class="booking-steps">
 
           <div class="bstep" data-reveal>
-            <div class="bstep__head"><span class="bstep__num">1</span><div><h3>Leistung wählen</h3><p class="bstep__hint">Worum geht es?</p></div></div>
+            <div class="bstep__head"><span class="bstep__num">1</span><div><h3 data-ed="termin-3">Leistung wählen</h3><p class="bstep__hint" data-ed="termin-4">Worum geht es?</p></div></div>
             <div class="chip-group">
               <button type="button" class="chip" data-accent="blue" data-service="Ambulante Seniorenbetreuung"><span class="dot"></span>Ambulante Seniorenbetreuung</button>
               <button type="button" class="chip" data-accent="blue" data-service="Stationäre Seniorenbetreuung"><span class="dot"></span>Stationäre Seniorenbetreuung</button>
@@ -136,7 +136,7 @@
           </div>
 
           <div class="bstep" data-reveal>
-            <div class="bstep__head"><span class="bstep__num">2</span><div><h3>Wunschdatum</h3><p class="bstep__hint">Montag bis Freitag verfügbar</p></div></div>
+            <div class="bstep__head"><span class="bstep__num">2</span><div><h3 data-ed="termin-5">Wunschdatum</h3><p class="bstep__hint" data-ed="termin-6">Montag bis Freitag verfügbar</p></div></div>
             <div class="calendar">
               <div class="cal__head">
                 <button type="button" class="cal__nav" id="calPrev" aria-label="Vorheriger Monat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -148,7 +148,7 @@
           </div>
 
           <div class="bstep" data-reveal>
-            <div class="bstep__head"><span class="bstep__num">3</span><div><h3>Uhrzeit</h3><p class="bstep__hint">Montag – Freitag, 8:00 bis 16:00 Uhr</p></div></div>
+            <div class="bstep__head"><span class="bstep__num">3</span><div><h3 data-ed="termin-7">Uhrzeit</h3><p class="bstep__hint" data-ed="termin-8">Montag – Freitag, 8:00 bis 16:00 Uhr</p></div></div>
             <div class="slot-group" id="slotGroup">
               <button type="button" class="slot" data-time="08:00">08:00</button>
               <button type="button" class="slot" data-time="09:00">09:00</button>
@@ -162,7 +162,7 @@
           </div>
 
           <div class="bstep" data-reveal>
-            <div class="bstep__head"><span class="bstep__num">4</span><div><h3>Ihre Kontaktdaten</h3><p class="bstep__hint">Damit wir Sie erreichen können</p></div></div>
+            <div class="bstep__head"><span class="bstep__num">4</span><div><h3 data-ed="termin-9">Ihre Kontaktdaten</h3><p class="bstep__hint" data-ed="termin-10">Damit wir Sie erreichen können</p></div></div>
             <div class="form">
               <div class="form__row">
                 <div class="field"><label for="bf-name">Name *</label><input id="bf-name" name="name" type="text" autocomplete="name" placeholder="Ihr Name"></div>
@@ -177,7 +177,7 @@
         </div>
 
         <aside class="booking__summary" data-reveal>
-          <h3>Ihre Terminanfrage</h3>
+          <h3 data-ed="termin-11">Ihre Terminanfrage</h3>
           <div class="summary-row"><span class="lbl">Leistung</span><span class="val empty" id="sumService">Noch nicht gewählt</span></div>
           <div class="summary-row"><span class="lbl">Datum</span><span class="val empty" id="sumDate">Noch nicht gewählt</span></div>
           <div class="summary-row"><span class="lbl">Uhrzeit</span><span class="val empty" id="sumTime">Noch nicht gewählt</span></div>
@@ -196,14 +196,14 @@
   <div class="wrap">
     <div class="section__head section__head--center">
       <div>
-        <span class="eyebrow is-center">So einfach geht's</span>
-        <h2 class="mt-s reveal-words">In drei Schritten zum Termin</h2>
+        <span class="eyebrow is-center" data-ed="termin-17">So einfach geht's</span>
+        <h2 class="mt-s reveal-words" data-ed="termin-12">In drei Schritten zum Termin</h2>
       </div>
     </div>
     <div class="how-grid" data-stagger>
-      <div class="how-step"><div class="how-step__num">01</div><h4>Anfrage senden</h4><p>Wählen Sie Leistung, Wunschdatum und Uhrzeit und schicken Sie uns Ihre Terminanfrage – in unter einer Minute.</p></div>
-      <div class="how-step"><div class="how-step__num">02</div><h4>Wir melden uns</h4><p>Wir prüfen Ihren Wunschtermin und bestätigen ihn schnellstmöglich telefonisch oder per E-Mail.</p></div>
-      <div class="how-step"><div class="how-step__num">03</div><h4>Termin wahrnehmen</h4><p>Wir kommen zu Ihnen, hören zu und finden gemeinsam die beste Unterstützung – ganz unkompliziert.</p></div>
+      <div class="how-step"><div class="how-step__num">01</div><h4>Anfrage senden</h4><p data-ed="termin-13">Wählen Sie Leistung, Wunschdatum und Uhrzeit und schicken Sie uns Ihre Terminanfrage – in unter einer Minute.</p></div>
+      <div class="how-step"><div class="how-step__num">02</div><h4>Wir melden uns</h4><p data-ed="termin-14">Wir prüfen Ihren Wunschtermin und bestätigen ihn schnellstmöglich telefonisch oder per E-Mail.</p></div>
+      <div class="how-step"><div class="how-step__num">03</div><h4>Termin wahrnehmen</h4><p data-ed="termin-15">Wir kommen zu Ihnen, hören zu und finden gemeinsam die beste Unterstützung – ganz unkompliziert.</p></div>
     </div>
   </div>
 </section>
@@ -264,7 +264,7 @@
 </div>
 
 <script src="assets/js/lenis.min.js"></script>
-<script src="assets/js/booking-config.js?v=26"></script>
-<script src="assets/js/main.js?v=26"></script>
+<script src="assets/js/booking-config.js?v=27"></script>
+<script src="assets/js/main.js?v=27"></script>
 </body>
 </html>

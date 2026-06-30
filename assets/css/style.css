@@ -503,7 +503,7 @@ em { font-style: italic; }
 .footer__giant { font-family: var(--display); font-size: clamp(3.5rem,8vw,11rem); line-height: 0.9; color: rgba(255,255,255,0.05); white-space: nowrap; position: absolute; bottom: 4.5rem; left: 0; pointer-events: none; user-select:none; }
 .footer__grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: clamp(1.5rem,1rem + 2vw,3rem); position: relative; z-index: 1; }
 .footer h4 { color: #fff; font-family: var(--body); font-size: 0.78rem; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; margin-bottom: 1.2rem; }
-.footer__brand .brand { flex-direction: column; align-items: flex-start; gap: 1rem; }
+.footer__brand .brand { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
 .footer__brand .brand__name { color: #fff; }
 .footer__brand .brand__name small { color: rgba(255,255,255,0.5); }
 .footer__col a, .footer__col p { display: block; color: rgba(250,246,240,0.7); font-size: 0.95rem; margin-bottom: 0.85rem; transition: color var(--t-fast); }
