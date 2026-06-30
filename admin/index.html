@@ -177,7 +177,7 @@
       img.addEventListener("click",function(e){ e.preventDefault(); picker.click(); });
       picker.addEventListener("change",function(){
         var f=picker.files[0]; if(!f) return;
-        resizeFile(f,function(dataUrl,b64){ img.src=dataUrl; pendingImg=b64; setMsg(doc,"Neues Bild gewählt – „Speichern" nicht vergessen."); });
+        resizeFile(f,function(dataUrl,b64){ img.src=dataUrl; pendingImg=b64; setMsg(doc,"Neues Bild gewählt – bitte unten speichern."); });
       });
     }
 
