@@ -557,7 +557,7 @@ em { font-style: italic; }
 .route { position: relative; max-width: 740px; margin: 2.6rem auto 0; }
 /* Desktop: Route bricht aus der Inhaltsspalte aus und reicht fast bis an die Seitenränder */
 @media (min-width: 641px){
-  .route { width: min(96vw, 1320px); max-width: none; margin-top: 3rem; margin-inline: 0; left: 50%; transform: translateX(-50%); }
+  .route { width: min(100vw, 2000px); max-width: none; margin-top: 3rem; margin-inline: 0; left: 50%; transform: translateX(-50%); }
 }
 .route__svg { display: block; width: 100%; height: auto; overflow: visible; }
 .route__road { stroke: var(--line-strong); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1 15; }
@@ -622,6 +622,10 @@ em { font-style: italic; }
   .route__stop--right { flex-direction: row-reverse; transform: translate(-100%, -50%); }
   /* Flüssiges Scrollen: teuren Dauer-Repaint (Fluss-Animation) auf Mobil abschalten */
   .route__map-water { animation: none; }
+  /* Mobil: alle Hintergrund-Animationen ruhen -> nur das Auto bewegt sich (keine Dauer-Repaints) */
+  .route__map-cloud, .route__map-bird, .route__car-bob { animation: none; }
+  .route__sun, .route__glow-ring, .route__dust { display: none; }
+  .route__stop.is-active .route__stop-dot { animation: none; }
 }
 
 /* ---------- 18. COOKIE ---------- */

@@ -207,9 +207,14 @@
     var lastDir = 1;
     routeUpdate = function (p) {
       p = Math.max(0, Math.min(1, p));
-      if (done) done.style.strokeDashoffset = len * (1 - p);
-      // Mobil: Karte sofort komplett sichtbar (kein teures Neu-Clippen pro Frame) -> flüssiges Scrollen
-      if (mapClip) mapClip.setAttribute("height", mqSmall.matches ? VBH : p * VBH);
+      // Mobil: Strecke + Karte fest gezeichnet (idempotent -> nur beim ersten Mal geschrieben, kein Per-Frame-Repaint)
+      if (mqSmall.matches) {
+        if (done && done.style.strokeDashoffset !== "0") done.style.strokeDashoffset = 0;
+        if (mapClip && +mapClip.getAttribute("height") !== VBH) mapClip.setAttribute("height", VBH);
+      } else {
+        if (done) done.style.strokeDashoffset = len * (1 - p);
+        if (mapClip) mapClip.setAttribute("height", p * VBH);
+      }
       var fi = p * SEG, i0 = fi | 0; if (i0 > SEG - 1) i0 = SEG - 1;
       var pt = pts[i0], pn = pts[i0 + 1], t = fi - i0;
       var cx = pt.x + (pn.x - pt.x) * t, cy = pt.y + (pn.y - pt.y) * t;
