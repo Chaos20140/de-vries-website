@@ -531,10 +531,12 @@ em { font-style: italic; }
 .footer__giant { font-family: var(--display); font-size: clamp(3.5rem,8vw,11rem); line-height: 0.9; color: rgba(255,255,255,0.05); white-space: nowrap; position: absolute; bottom: 4.5rem; left: 0; pointer-events: none; user-select:none; }
 .footer__grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: clamp(1.5rem,1rem + 2vw,3rem); position: relative; z-index: 1; }
 .footer h4 { color: #fff; font-family: var(--body); font-size: 0.78rem; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; margin-bottom: 1.2rem; }
-.footer__brand .brand { display: flex; flex-direction: column; align-items: flex-start; gap: 3.25rem; }
+.footer__brand .brand { display: flex; flex-direction: row; align-items: center; gap: 0.85rem; }
 .footer__brand .brand__name { color: #fff; }
 .footer__brand .brand__name small { color: rgba(255,255,255,0.5); }
-.footer__brand .brand { margin-top: 1rem; }
+.footer__brand .brand { margin-top: 0; margin-bottom: 1.15rem; }
+.footer__brand .brand__mark { flex: none; }
+.footer__brand .brand__name { font-size: 1.5rem; line-height: 1; }
 .footer__addr { font-family: var(--display); font-style: normal; font-size: 1.3rem; line-height: 1.45; color: #fff; margin-top: 2rem; }
 .footer__hours { color: rgba(250,246,240,0.7); font-size: 0.95rem; line-height: 1.6; margin-top: 1.1rem; }
 .footer__hours strong { color: #fff; }
@@ -566,7 +568,7 @@ em { font-style: italic; }
 .route__stop--right { transform: translate(0, -50%); }
 .route__stop.is-active .route__stop-dot { background: var(--red); border-color: var(--red); box-shadow: 0 0 0 5px var(--red-soft); animation: dotPop 0.55s ease-out; }
 .route__stop.is-active .route__stop-label { color: var(--red); }
-.route__car { transition: transform 0.1s linear; }
+.route__car { transition: transform 0.1s linear; will-change: transform; }
 .route__map-bg { fill: var(--paper-2); stroke: var(--line-strong); stroke-width: 2; }
 .route__map-grid { stroke: var(--line); stroke-width: 1; opacity: 0.5; }
 .route__map-blob { fill: var(--paper-3); opacity: 0.5; }
@@ -578,15 +580,15 @@ em { font-style: italic; }
 .route__map-forest { fill: var(--green); opacity: 0.16; }
 .route__map-compass { fill: none; stroke: var(--muted); stroke-width: 1.5; opacity: 0.45; }
 .route__map-compass-n { fill: var(--red); opacity: 0.5; }
-.route__map-cloud { fill: #ffffff; opacity: 0.5; animation: cloudDrift var(--dur, 52s) linear infinite; animation-delay: var(--delay, 0s); }
-.route__map-bird { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; opacity: 0.4; animation: birdDrift var(--dur, 30s) linear infinite; animation-delay: var(--delay, 0s); }
+.route__map-cloud { fill: #ffffff; opacity: 0.5; animation: cloudDrift var(--dur, 52s) linear infinite; animation-delay: var(--delay, 0s); will-change: transform; }
+.route__map-bird { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; opacity: 0.4; animation: birdDrift var(--dur, 30s) linear infinite; animation-delay: var(--delay, 0s); will-change: transform; }
 @keyframes routeFlow { to { stroke-dashoffset: -46; } }
 @keyframes cloudDrift { from { transform: translateX(-190px); } to { transform: translateX(960px); } }
 @keyframes birdDrift { from { transform: translateX(-90px); } to { transform: translateX(920px); } }
 @keyframes dotPop { 0% { transform: scale(0.5); } 55% { transform: scale(1.3); } 100% { transform: scale(1); } }
-.route__car-bob { animation: carBob 1.2s ease-in-out infinite; }
+.route__car-bob { animation: carBob 1.2s ease-in-out infinite; will-change: transform; }
 .route__dust { fill: var(--muted); opacity: 0; transform-box: fill-box; transform-origin: center; animation: dust 1.1s ease-out infinite; animation-delay: var(--d, 0s); }
-.route__sun { animation: sunDrift 64s ease-in-out infinite alternate; }
+.route__sun { animation: sunDrift 64s ease-in-out infinite alternate; will-change: transform; }
 .route__glow-core { fill: var(--red); opacity: 0.5; }
 .route__glow-ring { fill: none; stroke: var(--red); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: cityGlow 2.8s ease-out infinite; animation-delay: var(--gd, 0s); }
 @keyframes carBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.4px); } }
@@ -610,7 +612,12 @@ em { font-style: italic; }
 @media (max-width: 640px){
   .route { max-width: 460px; }
   .route__stop { gap: 0.3em; }
-  .route__stop-label { max-width: 98px; font-size: 0.72rem; padding: 0.2em 0.45em; line-height: 1.1; }
+  .route__stop-label { max-width: min(45vw, 150px); font-size: 0.74rem; padding: 0.2em 0.5em; line-height: 1.12; overflow-wrap: anywhere; }
+  /* Ortsnamen nach INNEN (zur Bildmitte) klappen -> ragen nie über den Bildrand hinaus */
+  .route__stop--left  { flex-direction: row;         transform: translate(0, -50%); }
+  .route__stop--right { flex-direction: row-reverse; transform: translate(-100%, -50%); }
+  /* Flüssiges Scrollen: teuren Dauer-Repaint (Fluss-Animation) auf Mobil abschalten */
+  .route__map-water { animation: none; }
 }
 
 /* ---------- 18. COOKIE ---------- */

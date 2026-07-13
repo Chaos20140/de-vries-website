@@ -185,6 +185,10 @@
     var len = 0;
     try { len = road.getTotalLength(); } catch (e) { return; }
     if (!len) return;
+    // Perf: Strecke EINMAL abtasten -> pro Scroll-Frame nur Array-Lookup statt 3x getPointAtLength (mobil flüssig)
+    var SEG = 300, pts = new Array(SEG + 1);
+    for (var sp = 0; sp <= SEG; sp++) pts[sp] = road.getPointAtLength(sp / SEG * len);
+    var mqSmall = window.matchMedia("(max-width: 640px)");
     var stops = [];
     places.forEach(function (name, i) {
       var frac = places.length > 1 ? 0.03 + (i / (places.length - 1)) * 0.94 : 0.5;
@@ -204,14 +208,14 @@
     routeUpdate = function (p) {
       p = Math.max(0, Math.min(1, p));
       if (done) done.style.strokeDashoffset = len * (1 - p);
-      if (mapClip) mapClip.setAttribute("height", p * VBH);
-      var at = p * len;
-      var pt = road.getPointAtLength(at);
-      var a = road.getPointAtLength(Math.min(len, at + 3));
-      var b = road.getPointAtLength(Math.max(0, at - 3));
-      var dx = a.x - b.x;
-      if (Math.abs(dx) > 0.6) lastDir = dx > 0 ? 1 : -1;
-      carG.setAttribute("transform", "translate(" + pt.x + " " + (pt.y - 9) + ") scale(" + lastDir + " 1)");
+      // Mobil: Karte sofort komplett sichtbar (kein teures Neu-Clippen pro Frame) -> flüssiges Scrollen
+      if (mapClip) mapClip.setAttribute("height", mqSmall.matches ? VBH : p * VBH);
+      var fi = p * SEG, i0 = fi | 0; if (i0 > SEG - 1) i0 = SEG - 1;
+      var pt = pts[i0], pn = pts[i0 + 1], t = fi - i0;
+      var cx = pt.x + (pn.x - pt.x) * t, cy = pt.y + (pn.y - pt.y) * t;
+      var dx = pn.x - pt.x;
+      if (Math.abs(dx) > 0.4) lastDir = dx > 0 ? 1 : -1;
+      carG.setAttribute("transform", "translate(" + cx + " " + (cy - 9) + ") scale(" + lastDir + " 1)");
       for (var i = 0; i < stops.length; i++) {
         stops[i].el.classList.toggle("is-active", stops[i].frac <= p + 0.004);
       }
