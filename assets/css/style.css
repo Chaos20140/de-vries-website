@@ -555,6 +555,10 @@ em { font-style: italic; }
 
 /* ---------- Einzugsgebiet / Serpentinen-Route ---------- */
 .route { position: relative; max-width: 740px; margin: 2.6rem auto 0; }
+/* Desktop: Route bricht aus der Inhaltsspalte aus und reicht fast bis an die Seitenränder */
+@media (min-width: 641px){
+  .route { width: min(96vw, 1320px); max-width: none; margin-top: 3rem; margin-inline: 0; left: 50%; transform: translateX(-50%); }
+}
 .route__svg { display: block; width: 100%; height: auto; overflow: visible; }
 .route__road { stroke: var(--line-strong); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1 15; }
 .route__road-case { stroke: #ffffff; stroke-width: 13; stroke-linecap: round; opacity: 0.8; }
