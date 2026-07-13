@@ -9,7 +9,8 @@
   :root{--red:#d7120a;--ink:#1c1714;--muted:#756a60;--paper:#faf6f0;--line:rgba(28,23,20,.14);--ok:#3b932b}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--paper);color:var(--ink);line-height:1.55;display:grid;place-items:center;min-height:100vh;padding:1.4rem}
-  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:1.8rem;max-width:440px;width:100%;box-shadow:0 40px 80px -55px rgba(28,23,20,.5)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:1.8rem;max-width:460px;width:100%;box-shadow:0 40px 80px -55px rgba(28,23,20,.5)}
+  .card.dash{max-width:640px}
   .logo{display:inline-grid;place-items:center;width:50px;height:50px;border-radius:11px;background:var(--red);color:#fff;font-weight:800;letter-spacing:1px;font-size:1.3rem;margin-bottom:1rem}
   h1{font-size:1.45rem;margin-bottom:.3rem}
   p.sub{color:var(--muted);font-size:.95rem;margin-bottom:1.3rem}
@@ -17,53 +18,134 @@
   input{width:100%;padding:.8rem .9rem;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--paper)}
   .btn{display:inline-flex;align-items:center;gap:.4em;border:0;border-radius:999px;background:var(--red);color:#fff;font-weight:700;font-size:1rem;padding:.85em 1.6em;cursor:pointer;margin-top:1.1rem;transition:transform .15s,opacity .2s}
   .btn:hover{transform:translateY(-1px)} .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.ghost{background:#eee;color:var(--ink)}
   .status{font-size:.92rem;margin-top:.9rem;min-height:1.2em}
   .status.ok{color:var(--ok)} .status.err{color:var(--red)}
   .how{margin-top:1.4rem;padding-top:1.1rem;border-top:1px solid var(--line);font-size:.88rem;color:var(--muted)}
   .how b{color:var(--ink)}
+  .head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.3rem}
+  .pill{font-size:.74rem;font-weight:700;color:var(--ok);background:rgba(59,147,43,.12);border-radius:999px;padding:.3em .8em}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.6rem;margin:.4rem 0 .2rem}
+  a.page{display:flex;flex-direction:column;gap:.15rem;text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:11px;padding:.75rem .85rem;background:var(--paper);transition:border-color .15s,transform .15s}
+  a.page:hover{border-color:var(--red);transform:translateY(-2px)}
+  a.page b{font-size:.96rem}
+  a.page span{font-size:.76rem;color:var(--muted)}
+  .grp{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);margin:1.3rem 0 .5rem}
+  .cap{display:flex;gap:.6rem;font-size:.88rem;margin-bottom:.5rem}
+  .cap .ic{flex:none;width:26px;height:26px;border-radius:7px;background:rgba(215,18,10,.1);display:grid;place-items:center}
+  .cap b{color:var(--ink)}
+  .foot{margin-top:1.3rem;padding-top:1rem;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+  .muted{color:var(--muted);font-size:.82rem}
+  .hidden{display:none}
 </style>
 </head>
 <body>
-  <div class="card">
+  <!-- LOGIN -->
+  <div class="card" id="login">
     <div class="logo">dV</div>
     <h1>Seite bearbeiten</h1>
-    <p class="sub">Passwort eingeben – danach kannst du auf allen Seiten Texte &amp; Bilder direkt ändern.</p>
+    <p class="sub">Passwort eingeben – danach kannst du auf allen Seiten Texte, Bilder &amp; SEO direkt ändern.</p>
     <label for="pw">Passwort</label>
     <input type="password" id="pw" autocomplete="current-password" placeholder="••••••••">
     <button class="btn" id="go">🖊&nbsp; Bearbeitungsmodus starten</button>
     <div class="status" id="status"></div>
     <div class="how">
-      <b>So funktioniert's:</b> Nach dem Start öffnet sich die Website im Bearbeitungsmodus.
-      Alle änderbaren Stellen sind <b style="color:var(--red)">rot umrandet</b> – einfach
-      <b>Text anklicken</b> und tippen oder <b>Bild anklicken</b> zum Ersetzen. Unten gibt es
-      <b>„Speichern"</b> und <b>„Verlassen"</b>. Du kannst über das Menü ganz normal durch alle
-      Seiten gehen – der Modus bleibt aktiv, bis du auf „Verlassen" klickst.
+      <b>So funktioniert's:</b> Nach dem Start bist du im Bearbeitungsmodus. Alle änderbaren Stellen sind
+      <b style="color:var(--red)">rot umrandet</b> – <b>Text anklicken</b> und tippen oder <b>Bild anklicken</b> zum Ersetzen.
+      Unten erscheint eine Leiste mit <b>Speichern</b>, <b>SEO &amp; Titel</b>, <b>Menü &amp; Footer</b> und <b>Verlassen</b>.
     </div>
   </div>
+
+  <!-- DASHBOARD -->
+  <div class="card dash hidden" id="dash">
+    <div class="head">
+      <div style="display:flex;align-items:center;gap:.7rem"><div class="logo" style="margin:0">dV</div><h1>Bearbeiten</h1></div>
+      <span class="pill">● Modus aktiv</span>
+    </div>
+    <p class="sub">Wähle eine Seite – sie öffnet direkt im Bearbeitungsmodus. Der Modus bleibt beim Wechseln zwischen Seiten aktiv.</p>
+
+    <div class="grp">Seiten</div>
+    <div class="grid" id="pages"></div>
+
+    <div class="grp">Was du bearbeiten kannst</div>
+    <div class="cap"><span class="ic">✍️</span><div><b>Texte &amp; Absätze</b> – rot umrandete Stellen anklicken und tippen.</div></div>
+    <div class="cap"><span class="ic">🖼️</span><div><b>Bilder</b> – anklicken zum Ersetzen, ziehen zum Positionieren.</div></div>
+    <div class="cap"><span class="ic">🔍</span><div><b>SEO &amp; Titel</b> – Seitentitel, Google-Beschreibung &amp; Bild-Alt-Texte je Seite.</div></div>
+    <div class="cap"><span class="ic">🧭</span><div><b>Menü &amp; Footer</b> – Beschriftungen, die auf allen Seiten gleich sind.</div></div>
+
+    <div class="foot">
+      <span class="muted">Änderungen sind nach dem Speichern in ~1–3 Min live. Sitzung endet automatisch nach 3 Std.</span>
+      <button class="btn ghost" id="logout" style="margin:0">Verlassen</button>
+    </div>
+  </div>
+
 <script>
 (function(){
   var FN="https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-edit";
+  var FLAG="dv_edit", PWK="dv_edit_pw", TSK="dv_edit_ts";
   var $=function(id){return document.getElementById(id);};
   function setS(m,k){ var e=$("status"); e.textContent=m; e.className="status"+(k?(" "+k):""); }
+
+  var PAGES=[
+    ["index.html","Startseite","Hero, Über uns, Leistungen, Einzugsgebiet"],
+    ["seniorenbetreuung.html","Seniorenbetreuung","Leistungsseite"],
+    ["haushaltshilfe.html","Haushaltshilfe","Leistungsseite"],
+    ["verhinderungspflege.html","Verhinderungspflege","Leistungsseite"],
+    ["entlastungsbetrag.html","Entlastungsbetrag","Leistungsseite"],
+    ["pflegeleistungen.html","Pflegesachleistungen","Leistungsseite"],
+    ["stellenangebote.html","Stellenangebote","Team &amp; Jobs"],
+    ["kontakt.html","Kontakt","Formular &amp; Karte"],
+    ["termin.html","Termin buchen","Buchungsseite"],
+    ["impressum.html","Impressum","Rechtstext"],
+    ["datenschutz.html","Datenschutz","Rechtstext"]
+  ];
+
+  function sessionValid(){
+    try{
+      if(localStorage.getItem(FLAG)!=="1") return false;
+      var ts=parseInt(localStorage.getItem(TSK),10)||0;
+      return (Date.now()-ts) < 3*3600*1000;
+    }catch(e){ return false; }
+  }
+
+  function showDash(){
+    $("login").classList.add("hidden");
+    $("dash").classList.remove("hidden");
+    var grid=$("pages"); grid.innerHTML="";
+    PAGES.forEach(function(p){
+      var a=document.createElement("a");
+      a.className="page"; a.href="../"+p[0];
+      var b=document.createElement("b"); b.textContent=p[1];
+      var s=document.createElement("span"); s.innerHTML=p[2];
+      a.appendChild(b); a.appendChild(s); grid.appendChild(a);
+    });
+  }
+
   async function go(){
     var pw=$("pw").value; if(!pw){ setS("Bitte Passwort eingeben.","err"); return; }
     var b=$("go"); b.disabled=true; setS("Prüfe Passwort …");
     try{
-      // Passwort vorab prüfen (ungültige action -> bei korrektem PW 400 bad_action, sonst 401)
       var r=await fetch(FN,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw,action:"__check"})});
       if(r.status===401){ setS("Falsches Passwort.","err"); b.disabled=false; return; }
       if(r.status===429){ setS("Zu viele Versuche – bitte später erneut.","err"); b.disabled=false; return; }
       if(r.status===503){ setS("Editor ist noch nicht eingerichtet (Secrets fehlen).","err"); b.disabled=false; return; }
-      // ok (400 bad_action o.ä.) -> Modus aktivieren
-      localStorage.setItem("dv_edit","1");
-      localStorage.setItem("dv_edit_pw",pw);
-      localStorage.setItem("dv_edit_ts",String(Date.now()));
-      setS("Modus aktiv – Seite wird geöffnet …","ok");
-      location.href="../index.html";
+      localStorage.setItem(FLAG,"1");
+      localStorage.setItem(PWK,pw);
+      localStorage.setItem(TSK,String(Date.now()));
+      showDash();
     }catch(e){ setS("Verbindungsfehler.","err"); b.disabled=false; }
   }
+
   $("go").addEventListener("click",go);
   $("pw").addEventListener("keydown",function(e){ if(e.key==="Enter") go(); });
+  $("logout").addEventListener("click",function(){
+    try{ localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK); }catch(e){}
+    $("dash").classList.add("hidden"); $("login").classList.remove("hidden");
+    var pwEl=$("pw"); if(pwEl) pwEl.value=""; setS("");
+  });
+
+  // Bereits angemeldet? -> direkt Dashboard
+  if(sessionValid()) showDash();
 })();
 </script>
 </body>

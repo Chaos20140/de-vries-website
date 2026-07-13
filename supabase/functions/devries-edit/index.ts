@@ -264,6 +264,52 @@ Deno.serve(async (req) => {
       return okShared ? json({ ok: true, updated: changedFiles.length }) : json({ error: "commit_failed" }, 500);
     }
 
+    if (body.action === "save-meta") {
+      // SEO/Meta pro Seite: <title>, Meta-Description (+ OG/Twitter-Spiegel) und Bild-Alt-Texte.
+      // Isoliert von save-page; nutzt dieselbe Härtung (Whitelist-Datei, esc, Längenlimits).
+      const file = body.file as string;
+      if (!PAGES.has(file)) return json({ error: "bad_file" }, 400);
+      const rawTitle = typeof body.title === "string" ? body.title.trim() : "";
+      const title = rawTitle ? rawTitle : null;                 // leerer Titel -> unverändert lassen
+      const desc  = typeof body.description === "string" ? body.description : null;
+      const alts  = (body.alts || {}) as Record<string, string>;
+      if (title !== null && title.length > 80) return json({ error: "too_long", field: "title" }, 400);
+      if (desc  !== null && desc.length > 320) return json({ error: "too_long", field: "description" }, 400);
+      for (const slot of Object.keys(alts)) {
+        if (!(slot in IMG_SLOTS)) return json({ error: "bad_slot", field: slot }, 400);
+        if (typeof alts[slot] !== "string" || alts[slot].length > 160) return json({ error: "too_long", field: slot }, 400);
+      }
+      const f = await getFile(file);
+      let html = f.text;
+      if (title !== null) {
+        if (!/<title>[\s\S]*?<\/title>/.test(html)) return json({ error: "marker_missing", field: "title" }, 400);
+        const et = esc(title);
+        html = html.replace(/<title>[\s\S]*?<\/title>/, () => "<title>" + et + "</title>");
+        html = html.replace(/(<meta property="og:title" content=")[^"]*(">)/, (_m, a, b) => a + et + b);
+        html = html.replace(/(<meta name="twitter:title" content=")[^"]*(">)/, (_m, a, b) => a + et + b);
+      }
+      if (desc !== null) {
+        const ed = esc(desc);
+        if (/(<meta name="description" content=")[^"]*(">)/.test(html)) {
+          html = html.replace(/(<meta name="description" content=")[^"]*(">)/, (_m, a, b) => a + ed + b);
+        } else {
+          html = html.replace(/(<\/title>)/, (m) => m + '\n<meta name="description" content="' + ed + '">');
+        }
+        html = html.replace(/(<meta property="og:description" content=")[^"]*(">)/, (_m, a, b) => a + ed + b);
+        html = html.replace(/(<meta name="twitter:description" content=")[^"]*(">)/, (_m, a, b) => a + ed + b);
+      }
+      for (const [slot, val] of Object.entries(alts)) {
+        const ev = esc(val);
+        const imgRe = new RegExp('<img\\b[^>]*\\bdata-ed-img="' + slot + '"[^>]*>');
+        if (!imgRe.test(html)) return json({ error: "marker_missing", field: slot }, 400);
+        html = html.replace(imgRe, (tag) => /\balt="/i.test(tag)
+          ? tag.replace(/\balt="[^"]*"/i, () => 'alt="' + ev + '"')
+          : tag.replace(/(\s*\/?>)$/, (m) => ' alt="' + ev + '"' + m));
+      }
+      const r = await putFile(file, utf8B64(html), f.sha, "Editor: SEO/Meta aktualisiert (" + file + ")");
+      return r.ok ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
+    }
+
     return json({ error: "bad_action" }, 400);
   } catch (_e) {
     return json({ error: "server_error" }, 500);

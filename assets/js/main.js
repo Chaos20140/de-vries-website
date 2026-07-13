@@ -503,7 +503,9 @@
       + '#dvPanel input{width:100%;padding:.5rem .6rem;border:1px solid rgba(28,23,20,.18);border-radius:8px;font:inherit}'
       + '#dvPanel .row{display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.2rem;position:sticky;bottom:-1px;background:#fff;padding:.7rem 0}'
       + '#dvPanel button{border:0;border-radius:999px;padding:.6em 1.3em;font-weight:700;cursor:pointer}'
-      + '#dvPanel .ok{background:#d7120a;color:#fff}#dvPanel .cancel{background:#eee;color:#1c1714}';
+      + '#dvPanel .ok{background:#d7120a;color:#fff}#dvPanel .cancel{background:#eee;color:#1c1714}'
+      + '#dvPanel textarea{width:100%;padding:.5rem .6rem;border:1px solid rgba(28,23,20,.18);border-radius:8px;font:inherit;resize:vertical;min-height:66px}'
+      + '#dvPanel .hint{display:flex;justify-content:space-between;font-size:.72rem;color:#a0968c;margin:.16rem 0 .1rem}';
     document.head.appendChild(st);
 
     var picker = document.createElement("input");
@@ -584,11 +586,13 @@
     var bar = document.createElement("div"); bar.id = "dvBar";
     bar.innerHTML = '<span class="m" id="dvMsg">Bearbeitungsmodus aktiv · Text/Bild anklicken & ändern · andere Seiten normal über das Menü</span>'
       + '<button class="s" id="dvSave">💾 Diese Seite speichern</button>'
+      + '<button class="x" id="dvSeo">🔍 SEO &amp; Titel</button>'
       + '<button class="x" id="dvShared">🧭 Menü &amp; Footer</button>'
       + '<button class="x" id="dvReload">🔄 Aktualisieren</button>'
       + '<button class="x" id="dvExit">🚪 Verlassen</button>';
     document.body.appendChild(bar);
     document.getElementById("dvSave").addEventListener("click", save);
+    document.getElementById("dvSeo").addEventListener("click", openSeo);
     document.getElementById("dvShared").addEventListener("click", openShared);
     // Cache umgehen + frisch laden (GitHub Pages cached Seiten einige Minuten)
     document.getElementById("dvReload").addEventListener("click", function () {
@@ -637,6 +641,52 @@
       var ok = document.getElementById("dvPok"); ok.disabled = true; ok.textContent = "Speichert …";
       call({ action: "save-shared", shared: shared }).then(function (res) {
         if (res.ok) { close(); msg("✓ Menü/Footer gespeichert (alle Seiten) – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); }
+        else { ok.disabled = false; ok.textContent = "Übernehmen"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); }
+      }).catch(function () { ok.disabled = false; ok.textContent = "Übernehmen"; msg("Verbindungsfehler."); });
+    });
+  }
+
+  // SEO/Titel + Meta-Beschreibung + Bild-Alt-Texte der AKTUELLEN Seite bearbeiten -> save-meta
+  function openSeo() {
+    if (document.getElementById("dvPanel")) return;
+    var metaEl = document.querySelector('meta[name="description"]');
+    var imgs = document.querySelectorAll("[data-ed-img]");
+    var html = '<div class="box"><h3>SEO &amp; Seitentitel</h3><p class="sub">Gilt nur für <b>diese</b> Seite – wichtig für Google-Treffer &amp; die Vorschau beim Teilen.</p>'
+      + '<label>Seitentitel (Browser-Tab &amp; Google-Überschrift)</label>'
+      + '<input id="dvSeoT" maxlength="80">'
+      + '<div class="hint"><span>Empfehlung: ca. 50–60 Zeichen</span><b><span id="dvSeoTn">0</span>/80</b></div>'
+      + '<label>Meta-Beschreibung (Textausschnitt bei Google)</label>'
+      + '<textarea id="dvSeoD" maxlength="320"></textarea>'
+      + '<div class="hint"><span>Empfehlung: ca. 150–160 Zeichen</span><b><span id="dvSeoDn">0</span>/320</b></div>';
+    if (imgs.length) {
+      html += '<div class="grp">Bild-Alt-Texte (Google-Bildersuche &amp; Barrierefreiheit)</div>';
+      for (var i = 0; i < imgs.length; i++) {
+        html += '<label>Bild: ' + imgs[i].getAttribute("data-ed-img") + '</label><input data-alt="' + imgs[i].getAttribute("data-ed-img") + '" maxlength="160">';
+      }
+    }
+    html += '<div class="row"><button class="cancel" id="dvSeoX">Abbrechen</button><button class="ok" id="dvSeoOk">Übernehmen</button></div></div>';
+    var wrap = document.createElement("div"); wrap.id = "dvPanel"; wrap.innerHTML = html;
+    document.body.appendChild(wrap);
+    var tIn = document.getElementById("dvSeoT"), dIn = document.getElementById("dvSeoD");
+    tIn.value = document.title || "";
+    dIn.value = metaEl ? (metaEl.getAttribute("content") || "") : "";
+    // Alt-Werte per Property setzen (kein HTML-Inject)
+    var altIns = wrap.querySelectorAll("input[data-alt]");
+    for (var k = 0; k < altIns.length; k++) {
+      var im = document.querySelector('[data-ed-img="' + altIns[k].getAttribute("data-alt") + '"]');
+      altIns[k].value = im ? (im.getAttribute("alt") || "") : "";
+    }
+    function cnt() { document.getElementById("dvSeoTn").textContent = tIn.value.length; document.getElementById("dvSeoDn").textContent = dIn.value.length; }
+    tIn.addEventListener("input", cnt); dIn.addEventListener("input", cnt); cnt();
+    function close() { wrap.remove(); }
+    document.getElementById("dvSeoX").addEventListener("click", close);
+    wrap.addEventListener("click", function (e) { if (e.target === wrap) close(); });
+    document.getElementById("dvSeoOk").addEventListener("click", function () {
+      var alts = {}, as = wrap.querySelectorAll("input[data-alt]");
+      for (var j = 0; j < as.length; j++) { alts[as[j].getAttribute("data-alt")] = as[j].value.replace(/\s+/g, " ").trim(); }
+      var ok = document.getElementById("dvSeoOk"); ok.disabled = true; ok.textContent = "Speichert …";
+      call({ action: "save-meta", file: file, title: tIn.value.replace(/\s+/g, " ").trim(), description: dIn.value.replace(/\s+/g, " ").trim(), alts: alts }).then(function (res) {
+        if (res.ok) { close(); msg("✓ SEO/Titel gespeichert – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); }
         else { ok.disabled = false; ok.textContent = "Übernehmen"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); }
       }).catch(function () { ok.disabled = false; ok.textContent = "Übernehmen"; msg("Verbindungsfehler."); });
     });
