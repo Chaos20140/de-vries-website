@@ -505,7 +505,16 @@
       + '#dvPanel button{border:0;border-radius:999px;padding:.6em 1.3em;font-weight:700;cursor:pointer}'
       + '#dvPanel .ok{background:#d7120a;color:#fff}#dvPanel .cancel{background:#eee;color:#1c1714}'
       + '#dvPanel textarea{width:100%;padding:.5rem .6rem;border:1px solid rgba(28,23,20,.18);border-radius:8px;font:inherit;resize:vertical;min-height:66px}'
-      + '#dvPanel .hint{display:flex;justify-content:space-between;font-size:.72rem;color:#a0968c;margin:.16rem 0 .1rem}';
+      + '#dvPanel .hint{display:flex;justify-content:space-between;font-size:.72rem;color:#a0968c;margin:.16rem 0 .1rem}'
+      + '[data-ed-zone]{outline:2px dashed rgba(215,18,10,.5);outline-offset:5px;min-height:28px}'
+      + '.eb-add{display:inline-flex;gap:.4em;margin:1.4rem auto;border:0;border-radius:999px;background:#1c1714;color:#fff;font-weight:700;font-size:.82rem;padding:.55em 1.15em;cursor:pointer}'
+      + '#dvPanel select{width:100%;padding:.5rem .6rem;border:1px solid rgba(28,23,20,.18);border-radius:8px;font:inherit;margin-top:.3rem}'
+      + '#dvPanel .eb-add-row{display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0 .2rem}'
+      + '#dvPanel .eb-add-row button{background:#f0e9e0;color:#1c1714;border-radius:999px;padding:.5em 1em;font-weight:700;font-size:.85rem}'
+      + '#dvPanel .eb-row{border:1px solid rgba(28,23,20,.14);border-radius:10px;padding:.6rem .7rem;margin:.55rem 0;background:#faf6f0}'
+      + '#dvPanel .eb-row .t{display:flex;gap:.4rem;align-items:center;margin-bottom:.35rem}'
+      + '#dvPanel .eb-row .t b{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:#a50d07;flex:1}'
+      + '#dvPanel .eb-row .t button{background:#eee;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:.9rem;padding:0}';
     document.head.appendChild(st);
 
     var picker = document.createElement("input");
@@ -574,6 +583,18 @@
         });
       })(imgs[j]);
     }
+    // Frei-Element-Zonen: pro Zone einen Verwalten-Button einfügen
+    var zones = document.querySelectorAll("[data-ed-zone]");
+    for (var z = 0; z < zones.length; z++) {
+      (function (zoneEl) {
+        var trig = document.createElement("button");
+        trig.type = "button"; trig.className = "eb-add";
+        trig.textContent = "➕ Buttons / Elemente hier verwalten";
+        if (zoneEl.parentNode) zoneEl.parentNode.insertBefore(trig, zoneEl.nextSibling);
+        trig.addEventListener("click", function () { openBlocks(zoneEl); });
+      })(zones[z]);
+    }
+
     // Links sollen im Edit-Modus NICHT navigieren, wenn sie editierbaren Inhalt enthalten
     // (Karten-Links) oder selbst in einem Rich-Feld liegen (Link-Text bearbeitbar).
     // Echte Menü-/Nav-Links funktionieren weiter normal.
@@ -644,6 +665,70 @@
         else { ok.disabled = false; ok.textContent = "Übernehmen"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); }
       }).catch(function () { ok.disabled = false; ok.textContent = "Übernehmen"; msg("Verbindungsfehler."); });
     });
+  }
+
+  // Frei hinzufügbare Elemente (Buttons/Überschriften/Text) einer Zone verwalten -> save-blocks
+  function openBlocks(zoneEl) {
+    if (document.getElementById("dvPanel")) return;
+    var zone = zoneEl.getAttribute("data-ed-zone");
+    var model = [];
+    var ebs = zoneEl.querySelectorAll("[data-eb]");
+    for (var i = 0; i < ebs.length; i++) {
+      var el = ebs[i], t = el.getAttribute("data-eb");
+      if (t === "button") model.push({ type: "button", text: el.textContent.trim(), href: el.getAttribute("href") || "", variant: el.classList.contains("btn--ghost") ? "ghost" : "solid" });
+      else if (t === "heading") model.push({ type: "heading", text: el.textContent.trim() });
+      else if (t === "text") model.push({ type: "text", text: el.textContent.trim() });
+    }
+    var wrap = document.createElement("div"); wrap.id = "dvPanel"; document.body.appendChild(wrap);
+    function label(t) { return t === "button" ? "Button" : t === "heading" ? "Überschrift" : "Text"; }
+    function sync() {
+      var ins = wrap.querySelectorAll("[data-f]");
+      for (var k = 0; k < ins.length; k++) { var f = ins[k].getAttribute("data-f"), idx = +ins[k].getAttribute("data-i"); if (model[idx]) model[idx][f] = ins[k].value; }
+    }
+    function render() {
+      var h = '<div class="box"><h3>Elemente &amp; Buttons</h3><p class="sub">Erscheinen auf dieser Seite über dem Footer. Reihenfolge mit den Pfeilen, danach Speichern.</p>';
+      h += '<div class="eb-add-row"><button data-add="button">➕ Button</button><button data-add="heading">➕ Überschrift</button><button data-add="text">➕ Text</button></div><div>';
+      if (!model.length) h += '<p class="sub">Noch keine Elemente – oben eins hinzufügen.</p>';
+      for (var i = 0; i < model.length; i++) {
+        var b = model[i], max = b.type === "text" ? 600 : b.type === "heading" ? 120 : 80;
+        h += '<div class="eb-row"><div class="t"><b>' + label(b.type) + '</b>'
+          + '<button data-up="' + i + '" title="nach oben">↑</button><button data-down="' + i + '" title="nach unten">↓</button><button data-del="' + i + '" title="entfernen">🗑</button></div>'
+          + '<input data-f="text" data-i="' + i + '" maxlength="' + max + '" placeholder="Beschriftung / Text">';
+        if (b.type === "button") {
+          h += '<input data-f="href" data-i="' + i + '" maxlength="200" placeholder="Link: termin.html · tel:051531552 · https://…">'
+            + '<select data-f="variant" data-i="' + i + '"><option value="solid">Gefüllt (rot)</option><option value="ghost">Umrandet</option></select>';
+        }
+        h += '</div>';
+      }
+      h += '</div><div class="row"><button class="cancel" id="ebX">Abbrechen</button><button class="ok" id="ebOk">Speichern</button></div></div>';
+      wrap.innerHTML = h;
+      var ins = wrap.querySelectorAll("[data-f]");
+      for (var k = 0; k < ins.length; k++) { var f = ins[k].getAttribute("data-f"), idx = +ins[k].getAttribute("data-i"); ins[k].value = (model[idx] && model[idx][f] != null) ? model[idx][f] : ""; }
+      bind();
+    }
+    function bind() {
+      var add = wrap.querySelectorAll("[data-add]");
+      for (var a = 0; a < add.length; a++) { add[a].onclick = (function (t) { return function () { sync(); model.push(t === "button" ? { type: "button", text: "", href: "", variant: "solid" } : { type: t, text: "" }); render(); }; })(add[a].getAttribute("data-add")); }
+      var del = wrap.querySelectorAll("[data-del]");
+      for (var d = 0; d < del.length; d++) { del[d].onclick = (function (i) { return function () { sync(); model.splice(i, 1); render(); }; })(+del[d].getAttribute("data-del")); }
+      var up = wrap.querySelectorAll("[data-up]");
+      for (var u = 0; u < up.length; u++) { up[u].onclick = (function (i) { return function () { sync(); if (i > 0) { var m = model[i - 1]; model[i - 1] = model[i]; model[i] = m; } render(); }; })(+up[u].getAttribute("data-up")); }
+      var dn = wrap.querySelectorAll("[data-down]");
+      for (var n = 0; n < dn.length; n++) { dn[n].onclick = (function (i) { return function () { sync(); if (i < model.length - 1) { var m = model[i + 1]; model[i + 1] = model[i]; model[i] = m; } render(); }; })(+dn[n].getAttribute("data-down")); }
+      var sels = wrap.querySelectorAll('select[data-f="variant"]');
+      for (var s = 0; s < sels.length; s++) { var idx = +sels[s].getAttribute("data-i"); if (model[idx]) sels[s].value = model[idx].variant || "solid"; }
+      document.getElementById("ebX").onclick = function () { wrap.remove(); };
+      wrap.onclick = function (e) { if (e.target === wrap) wrap.remove(); };
+      document.getElementById("ebOk").onclick = function () {
+        sync();
+        var ok = document.getElementById("ebOk"); ok.disabled = true; ok.textContent = "Speichert …";
+        call({ action: "save-blocks", file: file, zone: zone, blocks: model }).then(function (res) {
+          if (res.ok) { wrap.remove(); msg("✓ Elemente gespeichert – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); }
+          else { ok.disabled = false; ok.textContent = "Speichern"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); }
+        }).catch(function () { ok.disabled = false; ok.textContent = "Speichern"; msg("Verbindungsfehler."); });
+      };
+    }
+    render();
   }
 
   // SEO/Titel + Meta-Beschreibung + Bild-Alt-Texte der AKTUELLEN Seite bearbeiten -> save-meta

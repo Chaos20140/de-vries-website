@@ -310,6 +310,47 @@ Deno.serve(async (req) => {
       return r.ok ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
     }
 
+    if (body.action === "save-blocks") {
+      // Frei hinzufügbare Elemente (Buttons/Überschriften/Text) in einer Zone einer Seite.
+      // Sicherheit: Zone-Inhalt wird KOMPLETT aus validierten Daten neu erzeugt (kein HTML-Durchreichen).
+      const file = body.file as string;
+      if (!PAGES.has(file)) return json({ error: "bad_file" }, 400);
+      const zone = body.zone as string;
+      if (!/^[a-z0-9-]{1,32}$/.test(zone)) return json({ error: "bad_key", field: "zone" }, 400);
+      const blocks = Array.isArray(body.blocks) ? body.blocks : null;
+      if (!blocks || blocks.length > 30) return json({ error: "bad_blocks" }, 400);
+      let inner = "";
+      for (const b of blocks) {
+        const type = b && typeof b === "object" ? (b as any).type : null;
+        if (type === "button") {
+          const text = esc(String((b as any).text || "").slice(0, 80).trim());
+          const href = String((b as any).href || "").trim();
+          if (!text) continue;
+          if (!safeHref(href)) return json({ error: "bad_href" }, 400);
+          const ghost = (b as any).variant === "ghost";
+          inner += '<a class="btn' + (ghost ? " btn--ghost" : "") + '" data-eb="button"'
+            + (ghost ? ' data-eb-variant="ghost"' : "") + ' href="' + href + '">' + text + "</a>";
+        } else if (type === "heading") {
+          const text = esc(String((b as any).text || "").slice(0, 120).trim());
+          if (!text) continue;
+          inner += '<h3 data-eb="heading">' + text + "</h3>";
+        } else if (type === "text") {
+          const text = esc(String((b as any).text || "").slice(0, 600).trim());
+          if (!text) continue;
+          inner += '<p data-eb="text">' + text + "</p>";
+        } else {
+          return json({ error: "bad_block_type" }, 400);
+        }
+      }
+      const f = await getFile(file);
+      let html = f.text;
+      const re = new RegExp('(<([a-z]+)\\b[^>]*\\bdata-ed-zone="' + zone + '"[^>]*>)([\\s\\S]*?)(</\\2>)');
+      if (!re.test(html)) return json({ error: "marker_missing", field: zone }, 400);
+      html = html.replace(re, (_m, open, _tag, _old, close) => open + inner + close);
+      const r = await putFile(file, utf8B64(html), f.sha, "Editor: Elemente/Buttons aktualisiert (" + file + ")");
+      return r.ok ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
+    }
+
     return json({ error: "bad_action" }, 400);
   } catch (_e) {
     return json({ error: "server_error" }, 500);
