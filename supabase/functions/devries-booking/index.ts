@@ -21,8 +21,14 @@ const SLOTS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00"];
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
 const WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
 
+// CORS: nur die eigene Website darf die Buchungs-API vom Browser aus aufrufen
+// (statt "*"). Per Env ALLOW_ORIGIN überschreibbar, falls später eine eigene
+// Domain (CNAME) dazukommt. /confirm ist eine Top-Level-Navigation (kein CORS)
+// und bleibt davon unberührt.
+const ALLOW_ORIGIN = Deno.env.get("ALLOW_ORIGIN") || "https://chaos20140.github.io";
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOW_ORIGIN,
+  "Vary": "Origin",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
@@ -153,6 +159,21 @@ Deno.serve(async (req) => {
     if (!phone || phone.length > 60) fields.push("phone");
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) fields.push("email");
     if (fields.length) return json({ error: "validation", fields }, 422);
+
+    // ---- Rate-Limit (Spam-/Flood-Schutz fürs Postfach + die DB) ----
+    // Fail-open: bei einem DB-Fehler wird die Buchung NICHT blockiert.
+    // Grenzen bewusst großzügig (echte Praxis: wenige Anfragen/Tag), kappen aber
+    // Fluten: global >=6 in 10 Min ODER >=3 mit derselben E-Mail in 60 Min -> 429.
+    try {
+      const nowMs = Date.now();
+      const win10 = new Date(nowMs - 10 * 60 * 1000).toISOString();
+      const win60 = new Date(nowMs - 60 * 60 * 1000).toISOString();
+      const [glob, perMail] = await Promise.all([
+        admin.from("devries_bookings").select("*", { count: "exact", head: true }).gte("created_at", win10),
+        admin.from("devries_bookings").select("*", { count: "exact", head: true }).eq("email", email).gte("created_at", win60),
+      ]);
+      if ((glob.count || 0) >= 6 || (perMail.count || 0) >= 3) return json({ error: "rate_limited" }, 429);
+    } catch { /* fail-open: im Zweifel Buchung zulassen */ }
 
     // Slot schon bestätigt vergeben?
     const { data: taken } = await admin.from("devries_bookings")
