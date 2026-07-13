@@ -193,7 +193,9 @@
       el.className = "route__stop " + (pt.x < VBW / 2 ? "route__stop--left" : "route__stop--right");
       el.style.left = (pt.x / VBW * 100) + "%";
       el.style.top = (pt.y / VBH * 100) + "%";
-      el.appendChild(document.createTextNode(name));
+      var dot = document.createElement("span"); dot.className = "route__stop-dot";
+      var lab = document.createElement("span"); lab.className = "route__stop-label"; lab.textContent = name;
+      el.appendChild(dot); el.appendChild(lab);
       layer.appendChild(el);
       stops.push({ frac: frac, el: el });
     });

@@ -550,19 +550,20 @@ em { font-style: italic; }
 @media (max-width: 480px){ .footer__grid { grid-template-columns: 1fr; } }
 
 /* ---------- Einzugsgebiet / Serpentinen-Route ---------- */
-.route { position: relative; max-width: 600px; margin: 2.6rem auto 0; }
+.route { position: relative; max-width: 740px; margin: 2.6rem auto 0; }
 .route__svg { display: block; width: 100%; height: auto; overflow: visible; }
 .route__road { stroke: var(--line-strong); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1 15; }
 .route__road-case { stroke: #ffffff; stroke-width: 13; stroke-linecap: round; opacity: 0.8; }
 .route__road-done { stroke: var(--red); stroke-width: 8; stroke-linecap: round; }
 .route__car-shadow { fill: #1c1714; opacity: 0.15; }
 .route__stops-layer { position: absolute; inset: 0; pointer-events: none; }
-.route__stop { position: absolute; display: inline-flex; align-items: center; gap: 0.5em; white-space: nowrap; font-family: var(--display); font-size: clamp(0.9rem, 0.78rem + 0.45vw, 1.15rem); line-height: 1.1; color: var(--muted); transition: color var(--t-fast); }
-.route__stop::before { content: ""; width: 13px; height: 13px; border-radius: 50%; background: var(--paper); border: 2.5px solid var(--line-strong); flex: none; transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); }
+.route__stop { position: absolute; display: inline-flex; align-items: center; gap: 0.45em; }
+.route__stop-dot { width: 13px; height: 13px; border-radius: 50%; background: var(--paper); border: 2.5px solid var(--line-strong); flex: none; transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); }
+.route__stop-label { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 0.26em 0.66em; font-family: var(--display); font-size: clamp(0.85rem, 0.75rem + 0.35vw, 1.05rem); line-height: 1.16; color: var(--ink); max-width: 165px; box-shadow: 0 5px 16px -9px rgba(28,23,20,0.35); transition: color var(--t-fast); }
 .route__stop--left { transform: translate(-100%, -50%); flex-direction: row-reverse; }
 .route__stop--right { transform: translate(0, -50%); }
-.route__stop.is-active { color: var(--ink); }
-.route__stop.is-active::before { background: var(--red); border-color: var(--red); box-shadow: 0 0 0 5px var(--red-soft); animation: dotPop 0.55s ease-out; }
+.route__stop.is-active .route__stop-dot { background: var(--red); border-color: var(--red); box-shadow: 0 0 0 5px var(--red-soft); animation: dotPop 0.55s ease-out; }
+.route__stop.is-active .route__stop-label { color: var(--red); }
 .route__car { transition: transform 0.1s linear; }
 .route__map-bg { fill: var(--paper-2); stroke: var(--line-strong); stroke-width: 2; }
 .route__map-grid { stroke: var(--line); stroke-width: 1; opacity: 0.5; }
@@ -596,13 +597,18 @@ em { font-style: italic; }
 @media (prefers-reduced-motion: reduce){
   .route__road-done { display: none; }
   .route__car { display: none; }
-  .route__stop::before { background: var(--red); border-color: var(--red); }
-  .route__stop { color: var(--ink); }
+  .route__stop-dot { background: var(--red); border-color: var(--red); }
+  .route__stop-label { color: var(--red); }
   .route__map-water { animation: none; }
   .route__map-cloud, .route__map-bird { display: none; }
-  .route__stop.is-active::before { animation: none; }
+  .route__stop.is-active .route__stop-dot { animation: none; }
   .route__sun { animation: none; }
   .route__glow-ring { animation: none; }
+}
+@media (max-width: 640px){
+  .route { max-width: 460px; }
+  .route__stop { gap: 0.3em; }
+  .route__stop-label { max-width: 98px; font-size: 0.72rem; padding: 0.2em 0.45em; line-height: 1.1; }
 }
 
 /* ---------- 18. COOKIE ---------- */
