@@ -562,6 +562,11 @@ em { font-style: italic; }
 .route__stop.is-active { color: var(--ink); }
 .route__stop.is-active::before { background: var(--red); border-color: var(--red); box-shadow: 0 0 0 5px var(--red-soft); }
 .route__car { transition: transform 0.1s linear; }
+.route__map-bg { fill: var(--paper-2); }
+.route__map-grid { stroke: var(--line); stroke-width: 1; opacity: 0.5; }
+.route__map-blob { fill: var(--paper-3); opacity: 0.5; }
+.route__map-road { fill: none; stroke: var(--line-strong); stroke-width: 2; stroke-dasharray: 4 8; opacity: 0.55; }
+.route__map-block { fill: var(--paper-3); opacity: 0.7; }
 .area-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.4rem; margin-top: 2.8rem; padding: 1.7rem 1.9rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius-lg); }
 .area-note p { font-family: var(--display); font-size: 1.2rem; line-height: 1.4; color: var(--ink); max-width: 40ch; }
 .area-note .btn { flex: none; }

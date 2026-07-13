@@ -178,6 +178,7 @@
     if (!route) return;
     var road = $("#roadPath", route), done = $("#roadDone", route);
     var carG = $("#routeCar", route), layer = $("#routeStopsG", route);
+    var mapClip = $("#mapClipRect", route);
     if (!road || !carG || !layer) return;
     var VBW = 760, VBH = 1480;
     var places = (route.getAttribute("data-places") || "").split("|").filter(Boolean);
@@ -201,6 +202,7 @@
     routeUpdate = function (p) {
       p = Math.max(0, Math.min(1, p));
       if (done) done.style.strokeDashoffset = len * (1 - p);
+      if (mapClip) mapClip.setAttribute("height", p * VBH);
       var at = p * len;
       var pt = road.getPointAtLength(at);
       var a = road.getPointAtLength(Math.min(len, at + 3));
@@ -214,6 +216,7 @@
     };
     if (reduce) {
       if (done) done.style.strokeDashoffset = 0;
+      if (mapClip) mapClip.setAttribute("height", VBH);
       stops.forEach(function (s) { s.el.classList.add("is-active"); });
       routeUpdate = null;
     } else {
