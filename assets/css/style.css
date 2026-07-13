@@ -176,6 +176,8 @@ em { font-style: italic; }
 .btn--light { --bg: #fff; --fg: var(--ink); }
 .btn--light::before { background: var(--red); }
 .btn--light:hover { color: #fff; }
+/* Buttons in richtext/prose duerfen NICHT die rote Link-Farbe erben (sonst rot-auf-rot -> unsichtbar) */
+.richtext a.btn, .prose a.btn { color: var(--fg); text-decoration: none; }
 
 .link-arrow {
   display: inline-flex; align-items: center; gap: 0.5em;
