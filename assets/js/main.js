@@ -129,6 +129,8 @@
   var parallaxEls = $$("[data-parallax]");
   var timeline = $(".timeline");
   var tnodes = $$(".tnode");
+  var route = $("#route");
+  var routeStops = $$(".route__stop");
   var ticking = false;
   function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(applyScroll); } }
   function applyScroll() {
@@ -159,6 +161,17 @@
       tnodes.forEach(function (n) {
         var nr = n.getBoundingClientRect();
         n.classList.toggle("is-in", nr.top < vh * 0.7);
+      });
+    }
+    /* Einzugsgebiet-Route: Auto folgt dem Scroll, Orte aktivieren sich */
+    if (route) {
+      var rrt = route.getBoundingClientRect();
+      var rvh = window.innerHeight;
+      var rp = (rvh * 0.6 - rrt.top) / rrt.height;
+      rp = Math.max(0, Math.min(1, rp));
+      route.style.setProperty("--route-progress", (rp * 100) + "%");
+      routeStops.forEach(function (s) {
+        s.classList.toggle("is-active", s.getBoundingClientRect().top < rvh * 0.64);
       });
     }
   }

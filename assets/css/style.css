@@ -532,7 +532,7 @@ em { font-style: italic; }
 .footer__brand .brand { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
 .footer__brand .brand__name { color: #fff; }
 .footer__brand .brand__name small { color: rgba(255,255,255,0.5); }
-.footer__brand .brand { margin-top: 0.6rem; }
+.footer__brand .brand { margin-top: 2.6rem; }
 .footer__addr { font-family: var(--display); font-style: normal; font-size: 1.3rem; line-height: 1.45; color: #fff; margin-top: 2rem; }
 .footer__hours { color: rgba(250,246,240,0.7); font-size: 0.95rem; line-height: 1.6; margin-top: 1.1rem; }
 .footer__hours strong { color: #fff; }
@@ -549,14 +549,27 @@ em { font-style: italic; }
 @media (max-width: 860px){ .footer__grid { grid-template-columns: 1fr 1fr; } .footer__brand { grid-column: 1 / -1; } .footer__giant { display: none; } }
 @media (max-width: 480px){ .footer__grid { grid-template-columns: 1fr; } }
 
-/* ---------- Einzugsgebiet / Orts-Chips ---------- */
-.area-grid { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 2.2rem; }
-.area-chip { display: inline-flex; align-items: center; gap: 0.5em; padding: 0.6em 1.1em; border-radius: 999px; background: var(--white); border: 1px solid var(--line-strong); font-weight: 600; font-size: 0.95rem; color: var(--ink); transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast); }
-.area-chip svg { width: 15px; height: 15px; color: var(--red); flex: none; }
-.area-chip:hover { border-color: var(--red); background: var(--red-soft); transform: translateY(-2px); }
+/* ---------- Einzugsgebiet / animierte Route ---------- */
+.route { position: relative; max-width: 720px; margin: 2.6rem auto 0; padding-left: 2.6rem; }
+.route::before { content:""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.route::after { content:""; position: absolute; left: 0; top: 6px; width: 2px; height: var(--route-progress, 0%); background: var(--red); transition: height 0.12s linear; }
+.route__stops { list-style: none; display: flex; flex-direction: column; gap: clamp(0.8rem, 0.4rem + 1vw, 1.35rem); }
+.route__stop { position: relative; }
+.route__stop::before { content:""; position: absolute; left: calc(-2.6rem - 1px); top: 50%; transform: translateY(-50%); width: 14px; height: 14px; border-radius: 50%; background: var(--paper); border: 2px solid var(--line-strong); transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); }
+.route__stop.is-active::before { background: var(--red); border-color: var(--red); box-shadow: 0 0 0 5px var(--red-soft); }
+.route__name { display: inline-flex; align-items: center; gap: 0.5em; font-family: var(--display); font-size: clamp(1.05rem, 0.9rem + 0.5vw, 1.25rem); color: var(--muted); transition: color var(--t-fast), transform var(--t-fast); }
+.route__stop.is-active .route__name { color: var(--ink); transform: translateX(3px); }
+.route__car { position: absolute; left: 1px; top: var(--route-progress, 0%); width: 34px; height: 34px; transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 50%; background: var(--red); color: #fff; box-shadow: 0 8px 22px -6px rgba(215,18,10,0.7); transition: top 0.12s linear; z-index: 2; }
+.route__car svg { width: 19px; height: 19px; }
 .area-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.4rem; margin-top: 2.8rem; padding: 1.7rem 1.9rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius-lg); }
 .area-note p { font-family: var(--display); font-size: 1.2rem; line-height: 1.4; color: var(--ink); max-width: 40ch; }
 .area-note .btn { flex: none; }
+@media (prefers-reduced-motion: reduce){
+  .route::after { height: 100%; }
+  .route__stop::before { background: var(--red); border-color: var(--red); }
+  .route__stop .route__name { color: var(--ink); }
+  .route__car { display: none; }
+}
 
 /* ---------- 18. COOKIE ---------- */
 .cookie { position: fixed; left: 1rem; right: 1rem; bottom: 1rem; z-index: 150; max-width: 440px; background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 1.3rem 1.4rem; box-shadow: 0 30px 70px -30px rgba(28,23,20,0.5); transform: translateY(160%); transition: transform 0.6s var(--ease); }
