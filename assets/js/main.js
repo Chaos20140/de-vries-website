@@ -130,7 +130,7 @@
   var timeline = $(".timeline");
   var tnodes = $$(".tnode");
   var route = $("#route");
-  var routeStops = $$(".route__stop");
+  var routeUpdate = null;
   var ticking = false;
   function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(applyScroll); } }
   function applyScroll() {
@@ -163,20 +163,61 @@
         n.classList.toggle("is-in", nr.top < vh * 0.7);
       });
     }
-    /* Einzugsgebiet-Route: Auto folgt dem Scroll, Orte aktivieren sich */
-    if (route) {
+    /* Einzugsgebiet-Serpentine: Auto folgt der kurvigen Strecke */
+    if (routeUpdate) {
       var rrt = route.getBoundingClientRect();
       var rvh = window.innerHeight;
-      var rp = (rvh * 0.6 - rrt.top) / rrt.height;
-      rp = Math.max(0, Math.min(1, rp));
-      route.style.setProperty("--route-progress", (rp * 100) + "%");
-      routeStops.forEach(function (s) {
-        s.classList.toggle("is-active", s.getBoundingClientRect().top < rvh * 0.64);
-      });
+      routeUpdate((rvh * 0.62 - rrt.top) / rrt.height);
     }
   }
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll);
+
+  /* ---------- Einzugsgebiet: Serpentinen-Route mit fahrendem Auto ---------- */
+  function initRoute() {
+    if (!route) return;
+    var road = $("#roadPath", route), done = $("#roadDone", route);
+    var carG = $("#routeCar", route), layer = $("#routeStopsG", route);
+    if (!road || !carG || !layer) return;
+    var VBW = 760, VBH = 1480;
+    var places = (route.getAttribute("data-places") || "").split("|").filter(Boolean);
+    var len = 0;
+    try { len = road.getTotalLength(); } catch (e) { return; }
+    if (!len) return;
+    var stops = [];
+    places.forEach(function (name, i) {
+      var frac = places.length > 1 ? 0.03 + (i / (places.length - 1)) * 0.94 : 0.5;
+      var pt = road.getPointAtLength(frac * len);
+      var el = document.createElement("div");
+      el.className = "route__stop " + (pt.x < VBW / 2 ? "route__stop--left" : "route__stop--right");
+      el.style.left = (pt.x / VBW * 100) + "%";
+      el.style.top = (pt.y / VBH * 100) + "%";
+      el.appendChild(document.createTextNode(name));
+      layer.appendChild(el);
+      stops.push({ frac: frac, el: el });
+    });
+    if (done) { done.style.strokeDasharray = len; done.style.strokeDashoffset = len; }
+    routeUpdate = function (p) {
+      p = Math.max(0, Math.min(1, p));
+      if (done) done.style.strokeDashoffset = len * (1 - p);
+      var at = p * len;
+      var pt = road.getPointAtLength(at);
+      var a = road.getPointAtLength(Math.min(len, at + 2));
+      var b = road.getPointAtLength(Math.max(0, at - 2));
+      var ang = Math.atan2(a.y - b.y, a.x - b.x) * 180 / Math.PI;
+      carG.setAttribute("transform", "translate(" + pt.x + " " + pt.y + ") rotate(" + ang + ")");
+      for (var i = 0; i < stops.length; i++) {
+        stops[i].el.classList.toggle("is-active", stops[i].frac <= p + 0.004);
+      }
+    };
+    if (reduce) {
+      if (done) done.style.strokeDashoffset = 0;
+      stops.forEach(function (s) { s.el.classList.add("is-active"); });
+      routeUpdate = null;
+    } else {
+      routeUpdate(0);
+    }
+  }
 
   /* ---------- cookie banner ---------- */
   (function () {
@@ -381,6 +422,7 @@
 
   /* ---------- boot ---------- */
   initLenis();
+  initRoute();
   applyScroll();
 })();
 

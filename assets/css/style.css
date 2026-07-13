@@ -549,26 +549,27 @@ em { font-style: italic; }
 @media (max-width: 860px){ .footer__grid { grid-template-columns: 1fr 1fr; } .footer__brand { grid-column: 1 / -1; } .footer__giant { display: none; } }
 @media (max-width: 480px){ .footer__grid { grid-template-columns: 1fr; } }
 
-/* ---------- Einzugsgebiet / animierte Route ---------- */
-.route { position: relative; max-width: 720px; margin: 2.6rem auto 0; padding-left: 2.6rem; }
-.route::before { content:""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
-.route::after { content:""; position: absolute; left: 0; top: 6px; width: 2px; height: var(--route-progress, 0%); background: var(--red); transition: height 0.12s linear; }
-.route__stops { list-style: none; display: flex; flex-direction: column; gap: clamp(0.8rem, 0.4rem + 1vw, 1.35rem); }
-.route__stop { position: relative; }
-.route__stop::before { content:""; position: absolute; left: calc(-2.6rem - 1px); top: 50%; transform: translateY(-50%); width: 14px; height: 14px; border-radius: 50%; background: var(--paper); border: 2px solid var(--line-strong); transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); }
+/* ---------- Einzugsgebiet / Serpentinen-Route ---------- */
+.route { position: relative; max-width: 600px; margin: 2.6rem auto 0; }
+.route__svg { display: block; width: 100%; height: auto; overflow: visible; }
+.route__road { stroke: var(--line-strong); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1 15; }
+.route__road-done { stroke: var(--red); stroke-width: 4; stroke-linecap: round; }
+.route__stops-layer { position: absolute; inset: 0; pointer-events: none; }
+.route__stop { position: absolute; display: inline-flex; align-items: center; gap: 0.5em; white-space: nowrap; font-family: var(--display); font-size: clamp(0.9rem, 0.78rem + 0.45vw, 1.15rem); line-height: 1.1; color: var(--muted); transition: color var(--t-fast); }
+.route__stop::before { content: ""; width: 13px; height: 13px; border-radius: 50%; background: var(--paper); border: 2.5px solid var(--line-strong); flex: none; transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); }
+.route__stop--left { transform: translate(-100%, -50%); flex-direction: row-reverse; }
+.route__stop--right { transform: translate(0, -50%); }
+.route__stop.is-active { color: var(--ink); }
 .route__stop.is-active::before { background: var(--red); border-color: var(--red); box-shadow: 0 0 0 5px var(--red-soft); }
-.route__name { display: inline-flex; align-items: center; gap: 0.5em; font-family: var(--display); font-size: clamp(1.05rem, 0.9rem + 0.5vw, 1.25rem); color: var(--muted); transition: color var(--t-fast), transform var(--t-fast); }
-.route__stop.is-active .route__name { color: var(--ink); transform: translateX(3px); }
-.route__car { position: absolute; left: 1px; top: var(--route-progress, 0%); width: 34px; height: 34px; transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 50%; background: var(--red); color: #fff; box-shadow: 0 8px 22px -6px rgba(215,18,10,0.7); transition: top 0.12s linear; z-index: 2; }
-.route__car svg { width: 19px; height: 19px; }
+.route__car { transition: transform 0.1s linear; }
 .area-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.4rem; margin-top: 2.8rem; padding: 1.7rem 1.9rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius-lg); }
 .area-note p { font-family: var(--display); font-size: 1.2rem; line-height: 1.4; color: var(--ink); max-width: 40ch; }
 .area-note .btn { flex: none; }
 @media (prefers-reduced-motion: reduce){
-  .route::after { height: 100%; }
-  .route__stop::before { background: var(--red); border-color: var(--red); }
-  .route__stop .route__name { color: var(--ink); }
+  .route__road-done { display: none; }
   .route__car { display: none; }
+  .route__stop::before { background: var(--red); border-color: var(--red); }
+  .route__stop { color: var(--ink); }
 }
 
 /* ---------- 18. COOKIE ---------- */

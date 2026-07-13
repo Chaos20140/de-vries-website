@@ -20,7 +20,7 @@
 <meta name="twitter:description" content="de Vries aus Salzhemmendorf: liebevolle Seniorenbetreuung (ambulant &amp; stationär) und haushaltsnahe Dienstleistungen – anerkannt nach §§ 45a/45b SGB XI, direkte Abrechnung mit der Pflegekasse ab Pflegegrad 1. Tel: 05153 1552.">
 <meta name="twitter:image" content="https://chaos20140.github.io/de-vries-website/assets/img/senioren-zuhause.jpg">
 <link rel="icon" href="assets/img/favicon.svg?v=2" type="image/svg+xml">
-<link rel="stylesheet" href="assets/css/style.css?v=34">
+<link rel="stylesheet" href="assets/css/style.css?v=35">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -274,24 +274,24 @@
         <p class="lead" data-ed="index-43">Von Salzhemmendorf aus sind wir in der ganzen Region für Sie unterwegs – wohnortnah und verlässlich in zahlreichen Städten, Gemeinden und Ortsteilen.</p>
       </div>
     </div>
-    <div class="route" id="route">
-      <span class="route__car" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.4-4.2A2 2 0 0 1 8.3 5.4h7.4a2 2 0 0 1 1.9 1.4L19 11v5.5h-2.2v-1.8H7.2v1.8H5V11z"/><circle cx="7.6" cy="13.8" r="1"/><circle cx="16.4" cy="13.8" r="1"/></svg></span>
-      <ol class="route__stops">
-        <li class="route__stop"><span class="route__name">Salzhemmendorf</span></li>
-        <li class="route__stop"><span class="route__name">Lauenstein</span></li>
-        <li class="route__stop"><span class="route__name">Hameln</span></li>
-        <li class="route__stop"><span class="route__name">Afferde/Hastenbeck</span></li>
-        <li class="route__stop"><span class="route__name">Tündern/Emmerthal</span></li>
-        <li class="route__stop"><span class="route__name">Hessisch Oldendorf/Fischbeck</span></li>
-        <li class="route__stop"><span class="route__name">Klein Berkel/Groß Berkel</span></li>
-        <li class="route__stop"><span class="route__name">Aerzen</span></li>
-        <li class="route__stop"><span class="route__name">Sünteltal</span></li>
-        <li class="route__stop"><span class="route__name">Bad Münder/Altenhagen</span></li>
-        <li class="route__stop"><span class="route__name">Springe</span></li>
-        <li class="route__stop"><span class="route__name">Völksen</span></li>
-        <li class="route__stop"><span class="route__name">Bennigsen</span></li>
-        <li class="route__stop"><span class="route__name">Gehrden</span></li>
-      </ol>
+    <div class="route" id="route" data-places="Salzhemmendorf|Lauenstein|Hameln|Afferde/Hastenbeck|Tündern/Emmerthal|Hessisch Oldendorf/Fischbeck|Klein Berkel/Groß Berkel|Aerzen|Sünteltal|Bad Münder/Altenhagen|Springe|Völksen|Bennigsen|Gehrden">
+      <svg class="route__svg" viewBox="0 0 760 1480" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <path id="roadPath" class="route__road" fill="none" d="M 120 80 C 120 280 640 280 640 470 C 640 660 120 660 120 850 C 120 1040 640 1040 640 1230 C 640 1360 120 1360 120 1420"/>
+        <path id="roadDone" class="route__road-done" fill="none" d="M 120 80 C 120 280 640 280 640 470 C 640 660 120 660 120 850 C 120 1040 640 1040 640 1230 C 640 1360 120 1360 120 1420"/>
+        <g id="routeCar" class="route__car">
+          <rect x="-13" y="-15" width="8" height="5" rx="2" fill="#2a2320"/>
+          <rect x="6" y="-15" width="8" height="5" rx="2" fill="#2a2320"/>
+          <rect x="-13" y="10" width="8" height="5" rx="2" fill="#2a2320"/>
+          <rect x="6" y="10" width="8" height="5" rx="2" fill="#2a2320"/>
+          <rect x="-20" y="-12" width="40" height="24" rx="9" fill="#d7120a"/>
+          <rect x="-20" y="-12" width="40" height="24" rx="9" fill="none" stroke="#8f0b06" stroke-width="1.5"/>
+          <rect x="-9" y="-8" width="15" height="16" rx="4.5" fill="#8f0b06"/>
+          <rect x="8.5" y="-6.5" width="6.5" height="13" rx="3" fill="#ffe1a6"/>
+          <circle cx="18" cy="-6.5" r="1.9" fill="#fff6e2"/>
+          <circle cx="18" cy="6.5" r="1.9" fill="#fff6e2"/>
+        </g>
+      </svg>
+      <div id="routeStopsG" class="route__stops-layer"></div>
     </div>
     <div class="area-note" data-reveal>
       <p data-ed="index-44">Ihr Ort ist nicht dabei? Sprechen Sie uns an – wir prüfen gern, ob wir auch zu Ihnen kommen können.</p>
@@ -402,6 +402,6 @@
 </div>
 
 <script src="assets/js/lenis.min.js"></script>
-<script src="assets/js/main.js?v=34"></script>
+<script src="assets/js/main.js?v=35"></script>
 </body>
 </html>
