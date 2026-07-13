@@ -78,7 +78,7 @@ const IMG_SLOTS: Record<string, string> = {
 const PAGES = new Set([
   "index.html","seniorenbetreuung.html","haushaltshilfe.html","entlastungsbetrag.html",
   "pflegeleistungen.html","kontakt.html","stellenangebote.html","impressum.html",
-  "datenschutz.html","termin.html",
+  "datenschutz.html","termin.html","verhinderungspflege.html",
 ]);
 
 function gh(path: string, init: RequestInit = {}) {
