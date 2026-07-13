@@ -532,7 +532,7 @@ em { font-style: italic; }
 .footer__brand .brand { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
 .footer__brand .brand__name { color: #fff; }
 .footer__brand .brand__name small { color: rgba(255,255,255,0.5); }
-.footer__brand .brand { margin-top: 2.6rem; }
+.footer__brand .brand { margin-top: 5.5rem; }
 .footer__addr { font-family: var(--display); font-style: normal; font-size: 1.3rem; line-height: 1.45; color: #fff; margin-top: 2rem; }
 .footer__hours { color: rgba(250,246,240,0.7); font-size: 0.95rem; line-height: 1.6; margin-top: 1.1rem; }
 .footer__hours strong { color: #fff; }
