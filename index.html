@@ -20,7 +20,7 @@
 <meta name="twitter:description" content="de Vries aus Salzhemmendorf: liebevolle Seniorenbetreuung (ambulant &amp; stationär) und haushaltsnahe Dienstleistungen – anerkannt nach §§ 45a/45b SGB XI, direkte Abrechnung mit der Pflegekasse ab Pflegegrad 1. Tel: 05153 1552.">
 <meta name="twitter:image" content="https://chaos20140.github.io/de-vries-website/assets/img/senioren-zuhause.jpg">
 <link rel="icon" href="assets/img/favicon.svg?v=2" type="image/svg+xml">
-<link rel="stylesheet" href="assets/css/style.css?v=51">
+<link rel="stylesheet" href="assets/css/style.css?v=52">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -318,15 +318,27 @@
           <line class="route__map-grid" x1="0" y1="1235" x2="760" y2="1235"/>
           <line class="route__map-grid" x1="0" y1="1330" x2="760" y2="1330"/>
           <line class="route__map-grid" x1="0" y1="1425" x2="760" y2="1425"/>
-          <circle class="route__map-contour" cx="600" cy="180" r="34"/>
-          <circle class="route__map-contour" cx="600" cy="180" r="58"/>
-          <circle class="route__map-contour" cx="600" cy="180" r="84"/>
-          <circle class="route__map-contour" cx="180" cy="650" r="34"/>
-          <circle class="route__map-contour" cx="180" cy="650" r="58"/>
-          <circle class="route__map-contour" cx="180" cy="650" r="84"/>
-          <circle class="route__map-contour" cx="640" cy="1080" r="34"/>
-          <circle class="route__map-contour" cx="640" cy="1080" r="58"/>
-          <circle class="route__map-contour" cx="640" cy="1080" r="84"/>
+          <!-- Berge + Wälder (statt der früheren Höhenlinien-Kreise) -->
+          <path class="route__map-mountain route__map-mountain--back" d="M 500 252 L 545 150 L 578 194 L 612 132 L 648 186 L 690 252 Z"/>
+          <path class="route__map-mountain" d="M 516 258 L 553 200 L 586 230 L 621 192 L 659 234 L 698 258 Z"/>
+          <path class="route__map-snow" d="M 612 132 L 624 152 L 600 152 Z"/>
+          <path class="route__map-snow" d="M 545 150 L 555 168 L 535 168 Z"/>
+          <path class="route__map-forest" d="M 662 252 l 8 14 l -16 0 Z"/>
+          <path class="route__map-forest" d="M 676 258 l 8 14 l -16 0 Z"/>
+          <path class="route__map-forest" d="M 690 252 l 8 14 l -16 0 Z"/>
+          <path class="route__map-mountain route__map-mountain--back" d="M 90 712 L 130 606 L 164 652 L 198 588 L 234 646 L 276 712 Z"/>
+          <path class="route__map-mountain" d="M 106 718 L 144 658 L 177 690 L 213 650 L 250 692 L 290 718 Z"/>
+          <path class="route__map-snow" d="M 198 588 L 210 608 L 186 608 Z"/>
+          <path class="route__map-snow" d="M 130 606 L 140 624 L 120 624 Z"/>
+          <path class="route__map-forest" d="M 258 712 l 8 14 l -16 0 Z"/>
+          <path class="route__map-forest" d="M 272 718 l 8 14 l -16 0 Z"/>
+          <path class="route__map-forest" d="M 286 712 l 8 14 l -16 0 Z"/>
+          <path class="route__map-mountain route__map-mountain--back" d="M 548 1150 L 588 1046 L 622 1092 L 656 1030 L 692 1086 L 726 1150 Z"/>
+          <path class="route__map-mountain" d="M 564 1156 L 602 1097 L 634 1127 L 669 1089 L 705 1129 L 738 1156 Z"/>
+          <path class="route__map-snow" d="M 656 1030 L 668 1050 L 644 1050 Z"/>
+          <path class="route__map-snow" d="M 588 1046 L 598 1064 L 578 1064 Z"/>
+          <path class="route__map-forest" d="M 700 1150 l 8 14 l -16 0 Z"/>
+          <path class="route__map-forest" d="M 714 1156 l 8 14 l -16 0 Z"/>
           <path class="route__map-water" d="M 273 40 L 298 80 L 309 120 L 303 160 L 282 200 L 252 240 L 220 280 L 198 320 L 190 360 L 199 400 L 222 440 L 254 480 L 284 520 L 304 560 L 309 600 L 297 640 L 271 680 L 239 720 L 210 760"/>
           <path class="route__map-water" d="M 611 300 L 600 350 L 578 400 L 550 450 L 525 500 L 510 550 L 509 600 L 522 650 L 546 700 L 574 750 L 598 800 L 610 850 L 609 900 L 593 950 L 567 1000 L 540 1050 L 518 1100 L 508 1150 L 513 1200"/>
           <path class="route__map-water" d="M 186 760 L 195 798 L 192 837 L 176 876 L 153 915 L 129 954 L 111 993 L 104 1032 L 109 1071 L 127 1110 L 151 1148 L 174 1187 L 191 1226 L 195 1265 L 187 1304 L 168 1343 L 143 1382 L 121 1421 L 106 1460"/>
@@ -469,11 +481,6 @@
           <g class="route__map-bird" style="--dur:30s;--delay:0s"><path d="M 0 120 q 6 -7 12 0 q 6 -7 12 0"/><path d="M 40 108 q 5 -6 10 0 q 5 -6 10 0"/><path d="M 20 136 q 5 -6 10 0 q 5 -6 10 0"/></g>
           <g class="route__map-bird" style="--dur:26s;--delay:-13s"><path d="M 0 560 q 6 -7 12 0 q 6 -7 12 0"/><path d="M 40 548 q 5 -6 10 0 q 5 -6 10 0"/><path d="M 20 576 q 5 -6 10 0 q 5 -6 10 0"/></g>
           <g class="route__map-bird" style="--dur:34s;--delay:-8s"><path d="M 0 1040 q 6 -7 12 0 q 6 -7 12 0"/><path d="M 40 1028 q 5 -6 10 0 q 5 -6 10 0"/><path d="M 20 1056 q 5 -6 10 0 q 5 -6 10 0"/></g>
-          <g class="route__glow" transform="translate(210 262)"><circle class="route__glow-ring" r="6" style="--gd:0s"/><circle class="route__glow-core" r="4"/></g>
-          <g class="route__glow" transform="translate(560 322)"><circle class="route__glow-ring" r="6" style="--gd:0.9s"/><circle class="route__glow-core" r="4"/></g>
-          <g class="route__glow" transform="translate(200 782)"><circle class="route__glow-ring" r="6" style="--gd:1.7s"/><circle class="route__glow-core" r="4"/></g>
-          <g class="route__glow" transform="translate(600 1092)"><circle class="route__glow-ring" r="6" style="--gd:0.5s"/><circle class="route__glow-core" r="4"/></g>
-          <g class="route__glow" transform="translate(400 202)"><circle class="route__glow-ring" r="6" style="--gd:1.3s"/><circle class="route__glow-core" r="4"/></g>
         </g>
         <path id="roadCase" class="route__road-case" fill="none" d="M 200 80 C 200 280 560 280 560 470 C 560 660 200 660 200 850 C 200 1040 560 1040 560 1230 C 560 1360 200 1360 200 1420"/>
         <path id="roadPath" class="route__road" fill="none" d="M 200 80 C 200 280 560 280 560 470 C 560 660 200 660 200 850 C 200 1040 560 1040 560 1230 C 560 1360 200 1360 200 1420"/>
@@ -613,6 +620,6 @@
 </div>
 
 <script src="assets/js/lenis.min.js"></script>
-<script src="assets/js/main.js?v=51"></script>
+<script src="assets/js/main.js?v=52"></script>
 </body>
 </html>

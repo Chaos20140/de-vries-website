@@ -583,6 +583,9 @@ em { font-style: italic; }
 .route__map-contour { fill: none; stroke: var(--line-strong); stroke-width: 1; opacity: 0.3; }
 .route__map-water { fill: none; stroke: var(--blue); stroke-width: 6; opacity: 0.16; stroke-linecap: round; stroke-dasharray: 34 12; animation: routeFlow 3.5s linear infinite; }
 .route__map-forest { fill: var(--green); opacity: 0.16; }
+.route__map-mountain { fill: var(--muted); opacity: 0.14; }
+.route__map-mountain--back { opacity: 0.08; }
+.route__map-snow { fill: #ffffff; opacity: 0.5; }
 .route__map-compass { fill: none; stroke: var(--muted); stroke-width: 1.5; opacity: 0.45; }
 .route__map-compass-n { fill: var(--red); opacity: 0.5; }
 .route__map-cloud { fill: #ffffff; opacity: 0.5; animation: cloudDrift var(--dur, 52s) linear infinite; animation-delay: var(--delay, 0s); will-change: transform; }
