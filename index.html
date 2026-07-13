@@ -20,7 +20,7 @@
 <meta name="twitter:description" content="de Vries aus Salzhemmendorf: liebevolle Seniorenbetreuung (ambulant &amp; stationär) und haushaltsnahe Dienstleistungen – anerkannt nach §§ 45a/45b SGB XI, direkte Abrechnung mit der Pflegekasse ab Pflegegrad 1. Tel: 05153 1552.">
 <meta name="twitter:image" content="https://chaos20140.github.io/de-vries-website/assets/img/senioren-zuhause.jpg">
 <link rel="icon" href="assets/img/favicon.svg?v=2" type="image/svg+xml">
-<link rel="stylesheet" href="assets/css/style.css?v=35">
+<link rel="stylesheet" href="assets/css/style.css?v=36">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -279,16 +279,17 @@
         <path id="roadPath" class="route__road" fill="none" d="M 120 80 C 120 280 640 280 640 470 C 640 660 120 660 120 850 C 120 1040 640 1040 640 1230 C 640 1360 120 1360 120 1420"/>
         <path id="roadDone" class="route__road-done" fill="none" d="M 120 80 C 120 280 640 280 640 470 C 640 660 120 660 120 850 C 120 1040 640 1040 640 1230 C 640 1360 120 1360 120 1420"/>
         <g id="routeCar" class="route__car">
-          <rect x="-13" y="-15" width="8" height="5" rx="2" fill="#2a2320"/>
-          <rect x="6" y="-15" width="8" height="5" rx="2" fill="#2a2320"/>
-          <rect x="-13" y="10" width="8" height="5" rx="2" fill="#2a2320"/>
-          <rect x="6" y="10" width="8" height="5" rx="2" fill="#2a2320"/>
-          <rect x="-20" y="-12" width="40" height="24" rx="9" fill="#d7120a"/>
-          <rect x="-20" y="-12" width="40" height="24" rx="9" fill="none" stroke="#8f0b06" stroke-width="1.5"/>
-          <rect x="-9" y="-8" width="15" height="16" rx="4.5" fill="#8f0b06"/>
-          <rect x="8.5" y="-6.5" width="6.5" height="13" rx="3" fill="#ffe1a6"/>
-          <circle cx="18" cy="-6.5" r="1.9" fill="#fff6e2"/>
-          <circle cx="18" cy="6.5" r="1.9" fill="#fff6e2"/>
+          <!-- klassisches Auto in Seitenansicht, Front nach rechts -->
+          <path d="M -14 -3 L -10 -12 Q -9 -13 -7 -13 L 6 -13 Q 8 -13 9.5 -11 L 14 -3 Z" fill="#d7120a"/>
+          <path d="M -9 -4 L -6.5 -10.5 L -1.5 -10.5 L -1.5 -4 Z" fill="#ffe6b0"/>
+          <path d="M 1 -4 L 1 -10.5 L 5.5 -10.5 Q 7 -10.5 8 -9 L 11 -4 Z" fill="#ffe6b0"/>
+          <rect x="-23" y="-4" width="46" height="12" rx="4.5" fill="#d7120a"/>
+          <rect x="-23" y="-4" width="46" height="12" rx="4.5" fill="none" stroke="#a50d07" stroke-width="1.2"/>
+          <circle cx="-13" cy="8.5" r="6" fill="#241d1a"/>
+          <circle cx="-13" cy="8.5" r="2.4" fill="#9a8f86"/>
+          <circle cx="14" cy="8.5" r="6" fill="#241d1a"/>
+          <circle cx="14" cy="8.5" r="2.4" fill="#9a8f86"/>
+          <rect x="20.5" y="-1.5" width="3.5" height="4" rx="1.2" fill="#fff3cf"/>
         </g>
       </svg>
       <div id="routeStopsG" class="route__stops-layer"></div>
@@ -402,6 +403,6 @@
 </div>
 
 <script src="assets/js/lenis.min.js"></script>
-<script src="assets/js/main.js?v=35"></script>
+<script src="assets/js/main.js?v=36"></script>
 </body>
 </html>

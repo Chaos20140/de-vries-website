@@ -197,15 +197,17 @@
       stops.push({ frac: frac, el: el });
     });
     if (done) { done.style.strokeDasharray = len; done.style.strokeDashoffset = len; }
+    var lastDir = 1;
     routeUpdate = function (p) {
       p = Math.max(0, Math.min(1, p));
       if (done) done.style.strokeDashoffset = len * (1 - p);
       var at = p * len;
       var pt = road.getPointAtLength(at);
-      var a = road.getPointAtLength(Math.min(len, at + 2));
-      var b = road.getPointAtLength(Math.max(0, at - 2));
-      var ang = Math.atan2(a.y - b.y, a.x - b.x) * 180 / Math.PI;
-      carG.setAttribute("transform", "translate(" + pt.x + " " + pt.y + ") rotate(" + ang + ")");
+      var a = road.getPointAtLength(Math.min(len, at + 3));
+      var b = road.getPointAtLength(Math.max(0, at - 3));
+      var dx = a.x - b.x;
+      if (Math.abs(dx) > 0.6) lastDir = dx > 0 ? 1 : -1;
+      carG.setAttribute("transform", "translate(" + pt.x + " " + pt.y + ") scale(" + lastDir + " 1)");
       for (var i = 0; i < stops.length; i++) {
         stops[i].el.classList.toggle("is-active", stops[i].frac <= p + 0.004);
       }
