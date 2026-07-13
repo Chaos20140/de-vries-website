@@ -68,7 +68,7 @@
   /* spacing */
   --gap: clamp(1rem, 0.6rem + 2vw, 2rem);
   --section-y: clamp(4.5rem, 3rem + 7vw, 10rem);
-  --wrap: 1280px;
+  --wrap: 1600px;
   --wrap-narrow: 880px;
   --radius: 4px;
   --radius-lg: 18px;
@@ -360,6 +360,7 @@ em { font-style: italic; }
 .section__head--center h2 { margin-inline: auto; }
 
 /* ---------- 8. INTRO / RICH TEXT ---------- */
+.richtext { max-width: 42rem; } /* Lesbarkeit: Zeilenlänge auch bei breitem Layout begrenzt */
 .richtext p + p { margin-top: 1.6rem; }
 .richtext h3 { margin-top: 3rem; margin-bottom: 1rem; }
 .richtext .tick-list, .richtext + .tick-list { margin-top: 2.2rem; }
