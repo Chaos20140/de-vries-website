@@ -179,6 +179,7 @@
     var road = $("#roadPath", route), done = $("#roadDone", route);
     var carG = $("#routeCar", route), layer = $("#routeStopsG", route);
     var mapClip = $("#mapClipRect", route);
+    var roadCase = $("#roadCase", route), svg = $(".route__svg", route);
     if (!road || !carG || !layer) return;
     var VBW = 760, VBH = 1480;
     var places = (route.getAttribute("data-places") || "").split("|").filter(Boolean);
@@ -189,6 +190,19 @@
     var SEG = 300, pts = new Array(SEG + 1);
     for (var sp = 0; sp <= SEG; sp++) pts[sp] = road.getPointAtLength(sp / SEG * len);
     var mqSmall = window.matchMedia("(max-width: 640px)");
+    var lastP = 0;
+    // Detail-Größe deckeln: die Karte darf mit dem Bildschirm mitwachsen, aber Straßendicke + Auto
+    // skalieren nur bis Faktor FCAP mit und bleiben darüber KONSTANT (sonst auf großen Screens zu groß).
+    // Einmalig/bei resize berechnet (kein Layout-Read pro Frame).
+    var FCAP = 1.1, detailScale = 1;
+    function updateDetail() {
+      var w = svg ? svg.getBoundingClientRect().width : VBW;
+      detailScale = Math.min(1, FCAP / (w / VBW));
+      if (roadCase) roadCase.style.strokeWidth = 13 * detailScale;
+      if (road) road.style.strokeWidth = 3 * detailScale;
+      if (done) done.style.strokeWidth = 8 * detailScale;
+      if (routeUpdate) routeUpdate(lastP);
+    }
     var stops = [];
     places.forEach(function (name, i) {
       var frac = places.length > 1 ? 0.03 + (i / (places.length - 1)) * 0.94 : 0.5;
@@ -207,6 +221,7 @@
     var lastDir = 1;
     routeUpdate = function (p) {
       p = Math.max(0, Math.min(1, p));
+      lastP = p;
       // Mobil: Strecke + Karte fest gezeichnet (idempotent -> nur beim ersten Mal geschrieben, kein Per-Frame-Repaint)
       if (mqSmall.matches) {
         if (done && done.style.strokeDashoffset !== "0") done.style.strokeDashoffset = 0;
@@ -220,7 +235,7 @@
       var cx = pt.x + (pn.x - pt.x) * t, cy = pt.y + (pn.y - pt.y) * t;
       var dx = pn.x - pt.x;
       if (Math.abs(dx) > 0.4) lastDir = dx > 0 ? 1 : -1;
-      carG.setAttribute("transform", "translate(" + cx + " " + (cy - 9) + ") scale(" + lastDir + " 1)");
+      carG.setAttribute("transform", "translate(" + cx + " " + (cy - 9 * detailScale) + ") scale(" + (lastDir * detailScale) + " " + detailScale + ")");
       for (var i = 0; i < stops.length; i++) {
         stops[i].el.classList.toggle("is-active", stops[i].frac <= p + 0.004);
       }
@@ -233,6 +248,9 @@
     } else {
       routeUpdate(0);
     }
+    updateDetail();
+    // bei resize erst NACH dem Reflow messen (sonst stale Breite) -> rAF
+    window.addEventListener("resize", function () { requestAnimationFrame(updateDetail); });
   }
 
   /* ---------- cookie banner ---------- */
