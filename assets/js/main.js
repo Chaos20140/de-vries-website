@@ -485,11 +485,38 @@
     }).catch(function () {});
   }
 
+  // Eigene Menüpunkte (menu.json) in Haupt- und Mobil-Menü einblenden – für alle Besucher.
+  function injectCustomMenu() {
+    fetch("menu.json", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : []; }).then(function (list) {
+      if (!Array.isArray(list) || !list.length) return;
+      var ul = document.querySelector(".nav__links");
+      var mob = document.querySelector(".mobile-nav__body");
+      function okHref(h) { return typeof h === "string" && h.trim() && !/^\s*(javascript|data):/i.test(h); }
+      list.forEach(function (m, ix) {
+        if (!m || typeof m.text !== "string" || !m.text.trim() || !okHref(m.href)) return;
+        var text = m.text.trim().slice(0, 40), href = m.href.trim(), ext = /^https?:\/\//i.test(href);
+        if (ul && !ul.querySelector('a[href="' + href.replace(/"/g, "") + '"]')) {
+          var li = document.createElement("li");
+          var a = document.createElement("a"); a.setAttribute("href", href); a.textContent = text;
+          if (ext) { a.setAttribute("target", "_blank"); a.setAttribute("rel", "noopener"); }
+          li.appendChild(a); ul.appendChild(li);
+        }
+        if (mob && !mob.querySelector('a.mnav__link[href="' + href.replace(/"/g, "") + '"]')) {
+          var ma = document.createElement("a"); ma.className = "mnav__link"; ma.setAttribute("href", href); ma.textContent = text;
+          if (ext) { ma.setAttribute("target", "_blank"); ma.setAttribute("rel", "noopener"); }
+          ma.style.setProperty("--i", String(12 + ix));
+          mob.appendChild(ma);
+        }
+      });
+    }).catch(function () {});
+  }
+
   /* ---------- boot ---------- */
   initLenis();
   initRoute();
   applyScroll();
   injectCreatedPages();
+  injectCustomMenu();
 })();
 
 /* ============================================================
@@ -958,8 +985,9 @@
       + '.eb-zone [data-eb]{transition:outline .12s}'
       + '.eb-zone [data-eb][contenteditable]:hover{outline:2px dashed rgba(215,18,10,.35);outline-offset:3px}'
       + '.eb-zone [data-eb].eb-active{outline:2px solid #d7120a;outline-offset:3px}'
-      + '#ebCtx{position:fixed;left:50%;transform:translateX(-50%);bottom:72px;z-index:2147483646;background:#fff;border:1px solid rgba(28,23,20,.16);border-radius:12px;box-shadow:0 20px 50px -18px rgba(0,0,0,.5);display:none;gap:.28rem;align-items:center;padding:.4rem .5rem;flex-wrap:wrap;max-width:94vw;font:13px system-ui,-apple-system,sans-serif}'
-      + '#ebCtx.show{display:flex}'
+      + '#ebCtx{position:fixed;left:50%;bottom:80px;z-index:2147483646;background:#fff;border:1px solid rgba(28,23,20,.18);border-top:3px solid #d7120a;border-radius:13px;box-shadow:0 10px 26px -8px rgba(215,18,10,.42),0 26px 60px -22px rgba(0,0,0,.6);display:none;gap:.3rem;align-items:center;padding:.5rem .6rem;flex-wrap:wrap;max-width:94vw;font:13px system-ui,-apple-system,sans-serif;transform:translateX(-50%)}'
+      + '#ebCtx.show{display:flex;animation:ebCtxPop .3s cubic-bezier(.2,.9,.3,1)}'
+      + '@keyframes ebCtxPop{from{opacity:0;transform:translate(-50%,18px) scale(.94)}to{opacity:1;transform:translate(-50%,0) scale(1)}}'
       + '#ebCtx button{background:#f0e9e0;color:#1c1714;border:0;border-radius:8px;min-width:32px;height:30px;padding:0 .55em;cursor:pointer;font-weight:700;font-size:.85rem}'
       + '#ebCtx button:hover{background:#e7ddcf}#ebCtx button.on{background:#d7120a;color:#fff}'
       + '#ebCtx .lbl{font-weight:800;color:#a50d07;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;margin-right:.15rem}'
@@ -977,7 +1005,10 @@
       + '.eb-footaddbtn{background:transparent;border:1px dashed rgba(215,18,10,.55);color:#d7120a;border-radius:8px;padding:.28em .7em;font-size:.78rem;font-weight:700;cursor:pointer;margin-top:.35rem;align-self:flex-start}'
       + '.eb-footaddbtn:hover{background:rgba(215,18,10,.09)}'
       + '[data-eb="flink"]{cursor:text}'
-      + '[data-eb="flink"].eb-active{outline:2px solid #d7120a;outline-offset:2px;border-radius:3px}';
+      + '[data-eb="flink"].eb-active{outline:2px solid #d7120a;outline-offset:2px;border-radius:3px}'
+      + '#dvPanel .dv-menurow{display:flex;gap:.35rem;margin:.32rem 0;align-items:center}'
+      + '#dvPanel .dv-menurow input{margin:0}#dvPanel .dv-menurow .mt{flex:0 0 38%}#dvPanel .dv-menurow .mh{flex:1}'
+      + '#dvPanel .dv-menurow .mx{background:#eee;border:0;border-radius:7px;width:30px;height:32px;cursor:pointer;flex:none;font-weight:700}';
     document.head.appendChild(st);
 
     var picker = document.createElement("input");
@@ -1134,21 +1165,40 @@
         html += '<label>' + grp[j][1] + '</label><input data-k="' + key + '">';
       }
     }
+    html += '<div class="grp">Eigene Menüpunkte</div><p class="sub" style="margin:-.1rem 0 .35rem">Zusätzliche Links im Menü (oben &amp; mobil) – gelten auf allen Seiten. Max. 8.</p><div id="dvMenuList"></div><button type="button" class="eb-footaddbtn" id="dvMenuAdd" style="margin-top:.25rem">＋ Menüpunkt</button>';
     html += '<div class="row"><button class="cancel" id="dvPx">Abbrechen</button><button class="ok" id="dvPok">Übernehmen</button></div></div>';
     var wrap = document.createElement("div"); wrap.id = "dvPanel"; wrap.innerHTML = html;
     document.body.appendChild(wrap);
     var inputs = wrap.querySelectorAll("input[data-k]");
     for (var n = 0; n < inputs.length; n++) { inputs[n].value = vals[inputs[n].getAttribute("data-k")] || ""; }
+    var menuList = document.getElementById("dvMenuList");
+    function menuRow(text, href) {
+      var d = document.createElement("div"); d.className = "dv-menurow";
+      d.innerHTML = '<input class="mt" maxlength="40" placeholder="Menüname"><input class="mh" maxlength="200" placeholder="Ziel, z. B. kontakt.html"><button type="button" class="mx" title="entfernen">✕</button>';
+      d.querySelector(".mt").value = text || ""; d.querySelector(".mh").value = href || "";
+      d.querySelector(".mx").onclick = function () { d.remove(); };
+      menuList.appendChild(d);
+    }
+    document.getElementById("dvMenuAdd").onclick = function () { menuRow("", ""); };
+    fetch("menu.json", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : []; }).then(function (list) {
+      if (Array.isArray(list)) list.forEach(function (m) { if (m && m.text) menuRow(m.text, m.href); });
+    }).catch(function () {});
     function close() { wrap.remove(); }
     document.getElementById("dvPx").addEventListener("click", close);
     wrap.addEventListener("click", function (e) { if (e.target === wrap) close(); });
     document.getElementById("dvPok").addEventListener("click", function () {
       var shared = {}, ins = wrap.querySelectorAll("input[data-k]");
       for (var m = 0; m < ins.length; m++) { shared[ins[m].getAttribute("data-k")] = ins[m].value.replace(/\s+/g, " ").trim(); }
+      var menuItems = [], rows = wrap.querySelectorAll(".dv-menurow");
+      for (var mi = 0; mi < rows.length; mi++) { var mt = rows[mi].querySelector(".mt").value.replace(/\s+/g, " ").trim(), mh = rows[mi].querySelector(".mh").value.trim(); if (mt && mh) menuItems.push({ text: mt, href: mh }); }
       var ok = document.getElementById("dvPok"); ok.disabled = true; ok.textContent = "Speichert …";
       call({ action: "save-shared", shared: shared }).then(function (res) {
-        if (res.ok) { close(); msg("✓ Menü/Footer gespeichert (alle Seiten) – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); toast("✓ Menü & Footer gespeichert (alle Seiten). Neuaufbau in ~1-3 Min.", "ok"); }
-        else { ok.disabled = false; ok.textContent = "Übernehmen"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); }
+        var sharedFine = res.ok || (res.status === 400 && res.d && res.d.error === "marker_missing"); // keine Label-Änderung ist ok
+        if (!sharedFine) { ok.disabled = false; ok.textContent = "Übernehmen"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); return; }
+        call({ action: "save-menu", items: menuItems }).then(function (r2) {
+          if (r2.ok) { close(); msg("✓ Menü/Footer gespeichert (alle Seiten) – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); toast("✓ Menü & Footer gespeichert (alle Seiten). Neuaufbau in ~1-3 Min.", "ok"); }
+          else { ok.disabled = false; ok.textContent = "Übernehmen"; toast(r2.status === 401 ? "Falsches Passwort – neu anmelden." : "Menüpunkte-Fehler: " + ((r2.d && r2.d.error) || r2.status), "err"); }
+        }).catch(function () { ok.disabled = false; ok.textContent = "Übernehmen"; toast("Verbindungsfehler.", "err"); });
       }).catch(function () { ok.disabled = false; ok.textContent = "Übernehmen"; msg("Verbindungsfehler."); });
     });
   }

@@ -550,6 +550,24 @@ Deno.serve(async (req) => {
       return okc ? json({ ok: true, updated: changed.length }) : json({ error: "commit_failed" }, 500);
     }
 
+    if (body.action === "save-menu") {
+      // Eigene Menüpunkte -> menu.json (veröffentlicht). Client blendet sie ins Haupt-/Mobil-Menü ein.
+      const items = Array.isArray(body.items) ? body.items : [];
+      if (items.length > 8) return json({ error: "too_many" }, 400);
+      const clean: Array<{ text: string; href: string }> = [];
+      for (const it of items) {
+        const text = String((it && it.text) || "").replace(/\s+/g, " ").trim().slice(0, 40);
+        const href = String((it && it.href) || "").trim();
+        if (!text) continue;
+        if (!safeHref(href)) return json({ error: "bad_href" }, 400);
+        clean.push({ text, href });
+      }
+      let sha: string | undefined;
+      try { sha = (await getFile("menu.json")).sha; } catch { sha = undefined; }
+      const r = await putFile("menu.json", utf8B64(JSON.stringify(clean, null, 2)), sha, "Editor: Menüpunkte aktualisiert");
+      return r.ok ? json({ ok: true, count: clean.length }) : json({ error: "commit_failed" }, 500);
+    }
+
     if (body.action === "list-pages") {
       // Dateiliste (autoritativ aus dem Manifest) + Titel (aus der veröffentlichten pages.json).
       const files = await extraPages();
