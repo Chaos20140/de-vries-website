@@ -104,6 +104,7 @@
     $$("[data-magnetic]").forEach(function (el) {
       var strength = parseFloat(el.getAttribute("data-magnetic")) || 0.3;
       el.addEventListener("mousemove", function (e) {
+        if (document.documentElement.classList.contains("dv-editing")) { el.style.transform = ""; return; } // im Editor: Button ruhig halten
         var r = el.getBoundingClientRect();
         var x = (e.clientX - r.left - r.width / 2) * strength;
         var y = (e.clientY - r.top - r.height / 2) * strength;
@@ -515,6 +516,9 @@
   function msg(m) { var e = document.getElementById("dvMsg"); if (e) e.textContent = m; }
 
   function start() {
+    document.documentElement.classList.add("dv-editing"); // Magnetic-Buttons im Editor ruhig halten
+    var mg = document.querySelectorAll("[data-magnetic]");
+    for (var m0 = 0; m0 < mg.length; m0++) mg[m0].style.transform = "";
     var st = document.createElement("style");
     st.textContent =
       '[data-ed],[data-ed-img]{outline:2px dashed rgba(215,18,10,.55);outline-offset:2px}'

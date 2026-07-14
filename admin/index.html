@@ -138,18 +138,32 @@
     }catch(e){ return false; }
   }
 
-  function showDash(){
-    $("login").classList.add("hidden");
-    $("dash").classList.remove("hidden");
-    var grid=$("pages"); grid.innerHTML="";
+  function mkTile(href, title, sub){
+    var a=document.createElement("a");
+    a.className="page"; a.href=href;
+    var b=document.createElement("b"); b.textContent=title;
+    var s=document.createElement("span"); s.textContent=sub; // Titel/Sub aus Server -> textContent (kein HTML)
+    a.appendChild(b); a.appendChild(s); return a;
+  }
+  // Haupt-Kachelliste = eingebaute Seiten + eigene (erstellte) Seiten
+  function renderMainGrid(createdItems){
+    var grid=$("pages"); if(!grid) return; grid.innerHTML="";
     PAGES.forEach(function(p){
       var a=document.createElement("a");
       a.className="page"; a.href="../"+p[0];
       var b=document.createElement("b"); b.textContent=p[1];
-      var s=document.createElement("span"); s.innerHTML=p[2];
+      var s=document.createElement("span"); s.innerHTML=p[2]; // eingebaut, feste sichere HTML-Entities
       a.appendChild(b); a.appendChild(s); grid.appendChild(a);
     });
-    loadMyPages();
+    (createdItems||[]).forEach(function(it){
+      grid.appendChild(mkTile("../"+it.file, it.title||it.file, "Eigene Seite"));
+    });
+  }
+  function showDash(){
+    $("login").classList.add("hidden");
+    $("dash").classList.remove("hidden");
+    renderMainGrid([]);   // sofort die eingebauten Seiten zeigen …
+    loadMyPages();        // … dann eigene Seiten nachladen und einfügen
     loadMedia();
   }
 
@@ -183,25 +197,31 @@
   }
 
   function loadMyPages(){
-    var box=$("myPages"); if(!box) return; box.innerHTML="";
+    var box=$("myPages"); if(!box) return;
     callFn({action:"list-pages"}).then(function(res){
-      var pages = (res.ok && res.d && Array.isArray(res.d.pages)) ? res.d.pages : [];
-      populateDupSrc(pages);
-      pages.forEach(function(f){
+      var items = (res.ok && res.d && Array.isArray(res.d.items)) ? res.d.items
+                : (res.ok && res.d && Array.isArray(res.d.pages)) ? res.d.pages.map(function(f){return {file:f,title:f};})
+                : [];
+      renderMainGrid(items);   // eigene Seiten auch oben in die Haupt-Kachelliste
+      populateDupSrc(items);   // … und in die Duplizieren-Auswahl
+      box.innerHTML="";
+      items.forEach(function(it){
+        var f=it.file, title=it.title||it.file;
         var card=document.createElement("div"); card.className="page";
-        var a=document.createElement("a"); a.href="../"+f; a.textContent=f;
+        var a=document.createElement("a"); a.href="../"+f; a.textContent=title;
         a.style.fontWeight="700"; a.style.textDecoration="none"; a.style.color="var(--ink)";
+        var sub=document.createElement("span"); sub.textContent=f; sub.style.cssText="font-size:.72rem;color:var(--muted)";
         var del=document.createElement("button"); del.type="button"; del.textContent="Löschen";
         del.className="btn ghost"; del.style.cssText="margin-top:.5rem;font-size:.78rem;padding:.4em 1em";
         del.onclick=function(){
-          if(!window.confirm("Seite „"+f+"“ wirklich löschen? Das kann nicht rückgängig gemacht werden.")) return;
+          if(!window.confirm("Seite „"+title+"“ wirklich löschen? Das kann nicht rückgängig gemacht werden.")) return;
           del.disabled=true; del.textContent="Löscht …";
           callFn({action:"delete-page",file:f}).then(function(r2){
             if(r2.ok) loadMyPages();
             else { del.disabled=false; del.textContent="Löschen"; window.alert("Löschen fehlgeschlagen: "+((r2.d&&r2.d.error)||r2.status)); }
           }).catch(function(){ del.disabled=false; del.textContent="Löschen"; window.alert("Verbindungsfehler."); });
         };
-        card.appendChild(a); card.appendChild(del); box.appendChild(card);
+        card.appendChild(a); card.appendChild(sub); card.appendChild(del); box.appendChild(card);
       });
     });
   }
@@ -232,7 +252,7 @@
   function populateDupSrc(created){
     var sel=$("dupSrc"); if(!sel) return; sel.innerHTML="";
     PAGES.forEach(function(p){ var o=document.createElement("option"); o.value=p[0]; o.textContent=p[1]; sel.appendChild(o); });
-    (created||[]).forEach(function(f){ var o=document.createElement("option"); o.value=f; o.textContent=f+" (eigene)"; sel.appendChild(o); });
+    (created||[]).forEach(function(it){ var o=document.createElement("option"); o.value=it.file; o.textContent=(it.title||it.file)+" (eigene)"; sel.appendChild(o); });
   }
 
   $("dupGo").addEventListener("click", function(){

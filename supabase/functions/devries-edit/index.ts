@@ -435,7 +435,15 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "list-pages") {
-      return json({ ok: true, pages: await extraPages() });
+      // Dateiliste (autoritativ aus dem Manifest) + Titel (aus der veröffentlichten pages.json).
+      const files = await extraPages();
+      const titles: Record<string, string> = {};
+      try {
+        const pj = await getFile("pages.json");
+        const a = JSON.parse(pj.text);
+        if (Array.isArray(a)) for (const x of a) if (x && typeof x.file === "string" && typeof x.title === "string") titles[x.file] = x.title;
+      } catch { /* noch keine pages.json */ }
+      return json({ ok: true, pages: files, items: files.map((f) => ({ file: f, title: titles[f] || f })) });
     }
 
     if (body.action === "create-page") {
