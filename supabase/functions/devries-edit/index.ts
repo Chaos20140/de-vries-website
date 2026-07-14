@@ -154,6 +154,25 @@ async function commitMulti(files: { path: string; contentB64: string }[], messag
   const updR = await gh(`git/refs/heads/${GH_BRANCH}`, { method: "PATCH", body: JSON.stringify({ sha: (await ncR.json()).sha }) });
   return updR.ok;
 }
+// Ersetzt den INHALT einer Zone <tag ... data-ed-zone="X" ...>…</tag> balanciert – zählt verschachtelte
+// gleiche Tags mit, damit Blöcke mit inneren <div> (Karten, Spalten, FAQ) nicht zerschnitten werden.
+function replaceZoneInner(html: string, zone: string, inner: string): string | null {
+  const z = zone.replace(/[^a-z0-9-]/g, "");
+  const openRe = new RegExp('<([a-z]+)\\b[^>]*\\bdata-ed-zone="' + z + '"[^>]*>');
+  const m = openRe.exec(html);
+  if (!m) return null;
+  const tag = m[1];
+  const openEnd = m.index + m[0].length;
+  const tokRe = new RegExp('<' + tag + '\\b|</' + tag + '>', "g");
+  tokRe.lastIndex = openEnd;
+  let depth = 1, t: RegExpExecArray | null, closeStart = -1;
+  while ((t = tokRe.exec(html))) {
+    if (t[0].charAt(1) === "/") { depth--; if (depth === 0) { closeStart = t.index; break; } }
+    else depth++;
+  }
+  if (closeStart < 0) return null;
+  return html.slice(0, openEnd) + inner + html.slice(closeStart);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -489,12 +508,46 @@ Deno.serve(async (req) => {
         }
       }
       const f = await getFile(file);
-      let html = f.text;
-      const re = new RegExp('(<([a-z]+)\\b[^>]*\\bdata-ed-zone="' + zone + '"[^>]*>)([\\s\\S]*?)(</\\2>)');
-      if (!re.test(html)) return json({ error: "marker_missing", field: zone }, 400);
-      html = html.replace(re, (_m, open, _tag, _old, close) => open + inner + close);
+      // Balanciert ersetzen: Zonen-Inhalt kann verschachtelte <div> enthalten (z. B. Karten mit
+      // .scard__icon/.scard__more) – ein non-greedy </div>-Match würde am ersten inneren </div> abbrechen.
+      const html = replaceZoneInner(f.text, zone, inner);
+      if (html === null) return json({ error: "marker_missing", field: zone }, 400);
       const r = await putFile(file, utf8B64(html), f.sha, "Editor: Elemente/Buttons aktualisiert (" + file + ")");
       return r.ok ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
+    }
+
+    if (body.action === "save-footer") {
+      // Eigene Footer-Links (pro Spalte) – geteilt auf ALLEN Seiten (wie save-shared).
+      const links = (body.links || {}) as Record<string, any>;
+      const COLS = ["leistungen", "informationen", "kontakt"];
+      const rendered: Record<string, string> = {};
+      for (const col of COLS) {
+        const arr = Array.isArray(links[col]) ? links[col] : [];
+        if (arr.length > 12) return json({ error: "too_many", field: col }, 400);
+        let out = "";
+        for (const it of arr) {
+          const text = esc(String((it && it.text) || "").slice(0, 60).trim());
+          const href = String((it && it.href) || "").trim();
+          if (!text) continue;
+          if (href && href !== "#" && !safeHref(href)) return json({ error: "bad_href" }, 400);
+          const ext = /^https?:\/\//i.test(href);
+          out += '<a href="' + esc(href || "#") + '"' + (ext ? ' target="_blank" rel="noopener"' : "") + ' data-eb="flink">' + text + "</a>";
+        }
+        rendered[col] = out;
+      }
+      const changed: { path: string; contentB64: string }[] = [];
+      for (const page of [...PAGES, ...(await extraPages())]) {
+        const pf = await getFile(page);
+        let h = pf.text, ch = false;
+        for (const col of COLS) {
+          const re = new RegExp('(<div class="eb-footadd" data-foot-zone="' + col + '"[^>]*>)([\\s\\S]*?)(</div>)');
+          if (re.test(h)) { const nh = h.replace(re, (_m, a, _o, c) => a + rendered[col] + c); if (nh !== h) { h = nh; ch = true; } }
+        }
+        if (ch) changed.push({ path: page, contentB64: utf8B64(h) });
+      }
+      if (!changed.length) return json({ error: "marker_missing" }, 400);
+      const okc = await commitMulti(changed, "Editor: Footer-Links aktualisiert");
+      return okc ? json({ ok: true, updated: changed.length }) : json({ error: "commit_failed" }, 500);
     }
 
     if (body.action === "list-pages") {

@@ -524,7 +524,7 @@
     setTimeout(function () { t.classList.remove("show"); setTimeout(function () { if (t.parentNode) t.remove(); }, 320); }, kind === "err" ? 5200 : 3600);
   }
   function unsavedCount() {
-    return document.querySelectorAll(".dv-changed").length + Object.keys(pending).length + Object.keys(pendingPos).length + Object.keys(dirtyZones).length;
+    return document.querySelectorAll(".dv-changed").length + Object.keys(pending).length + Object.keys(pendingPos).length + Object.keys(dirtyZones).length + (dirtyFooter ? 1 : 0);
   }
   function hasUnsaved() { return unsavedCount() > 0; }
   function refreshSaveBtn() {
@@ -627,7 +627,7 @@
     { t: "list", ic: "☰", lbl: "Liste" }, { t: "quote", ic: "❝", lbl: "Zitat" },
     { t: "divider", ic: "—", lbl: "Linie" }
   ];
-  var dirtyZones = {}, ebActive = null, ebImgPicker = null, ebCtx = null;
+  var dirtyZones = {}, dirtyFooter = false, ebActive = null, ebImgPicker = null, ebCtx = null;
   var EB_SIZES = ["s", "m", "l", "xl"], EB_WIDTHS = ["narrow", "normal", "wide", "full"], EB_ALIGN = ["left", "center", "right"];
   var CARD_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l8.8 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8z"/></svg>';
   var CARD_ARROW = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -635,7 +635,10 @@
   function ebClass(b) { return "eb-al-" + (b.align || "center") + " eb-w-" + (b.width || "normal") + " eb-sp-" + (b.space || "normal") + " eb-fs-" + (b.size || "m"); }
   function ebGet(el, prefix, vals, def) { for (var i = 0; i < vals.length; i++) if (el.classList.contains(prefix + vals[i])) return vals[i]; return def; }
   function ebSet(el, prefix, vals, val) { for (var i = 0; i < vals.length; i++) el.classList.remove(prefix + vals[i]); el.classList.add(prefix + val); ebDirty(el); }
-  function ebDirty(el) { var z = el.closest ? el.closest("[data-ed-zone]") : null; if (z) { dirtyZones[z.getAttribute("data-ed-zone")] = true; refreshSaveBtn(); } }
+  function ebDirty(el) {
+    if (el.closest && el.closest("[data-foot-zone]")) { dirtyFooter = true; refreshSaveBtn(); return; }
+    var z = el.closest ? el.closest("[data-ed-zone]") : null; if (z) { dirtyZones[z.getAttribute("data-ed-zone")] = true; refreshSaveBtn(); }
+  }
   function ebBuild(type) {
     var b = { align: "center", width: "normal", space: "normal", size: "m" }, el;
     if (type === "button") { el = document.createElement("a"); el.href = "#"; el.setAttribute("data-eb", "button"); el.className = "btn " + ebClass(b); el.textContent = "Button-Text"; }
@@ -660,6 +663,13 @@
     if (t === "card") {
       var flds = el.querySelectorAll("[data-cf]");
       for (var ci = 0; ci < flds.length; ci++) { flds[ci].setAttribute("contenteditable", "true"); flds[ci].setAttribute("spellcheck", "false"); }
+      el.addEventListener("click", function (e) { e.preventDefault(); ebSelect(el); });
+      el.addEventListener("focusin", function () { ebSelect(el); });
+      el.addEventListener("input", function () { ebDirty(el); });
+      return;
+    }
+    if (t === "flink") {
+      el.setAttribute("contenteditable", "true"); el.setAttribute("spellcheck", "false");
       el.addEventListener("click", function (e) { e.preventDefault(); ebSelect(el); });
       el.addEventListener("focusin", function () { ebSelect(el); });
       el.addEventListener("input", function () { ebDirty(el); });
@@ -701,7 +711,7 @@
     }).catch(function () { grid.textContent = "Fehler beim Laden."; });
   }
   function ebMove(el, dir) {
-    var zone = el.closest("[data-ed-zone]"); if (!zone) return; var sib = el, found = null;
+    var zone = el.closest("[data-ed-zone]") || el.closest("[data-foot-zone]"); if (!zone) return; var sib = el, found = null;
     if (dir < 0) { sib = el.previousElementSibling; while (sib && !sib.hasAttribute("data-eb")) sib = sib.previousElementSibling; if (sib) { zone.insertBefore(el, sib); found = 1; } }
     else { sib = el.nextElementSibling; while (sib && !sib.hasAttribute("data-eb")) sib = sib.nextElementSibling; if (sib) { zone.insertBefore(sib, el); found = 1; } }
     if (found) ebDirty(el);
@@ -722,6 +732,20 @@
           else if (a === "del") { if (window.confirm("Diese Leistung wirklich löschen?")) { var z = el.closest("[data-ed-zone]"); el.remove(); if (z) { dirtyZones[z.getAttribute("data-ed-zone")] = true; refreshSaveBtn(); } ebHideCtx(); } }
         };
       })(cbs[ci]);
+      return;
+    }
+    if (t === "flink") {
+      c.innerHTML = '<span class="lbl">Footer-Link</span><input data-a="href" placeholder="Ziel, z. B. haushaltshilfe.html oder https://…"><span class="sep"></span><button data-a="up" title="nach oben">↑</button><button data-a="down" title="nach unten">↓</button><button data-a="del" title="löschen">🗑</button>';
+      c.classList.add("show");
+      var fhi = c.querySelector('input[data-a="href"]'); var fhv = el.getAttribute("href") || ""; fhi.value = fhv === "#" ? "" : fhv; fhi.oninput = function () { el.setAttribute("href", fhi.value.trim() || "#"); ebDirty(el); };
+      var fbs = c.querySelectorAll("button[data-a]");
+      for (var fi = 0; fi < fbs.length; fi++) (function (btn) {
+        btn.onclick = function () {
+          var a = btn.getAttribute("data-a");
+          if (a === "up") ebMove(el, -1); else if (a === "down") ebMove(el, 1);
+          else if (a === "del") { if (window.confirm("Diesen Footer-Link löschen?")) { el.remove(); dirtyFooter = true; refreshSaveBtn(); ebHideCtx(); } }
+        };
+      })(fbs[fi]);
       return;
     }
     var al = ebGet(el, "eb-al-", EB_ALIGN, "center"), w = ebGet(el, "eb-w-", EB_WIDTHS, "normal");
@@ -814,6 +838,37 @@
       });
     });
     return chain.then(function () { return okAll; });
+  }
+  function ebSerializeFooter() {
+    var out = {}, zones = document.querySelectorAll("[data-foot-zone]");
+    for (var i = 0; i < zones.length; i++) {
+      var z = zones[i], col = z.getAttribute("data-foot-zone"), arr = [];
+      var ls = z.querySelectorAll('[data-eb="flink"]');
+      for (var j = 0; j < ls.length; j++) { var t = ls[j].textContent.trim(); if (t) arr.push({ text: t, href: ls[j].getAttribute("href") || "" }); }
+      out[col] = arr;
+    }
+    return out;
+  }
+  function ebAddFooterLink(zone) {
+    var a = document.createElement("a"); a.href = "#"; a.setAttribute("data-eb", "flink"); a.textContent = "Neuer Link";
+    var addBtn = zone.querySelector(".eb-footaddbtn");
+    if (addBtn) zone.insertBefore(a, addBtn); else zone.appendChild(a);
+    ebEnhance(a); dirtyFooter = true; refreshSaveBtn();
+    a.focus(); try { var r = document.createRange(); r.selectNodeContents(a); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch (e) {}
+    ebSelect(a);
+  }
+  function ebEnhanceFooterZone(zone) {
+    var links = zone.querySelectorAll('[data-eb="flink"]');
+    for (var i = 0; i < links.length; i++) ebEnhance(links[i]);
+    var add = document.createElement("button"); add.type = "button"; add.className = "eb-footaddbtn"; add.textContent = "＋ Link hinzufügen";
+    add.onclick = function () { ebAddFooterLink(zone); };
+    zone.appendChild(add);
+  }
+  function ebSaveAll() {
+    return ebSaveZones().then(function (zonesOk) {
+      if (!dirtyFooter) return zonesOk;
+      return call({ action: "save-footer", links: ebSerializeFooter() }).then(function (res) { if (res.ok) dirtyFooter = false; return zonesOk && res.ok; });
+    });
   }
 
   function start() {
@@ -917,7 +972,12 @@
       + '[data-eb="card"] [data-cf][contenteditable]:hover{outline:2px dashed rgba(215,18,10,.4);outline-offset:2px}'
       + '[data-eb="card"].eb-active{outline:2px solid #d7120a;outline-offset:4px}'
       + '.eb-adder--card{border:2px dashed rgba(215,18,10,.45);border-radius:16px;min-height:150px;width:auto;margin:0;justify-content:center;gap:.35rem}'
-      + '.eb-adder--card .eb-plus{opacity:.9}';
+      + '.eb-adder--card .eb-plus{opacity:.9}'
+      // Footer-Link-Editor
+      + '.eb-footaddbtn{background:transparent;border:1px dashed rgba(215,18,10,.55);color:#d7120a;border-radius:8px;padding:.28em .7em;font-size:.78rem;font-weight:700;cursor:pointer;margin-top:.35rem;align-self:flex-start}'
+      + '.eb-footaddbtn:hover{background:rgba(215,18,10,.09)}'
+      + '[data-eb="flink"]{cursor:text}'
+      + '[data-eb="flink"].eb-active{outline:2px solid #d7120a;outline-offset:2px;border-radius:3px}';
     document.head.appendChild(st);
 
     var picker = document.createElement("input");
@@ -993,6 +1053,8 @@
     // Frei-Element-Zonen: pro Zone einen Verwalten-Button einfügen
     var zones = document.querySelectorAll("[data-ed-zone]");
     for (var z = 0; z < zones.length; z++) ebEnhanceZone(zones[z]);
+    var fzones = document.querySelectorAll("[data-foot-zone]");
+    for (var fz = 0; fz < fzones.length; fz++) ebEnhanceFooterZone(fzones[fz]);
     // Kontext-Leiste ausblenden, wenn außerhalb eines Elements/der Leiste geklickt wird
     document.addEventListener("mousedown", function (e) {
       if (e.target.closest && (e.target.closest("[data-eb]") || e.target.closest("#ebCtx") || e.target.closest(".eb-adder"))) return;
@@ -1327,7 +1389,7 @@
       var slots = Object.keys(pending);
       (function next(k) {
         if (k >= slots.length) {
-          ebSaveZones().then(function (zonesOk) {
+          ebSaveAll().then(function (zonesOk) {
             clearChanged();
             if (zonesOk) { msg("✓ Gespeichert! Seite wird neu gebaut (~1–3 Min) – danach auf Aktualisieren klicken."); toast("✓ Gespeichert! Neuaufbau in ~1-3 Min, danach auf Aktualisieren klicken.", "ok"); }
             else { msg("Teilweise gespeichert – einige Element-Zonen konnten nicht gesichert werden."); toast("Einige eingefügte Elemente konnten nicht gespeichert werden.", "err"); }

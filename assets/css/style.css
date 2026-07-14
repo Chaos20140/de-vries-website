@@ -644,6 +644,8 @@ em { font-style: italic; }
 .eb-zone > .eb-fs-xl { font-size: 1.65em; }
 /* Karten-Zone im Leistungs-Grid: Wrapper unsichtbar, damit eigene .scard direkt ins Grid fließen */
 .eb-cardzone { display: contents; }
+/* Footer-Link-Zone: Wrapper unsichtbar, damit eigene Links wie die Standard-Links in der Spalte liegen */
+.eb-footadd { display: contents; }
 .eb-wrap:has(.eb-zone:not(:empty)) { padding-block: clamp(2rem, 1rem + 3vw, 4.5rem); }
 @media (prefers-reduced-motion: reduce){
   .route__road-done { display: none; }
