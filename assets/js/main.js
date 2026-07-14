@@ -462,7 +462,7 @@
       var mob = document.querySelector(".mobile-nav__body");
       var footH = document.querySelector('.footer__col h4[data-eds="lbl-foot-informationen"]');
       var foot = footH ? footH.parentNode : null;
-      list.forEach(function (p) {
+      list.forEach(function (p, ix) {
         if (!p || typeof p.file !== "string" || !/^[a-z][a-z0-9-]{1,38}\.html$/.test(p.file)) return;
         var title = (typeof p.title === "string" && p.title.trim()) ? p.title.trim() : p.file;
         if (ul && !ul.querySelector('a[href="' + p.file + '"]')) {
@@ -472,6 +472,7 @@
         }
         if (mob && !mob.querySelector('a.mnav__link[href="' + p.file + '"]')) {
           var ma = document.createElement("a"); ma.className = "mnav__link"; ma.setAttribute("href", p.file); ma.textContent = title;
+          ma.style.setProperty("--i", String(10 + ix)); // Stagger-Animation wie die anderen Menüpunkte
           mob.appendChild(ma);
         }
         if (foot && !foot.querySelector('a[href="' + p.file + '"]')) {
