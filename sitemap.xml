@@ -11,4 +11,9 @@
   <url><loc>https://chaos20140.github.io/de-vries-website/stellenangebote.html</loc><lastmod>2026-06-27</lastmod></url>
   <url><loc>https://chaos20140.github.io/de-vries-website/impressum.html</loc><lastmod>2026-06-27</lastmod></url>
   <url><loc>https://chaos20140.github.io/de-vries-website/datenschutz.html</loc><lastmod>2026-06-27</lastmod></url>
+  <url>
+    <loc>https://chaos20140.github.io/de-vries-website/cms-duptest.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
 </urlset>
