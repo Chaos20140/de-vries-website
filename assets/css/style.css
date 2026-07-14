@@ -614,6 +614,11 @@ em { font-style: italic; }
 .eb-zone hr { border: 0; border-top: 1px solid var(--line); width: 64px; margin: 0.4rem auto; }
 .eb-zone ul { text-align: left; max-width: 56ch; margin: 0; padding-left: 1.25rem; display: grid; gap: 0.45rem; }
 .eb-zone ul li { list-style: disc; color: var(--ink-2); line-height: 1.6; }
+.eb-zone img { max-width: min(100%, 660px); height: auto; border-radius: var(--radius-lg); box-shadow: 0 30px 60px -42px rgba(28,23,20,0.55); }
+.eb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.2rem, 0.6rem + 2vw, 2.8rem); text-align: left; width: 100%; max-width: var(--wrap); }
+.eb-cols > div { min-width: 0; }
+.eb-cols p { max-width: none; margin: 0; }
+@media (max-width: 640px) { .eb-cols { grid-template-columns: 1fr; } }
 .eb-wrap:has(.eb-zone:not(:empty)) { padding-block: clamp(2rem, 1rem + 3vw, 4.5rem); }
 @media (prefers-reduced-motion: reduce){
   .route__road-done { display: none; }

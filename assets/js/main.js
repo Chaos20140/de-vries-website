@@ -460,6 +460,8 @@
       if (!Array.isArray(list) || !list.length) return;
       var ul = document.querySelector(".nav__links");
       var mob = document.querySelector(".mobile-nav__body");
+      var footH = document.querySelector('.footer__col h4[data-eds="lbl-foot-informationen"]');
+      var foot = footH ? footH.parentNode : null;
       list.forEach(function (p) {
         if (!p || typeof p.file !== "string" || !/^[a-z][a-z0-9-]{1,38}\.html$/.test(p.file)) return;
         var title = (typeof p.title === "string" && p.title.trim()) ? p.title.trim() : p.file;
@@ -471,6 +473,10 @@
         if (mob && !mob.querySelector('a.mnav__link[href="' + p.file + '"]')) {
           var ma = document.createElement("a"); ma.className = "mnav__link"; ma.setAttribute("href", p.file); ma.textContent = title;
           mob.appendChild(ma);
+        }
+        if (foot && !foot.querySelector('a[href="' + p.file + '"]')) {
+          var fa = document.createElement("a"); fa.setAttribute("href", p.file); fa.textContent = title;
+          foot.appendChild(fa);
         }
       });
     }).catch(function () {});
@@ -694,6 +700,8 @@
   function openBlocks(zoneEl) {
     if (document.getElementById("dvPanel")) return;
     var zone = zoneEl.getAttribute("data-ed-zone");
+    // Verfügbare Bild-Slots (müssen serverseitig in IMG_SLOTS existieren).
+    var EB_SLOTS = [["senioren-zuhause", "Senioren zuhause"], ["senioren-familie", "Familie / Team"], ["senioren-pflege", "Pflege"], ["senioren-entlastung", "Entlastung"], ["haushalt-alltag", "Haushalt: Alltag"], ["haushalt-reinigung", "Haushalt: Reinigung"], ["hero", "Hero-Bild"]];
     var model = [];
     var ebs = zoneEl.querySelectorAll("[data-eb]");
     for (var i = 0; i < ebs.length; i++) {
@@ -704,16 +712,18 @@
       else if (t === "quote") model.push({ type: "quote", text: el.textContent.trim() });
       else if (t === "divider") model.push({ type: "divider" });
       else if (t === "list") { var items = [], lis = el.querySelectorAll("li"); for (var q = 0; q < lis.length; q++) items.push(lis[q].textContent.trim()); model.push({ type: "list", text: items.join("\n") }); }
+      else if (t === "image") model.push({ type: "image", slot: el.getAttribute("data-eb-slot") || "senioren-zuhause", alt: el.getAttribute("alt") || "" });
+      else if (t === "columns") { var cd = el.children; model.push({ type: "columns", left: cd[0] ? cd[0].textContent.trim() : "", right: cd[1] ? cd[1].textContent.trim() : "" }); }
     }
     var wrap = document.createElement("div"); wrap.id = "dvPanel"; document.body.appendChild(wrap);
-    function label(t) { return t === "button" ? "Button" : t === "heading" ? "Überschrift" : t === "quote" ? "Zitat" : t === "divider" ? "Trenner" : t === "list" ? "Liste" : "Text"; }
+    function label(t) { return t === "button" ? "Button" : t === "heading" ? "Überschrift" : t === "quote" ? "Zitat" : t === "divider" ? "Trenner" : t === "list" ? "Liste" : t === "image" ? "Bild" : t === "columns" ? "Spalten" : "Text"; }
     function sync() {
       var ins = wrap.querySelectorAll("[data-f]");
       for (var k = 0; k < ins.length; k++) { var f = ins[k].getAttribute("data-f"), idx = +ins[k].getAttribute("data-i"); if (model[idx]) model[idx][f] = ins[k].value; }
     }
     function render() {
       var h = '<div class="box"><h3>Elemente &amp; Buttons</h3><p class="sub">Erscheinen auf dieser Seite über dem Footer. Reihenfolge mit den Pfeilen, danach Speichern.</p>';
-      h += '<div class="eb-add-row"><button data-add="button">➕ Button</button><button data-add="heading">➕ Überschrift</button><button data-add="text">➕ Text</button><button data-add="list">➕ Liste</button><button data-add="quote">➕ Zitat</button><button data-add="divider">➕ Trenner</button></div><div>';
+      h += '<div class="eb-add-row"><button data-add="button">➕ Button</button><button data-add="heading">➕ Überschrift</button><button data-add="text">➕ Text</button><button data-add="list">➕ Liste</button><button data-add="image">➕ Bild</button><button data-add="columns">➕ Spalten</button><button data-add="quote">➕ Zitat</button><button data-add="divider">➕ Trenner</button></div><div>';
       if (!model.length) h += '<p class="sub">Noch keine Elemente – oben eins hinzufügen.</p>';
       for (var i = 0; i < model.length; i++) {
         var b = model[i];
@@ -723,6 +733,13 @@
           h += '<p class="sub" style="margin:.15rem 0 0">Waagerechte Trennlinie – keine Eingabe nötig.</p>';
         } else if (b.type === "list") {
           h += '<textarea data-f="text" data-i="' + i + '" maxlength="1600" placeholder="Ein Listenpunkt pro Zeile"></textarea>';
+        } else if (b.type === "image") {
+          h += '<select data-f="slot" data-i="' + i + '">';
+          for (var si = 0; si < EB_SLOTS.length; si++) h += '<option value="' + EB_SLOTS[si][0] + '">' + EB_SLOTS[si][1] + '</option>';
+          h += '</select><input data-f="alt" data-i="' + i + '" maxlength="160" placeholder="Alt-Text (Bildbeschreibung für Google/Barrierefreiheit)">';
+        } else if (b.type === "columns") {
+          h += '<textarea data-f="left" data-i="' + i + '" maxlength="600" placeholder="Linke Spalte"></textarea>'
+            + '<textarea data-f="right" data-i="' + i + '" maxlength="600" placeholder="Rechte Spalte"></textarea>';
         } else {
           var max = b.type === "text" ? 600 : b.type === "quote" ? 400 : b.type === "heading" ? 120 : 80;
           h += '<input data-f="text" data-i="' + i + '" maxlength="' + max + '" placeholder="Beschriftung / Text">';
@@ -741,7 +758,7 @@
     }
     function bind() {
       var add = wrap.querySelectorAll("[data-add]");
-      for (var a = 0; a < add.length; a++) { add[a].onclick = (function (t) { return function () { sync(); model.push(t === "button" ? { type: "button", text: "", href: "", variant: "solid" } : t === "divider" ? { type: "divider" } : { type: t, text: "" }); render(); }; })(add[a].getAttribute("data-add")); }
+      for (var a = 0; a < add.length; a++) { add[a].onclick = (function (t) { return function () { sync(); model.push(t === "button" ? { type: "button", text: "", href: "", variant: "solid" } : t === "divider" ? { type: "divider" } : t === "image" ? { type: "image", slot: "senioren-zuhause", alt: "" } : t === "columns" ? { type: "columns", left: "", right: "" } : { type: t, text: "" }); render(); }; })(add[a].getAttribute("data-add")); }
       var del = wrap.querySelectorAll("[data-del]");
       for (var d = 0; d < del.length; d++) { del[d].onclick = (function (i) { return function () { sync(); model.splice(i, 1); render(); }; })(+del[d].getAttribute("data-del")); }
       var up = wrap.querySelectorAll("[data-up]");

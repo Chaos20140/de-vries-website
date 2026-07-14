@@ -5,8 +5,12 @@
 // (das Passwort ist die Zugangskontrolle).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// CORS auf die echte Editor-Domain beschränken (per Env überschreibbar). Auth läuft ohnehin über
+// das Passwort im Body (keine Cookies), aber so kann kein fremder Origin die Antworten auslesen.
+const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "https://chaos20140.github.io";
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+  "Vary": "Origin",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -185,6 +189,8 @@ Deno.serve(async (req) => {
     return json({ error: "unauthorized" }, 401);
   }
   await admin.from("devries_edit_log").insert({ ip, ok: true });
+  // Log-Hygiene: bei (seltenen) Owner-Aktionen alte Einträge >7 Tage entfernen (Rate-Fenster = 15 Min).
+  try { await admin.from("devries_edit_log").delete().lt("created_at", new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()); } catch { /* nicht kritisch */ }
 
   try {
     if (body.action === "save-home") {
@@ -383,6 +389,16 @@ Deno.serve(async (req) => {
           }
           if (!li) continue;
           inner += '<ul data-eb="list">' + li + "</ul>";
+        } else if (type === "image") {
+          const slot = String((b as any).slot || "");
+          if (!(slot in IMG_SLOTS)) return json({ error: "bad_slot", field: slot }, 400);
+          const alt = esc(String((b as any).alt || "").slice(0, 160).trim());
+          inner += '<img data-eb="image" data-eb-slot="' + slot + '" src="' + IMG_SLOTS[slot] + '" alt="' + alt + '" loading="lazy">';
+        } else if (type === "columns") {
+          const l = esc(String((b as any).left || "").slice(0, 600).trim());
+          const r = esc(String((b as any).right || "").slice(0, 600).trim());
+          if (!l && !r) continue;
+          inner += '<div class="eb-cols" data-eb="columns"><div>' + (l ? "<p>" + l + "</p>" : "") + '</div><div>' + (r ? "<p>" + r + "</p>" : "") + "</div></div>";
         } else {
           return json({ error: "bad_block_type" }, 400);
         }
