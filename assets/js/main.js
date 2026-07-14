@@ -676,7 +676,7 @@
     else if (type === "list") { el = document.createElement("ul"); el.setAttribute("data-eb", "list"); el.className = ebClass(b); ["Erster Punkt", "Zweiter Punkt"].forEach(function (x) { var li = document.createElement("li"); li.textContent = x; el.appendChild(li); }); }
     else if (type === "image") { el = document.createElement("img"); el.setAttribute("data-eb", "image"); el.setAttribute("data-eb-slot", "senioren-zuhause"); el.className = ebClass(b); el.src = EB_IMG["senioren-zuhause"]; el.alt = ""; }
     else if (type === "card") {
-      el = document.createElement("a"); el.href = "#"; el.setAttribute("data-eb", "card"); el.className = "scard";
+      el = document.createElement("div"); el.setAttribute("data-eb-href", "#"); el.setAttribute("data-eb", "card"); el.className = "scard";
       el.innerHTML = '<span class="scard__num">05</span><div class="scard__icon">' + CARD_ICON + '</div>'
         + '<h3 data-cf="title">Neue Leistung</h3>'
         + '<p data-cf="text">Kurze Beschreibung der Leistung – hier eintragen.</p>'
@@ -685,14 +685,48 @@
     }
     return el;
   }
+  function ebCardToDiv(a) {
+    var d = document.createElement("div");
+    d.className = a.className; d.setAttribute("data-eb", "card"); d.setAttribute("data-eb-href", a.getAttribute("href") || "#");
+    while (a.firstChild) d.appendChild(a.firstChild);
+    if (a.parentNode) a.parentNode.replaceChild(d, a);
+    return d;
+  }
+  function ebCardAddBullet(cardEl) {
+    var ul = cardEl.querySelector('[data-cf="list"]');
+    if (!ul) {
+      ul = document.createElement("ul"); ul.className = "scard__list"; ul.setAttribute("data-cf", "list"); ul.setAttribute("contenteditable", "true"); ul.setAttribute("spellcheck", "false");
+      var more = cardEl.querySelector(".scard__more"); if (more) cardEl.insertBefore(ul, more); else cardEl.appendChild(ul);
+    }
+    var li = document.createElement("li"); li.textContent = "Neuer Stichpunkt"; ul.appendChild(li);
+    ebDirty(cardEl);
+    try { ul.focus(); var r = document.createRange(); r.selectNodeContents(li); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch (e) {}
+  }
+  function ebPositionCtx(el) {
+    var c = ebCtx; if (!c || !el || !c.classList.contains("show")) return;
+    var r = el.getBoundingClientRect(), cw = c.offsetWidth, chh = c.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+    // Fallback: Element (fast) außerhalb des sichtbaren Bereichs -> Leiste unten mittig einblenden
+    if (r.bottom < 44 || r.top > vh - 44) { c.style.top = Math.max(8, vh - chh - 84) + "px"; c.style.left = Math.max(8, (vw - cw) / 2) + "px"; return; }
+    var top = r.bottom + 10;
+    if (top + chh > vh - 84) top = r.top - chh - 10; // über das Element, wenn unten kein Platz (Bottom-Bar freihalten)
+    if (top < 8) top = 8;
+    var left = r.left + r.width / 2 - cw / 2;
+    if (left < 8) left = 8; if (left + cw > vw - 8) left = vw - cw - 8;
+    c.style.top = Math.round(top) + "px"; c.style.left = Math.round(left) + "px";
+  }
   function ebEnhance(el) {
     var t = el.getAttribute("data-eb");
     if (t === "card") {
+      if (el.tagName === "A") el = ebCardToDiv(el); // Link -> div, damit die Felder zuverlässig editierbar sind
+      var ct = el.querySelector('[data-cf="title"]') || el.querySelector("h3"); if (ct) ct.setAttribute("data-cf", "title");
+      var cx = el.querySelector('[data-cf="text"]') || el.querySelector("p"); if (cx) cx.setAttribute("data-cf", "text");
+      var cl = el.querySelector('[data-cf="list"]') || el.querySelector("ul.scard__list"); if (cl) cl.setAttribute("data-cf", "list");
       var flds = el.querySelectorAll("[data-cf]");
       for (var ci = 0; ci < flds.length; ci++) { flds[ci].setAttribute("contenteditable", "true"); flds[ci].setAttribute("spellcheck", "false"); }
-      el.addEventListener("click", function (e) { e.preventDefault(); ebSelect(el); });
-      el.addEventListener("focusin", function () { ebSelect(el); });
-      el.addEventListener("input", function () { ebDirty(el); });
+      var cardEl = el;
+      el.addEventListener("focusin", function () { ebSelect(cardEl); });
+      el.addEventListener("click", function () { ebSelect(cardEl); });
+      el.addEventListener("input", function () { ebDirty(cardEl); });
       return;
     }
     if (t === "flink") {
@@ -748,17 +782,19 @@
   function ebShowCtx(el) {
     var c = ebEnsureCtx(), t = el.getAttribute("data-eb");
     if (t === "card") {
-      c.innerHTML = '<span class="lbl">Leistung</span><input data-a="href" placeholder="Link, z. B. seniorenbetreuung.html"><span class="sep"></span><button data-a="up" title="nach oben">↑</button><button data-a="down" title="nach unten">↓</button><button data-a="del" title="löschen">🗑</button>';
+      c.innerHTML = '<span class="lbl">Leistung</span><button data-a="bullet" title="Stichpunkt hinzufügen">＋ Stichpunkt</button><span class="sep"></span><input data-a="href" placeholder="Link, z. B. seniorenbetreuung.html"><span class="sep"></span><button data-a="up" title="nach oben">↑</button><button data-a="down" title="nach unten">↓</button><button data-a="del" title="löschen">🗑</button>';
       c.classList.add("show");
-      var chi = c.querySelector('input[data-a="href"]'); var chv = el.getAttribute("href") || ""; chi.value = chv === "#" ? "" : chv; chi.oninput = function () { el.setAttribute("href", chi.value.trim() || "#"); ebDirty(el); };
+      var chi = c.querySelector('input[data-a="href"]'); var chv = el.getAttribute("data-eb-href") || el.getAttribute("href") || ""; chi.value = chv === "#" ? "" : chv; chi.oninput = function () { el.setAttribute("data-eb-href", chi.value.trim() || "#"); ebDirty(el); };
       var cbs = c.querySelectorAll("button[data-a]");
       for (var ci = 0; ci < cbs.length; ci++) (function (btn) {
         btn.onclick = function () {
           var a = btn.getAttribute("data-a");
-          if (a === "up") ebMove(el, -1); else if (a === "down") ebMove(el, 1);
+          if (a === "bullet") ebCardAddBullet(el);
+          else if (a === "up") ebMove(el, -1); else if (a === "down") ebMove(el, 1);
           else if (a === "del") { if (window.confirm("Diese Leistung wirklich löschen?")) { var z = el.closest("[data-ed-zone]"); el.remove(); if (z) { dirtyZones[z.getAttribute("data-ed-zone")] = true; refreshSaveBtn(); } ebHideCtx(); } }
         };
       })(cbs[ci]);
+      ebPositionCtx(el);
       return;
     }
     if (t === "flink") {
@@ -773,6 +809,7 @@
           else if (a === "del") { if (window.confirm("Diesen Footer-Link löschen?")) { el.remove(); dirtyFooter = true; refreshSaveBtn(); ebHideCtx(); } }
         };
       })(fbs[fi]);
+      ebPositionCtx(el);
       return;
     }
     var al = ebGet(el, "eb-al-", EB_ALIGN, "center"), w = ebGet(el, "eb-w-", EB_WIDTHS, "normal");
@@ -803,6 +840,7 @@
         if (a !== "del" && a !== "imgup" && a !== "imglib") ebShowCtx(el); // Panel aktualisieren
       };
     })(bs[i]);
+    ebPositionCtx(el);
   }
   function ebAdd(zone, type) {
     var el = ebBuild(type), adder = zone.querySelector(".eb-adder");
@@ -842,7 +880,7 @@
         var h3 = el.querySelector('[data-cf="title"]'), pp = el.querySelector('[data-cf="text"]'), ull = el.querySelector('[data-cf="list"]');
         b.title = h3 ? h3.textContent.trim() : ""; b.text = pp ? pp.textContent.trim() : "";
         b.items = ull ? (ull.innerText || "").split("\n").map(function (s) { return s.trim(); }).filter(Boolean) : [];
-        b.href = el.getAttribute("href") || ""; cardIdx++; b.num = ("0" + (builtinCards + cardIdx)).slice(-2);
+        b.href = el.getAttribute("data-eb-href") || el.getAttribute("href") || ""; cardIdx++; b.num = ("0" + (builtinCards + cardIdx)).slice(-2);
         model.push(b); continue;
       }
       if (t === "button") { b.text = el.textContent.trim(); b.href = el.getAttribute("href") || ""; b.variant = el.classList.contains("btn--ghost") ? "ghost" : "solid"; }
@@ -985,9 +1023,9 @@
       + '.eb-zone [data-eb]{transition:outline .12s}'
       + '.eb-zone [data-eb][contenteditable]:hover{outline:2px dashed rgba(215,18,10,.35);outline-offset:3px}'
       + '.eb-zone [data-eb].eb-active{outline:2px solid #d7120a;outline-offset:3px}'
-      + '#ebCtx{position:fixed;left:50%;bottom:80px;z-index:2147483646;background:#fff;border:1px solid rgba(28,23,20,.18);border-top:3px solid #d7120a;border-radius:13px;box-shadow:0 10px 26px -8px rgba(215,18,10,.42),0 26px 60px -22px rgba(0,0,0,.6);display:none;gap:.3rem;align-items:center;padding:.5rem .6rem;flex-wrap:wrap;max-width:94vw;font:13px system-ui,-apple-system,sans-serif;transform:translateX(-50%)}'
-      + '#ebCtx.show{display:flex;animation:ebCtxPop .3s cubic-bezier(.2,.9,.3,1)}'
-      + '@keyframes ebCtxPop{from{opacity:0;transform:translate(-50%,18px) scale(.94)}to{opacity:1;transform:translate(-50%,0) scale(1)}}'
+      + '#ebCtx{position:fixed;top:0;left:0;z-index:2147483646;background:#fff;border:1px solid rgba(28,23,20,.18);border-top:3px solid #d7120a;border-radius:13px;box-shadow:0 10px 26px -8px rgba(215,18,10,.42),0 26px 60px -22px rgba(0,0,0,.6);display:none;gap:.3rem;align-items:center;padding:.5rem .6rem;flex-wrap:wrap;max-width:min(94vw,560px);font:13px system-ui,-apple-system,sans-serif}'
+      + '#ebCtx.show{display:flex;animation:ebCtxPop .24s cubic-bezier(.2,.9,.3,1)}'
+      + '@keyframes ebCtxPop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}'
       + '#ebCtx button{background:#f0e9e0;color:#1c1714;border:0;border-radius:8px;min-width:32px;height:30px;padding:0 .55em;cursor:pointer;font-weight:700;font-size:.85rem}'
       + '#ebCtx button:hover{background:#e7ddcf}#ebCtx button.on{background:#d7120a;color:#fff}'
       + '#ebCtx .lbl{font-weight:800;color:#a50d07;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;margin-right:.15rem}'
@@ -1091,6 +1129,9 @@
       if (e.target.closest && (e.target.closest("[data-eb]") || e.target.closest("#ebCtx") || e.target.closest(".eb-adder"))) return;
       ebHideCtx();
     }, true);
+    var ebReposition = function () { if (ebActive && ebCtx && ebCtx.classList.contains("show")) ebPositionCtx(ebActive); };
+    window.addEventListener("scroll", ebReposition, true);
+    window.addEventListener("resize", ebReposition);
 
     // Links sollen im Edit-Modus NICHT navigieren, wenn sie editierbaren Inhalt enthalten
     // (Karten-Links) oder selbst in einem Rich-Feld liegen (Link-Text bearbeitbar).
