@@ -464,6 +464,26 @@ Deno.serve(async (req) => {
           }
           if (!d) continue;
           inner += '<div class="eb-faq ' + alc + '" data-eb="faq">' + d + "</div>";
+        } else if (type === "card") {
+          // Leistungs-Kachel (design-konform wie die eingebauten .scard)
+          const title = esc(String((b as any).title || "").slice(0, 80).trim()) || "Neue Leistung";
+          const text = esc(String((b as any).text || "").slice(0, 600).trim());
+          const href = String((b as any).href || "").trim();
+          if (href && href !== "#" && !safeHref(href)) return json({ error: "bad_href" }, 400);
+          const num = /^\d{1,2}$/.test(String((b as any).num || "")) ? String((b as any).num) : "";
+          const cItems = Array.isArray((b as any).items) ? (b as any).items : [];
+          let cli = "";
+          for (const it of cItems.slice(0, 8)) { const t = esc(String(it || "").slice(0, 120).trim()); if (t) cli += "<li>" + t + "</li>"; }
+          const cardIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l8.8 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+          const arrow = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+          inner += '<a class="scard" data-eb="card" href="' + (href ? esc(href) : "#") + '">'
+            + (num ? '<span class="scard__num">' + num + '</span>' : '')
+            + '<div class="scard__icon">' + cardIcon + '</div>'
+            + '<h3>' + title + '</h3>'
+            + (text ? '<p>' + text + '</p>' : '')
+            + (cli ? '<ul class="scard__list">' + cli + '</ul>' : '')
+            + '<div class="scard__more"><span class="link-arrow">Mehr erfahren ' + arrow + '</span></div>'
+            + '</a>';
         } else {
           return json({ error: "bad_block_type" }, 400);
         }

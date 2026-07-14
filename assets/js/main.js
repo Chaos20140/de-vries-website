@@ -629,6 +629,8 @@
   ];
   var dirtyZones = {}, ebActive = null, ebImgPicker = null, ebCtx = null;
   var EB_SIZES = ["s", "m", "l", "xl"], EB_WIDTHS = ["narrow", "normal", "wide", "full"], EB_ALIGN = ["left", "center", "right"];
+  var CARD_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l8.8 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+  var CARD_ARROW = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   function ebLabel(t) { return t === "text" ? "Text" : t === "heading" ? "Titel" : t === "button" ? "Button" : t === "image" ? "Bild" : t === "list" ? "Liste" : t === "quote" ? "Zitat" : "Linie"; }
   function ebClass(b) { return "eb-al-" + (b.align || "center") + " eb-w-" + (b.width || "normal") + " eb-sp-" + (b.space || "normal") + " eb-fs-" + (b.size || "m"); }
   function ebGet(el, prefix, vals, def) { for (var i = 0; i < vals.length; i++) if (el.classList.contains(prefix + vals[i])) return vals[i]; return def; }
@@ -643,10 +645,26 @@
     else if (type === "divider") { el = document.createElement("hr"); el.setAttribute("data-eb", "divider"); el.className = ebClass(b); }
     else if (type === "list") { el = document.createElement("ul"); el.setAttribute("data-eb", "list"); el.className = ebClass(b); ["Erster Punkt", "Zweiter Punkt"].forEach(function (x) { var li = document.createElement("li"); li.textContent = x; el.appendChild(li); }); }
     else if (type === "image") { el = document.createElement("img"); el.setAttribute("data-eb", "image"); el.setAttribute("data-eb-slot", "senioren-zuhause"); el.className = ebClass(b); el.src = EB_IMG["senioren-zuhause"]; el.alt = ""; }
+    else if (type === "card") {
+      el = document.createElement("a"); el.href = "#"; el.setAttribute("data-eb", "card"); el.className = "scard";
+      el.innerHTML = '<span class="scard__num">05</span><div class="scard__icon">' + CARD_ICON + '</div>'
+        + '<h3 data-cf="title">Neue Leistung</h3>'
+        + '<p data-cf="text">Kurze Beschreibung der Leistung – hier eintragen.</p>'
+        + '<ul class="scard__list" data-cf="list"><li>Stichpunkt eins</li><li>Stichpunkt zwei</li><li>Stichpunkt drei</li></ul>'
+        + '<div class="scard__more"><span class="link-arrow">Mehr erfahren ' + CARD_ARROW + '</span></div>';
+    }
     return el;
   }
   function ebEnhance(el) {
     var t = el.getAttribute("data-eb");
+    if (t === "card") {
+      var flds = el.querySelectorAll("[data-cf]");
+      for (var ci = 0; ci < flds.length; ci++) { flds[ci].setAttribute("contenteditable", "true"); flds[ci].setAttribute("spellcheck", "false"); }
+      el.addEventListener("click", function (e) { e.preventDefault(); ebSelect(el); });
+      el.addEventListener("focusin", function () { ebSelect(el); });
+      el.addEventListener("input", function () { ebDirty(el); });
+      return;
+    }
     if (t === "text" || t === "heading" || t === "quote" || t === "list" || t === "button") { el.setAttribute("contenteditable", "true"); el.setAttribute("spellcheck", "false"); }
     el.addEventListener("focusin", function () { ebSelect(el); });
     el.addEventListener("click", function (e) { if (t === "button") e.preventDefault(); ebSelect(el); });
@@ -692,6 +710,20 @@
   function ebHideCtx() { if (ebCtx) ebCtx.classList.remove("show"); if (ebActive) { ebActive.classList.remove("eb-active"); ebActive = null; } }
   function ebShowCtx(el) {
     var c = ebEnsureCtx(), t = el.getAttribute("data-eb");
+    if (t === "card") {
+      c.innerHTML = '<span class="lbl">Leistung</span><input data-a="href" placeholder="Link, z. B. seniorenbetreuung.html"><span class="sep"></span><button data-a="up" title="nach oben">↑</button><button data-a="down" title="nach unten">↓</button><button data-a="del" title="löschen">🗑</button>';
+      c.classList.add("show");
+      var chi = c.querySelector('input[data-a="href"]'); var chv = el.getAttribute("href") || ""; chi.value = chv === "#" ? "" : chv; chi.oninput = function () { el.setAttribute("href", chi.value.trim() || "#"); ebDirty(el); };
+      var cbs = c.querySelectorAll("button[data-a]");
+      for (var ci = 0; ci < cbs.length; ci++) (function (btn) {
+        btn.onclick = function () {
+          var a = btn.getAttribute("data-a");
+          if (a === "up") ebMove(el, -1); else if (a === "down") ebMove(el, 1);
+          else if (a === "del") { if (window.confirm("Diese Leistung wirklich löschen?")) { var z = el.closest("[data-ed-zone]"); el.remove(); if (z) { dirtyZones[z.getAttribute("data-ed-zone")] = true; refreshSaveBtn(); } ebHideCtx(); } }
+        };
+      })(cbs[ci]);
+      return;
+    }
     var al = ebGet(el, "eb-al-", EB_ALIGN, "center"), w = ebGet(el, "eb-w-", EB_WIDTHS, "normal");
     var h = '<span class="lbl">' + ebLabel(t) + '</span>';
     if (t !== "divider" && t !== "image") h += '<button data-a="fsd" title="kleiner">A−</button><button data-a="fsu" title="größer">A+</button><span class="sep"></span>';
@@ -726,6 +758,11 @@
     if (adder) zone.insertBefore(el, adder); else zone.appendChild(el);
     ebEnhance(el);
     dirtyZones[zone.getAttribute("data-ed-zone")] = true; refreshSaveBtn();
+    if (type === "card") {
+      el.classList.add("eb-card-in"); setTimeout(function () { el.classList.remove("eb-card-in"); }, 650);
+      var ct = el.querySelector('[data-cf="title"]'); if (ct) { ct.focus(); try { var rr = document.createRange(); rr.selectNodeContents(ct); var ss = window.getSelection(); ss.removeAllRanges(); ss.addRange(rr); } catch (e) {} }
+      ebSelect(el); return;
+    }
     if (type === "image") { ebSelect(el); ebPickImage(el); return; }
     if (type === "divider") { ebSelect(el); return; }
     el.focus();
@@ -733,19 +770,30 @@
     ebSelect(el);
   }
   function ebEnhanceZone(zone) {
+    var isCards = zone.hasAttribute("data-ed-cards");
     var ebs = zone.querySelectorAll("[data-eb]");
     for (var i = 0; i < ebs.length; i++) ebEnhance(ebs[i]);
-    var adder = document.createElement("div"); adder.className = "eb-adder";
-    var plus = document.createElement("button"); plus.type = "button"; plus.className = "eb-plus"; plus.textContent = "+"; plus.title = "Element hinzufügen";
+    var adder = document.createElement("div"); adder.className = "eb-adder" + (isCards ? " eb-adder--card" : "");
+    var plus = document.createElement("button"); plus.type = "button"; plus.className = "eb-plus"; plus.textContent = "+"; plus.title = isCards ? "Neue Leistung hinzufügen" : "Element hinzufügen";
     var fan = document.createElement("div"); fan.className = "eb-fan";
-    EB_TYPES.forEach(function (ty) { var b = document.createElement("button"); b.type = "button"; b.innerHTML = '<span class="ei">' + ty.ic + '</span>' + ty.lbl; b.onclick = function () { adder.classList.remove("open"); ebAdd(zone, ty.t); }; fan.appendChild(b); });
+    var types = isCards ? [{ t: "card", ic: "➕", lbl: "Neue Leistung" }] : EB_TYPES;
+    types.forEach(function (ty) { var b = document.createElement("button"); b.type = "button"; b.innerHTML = '<span class="ei">' + ty.ic + '</span>' + ty.lbl; b.onclick = function () { adder.classList.remove("open"); ebAdd(zone, ty.t); }; fan.appendChild(b); });
     plus.onclick = function () { adder.classList.toggle("open"); };
     adder.appendChild(plus); adder.appendChild(fan); zone.appendChild(adder);
   }
   function ebSerialize(zone) {
     var model = [], ebs = zone.querySelectorAll("[data-eb]");
+    var builtinCards = 0, cardIdx = 0;
+    if (zone.hasAttribute("data-ed-cards") && zone.parentNode) builtinCards = zone.parentNode.querySelectorAll(".scard:not([data-eb])").length;
     for (var i = 0; i < ebs.length; i++) {
       var el = ebs[i], t = el.getAttribute("data-eb"), b = { type: t };
+      if (t === "card") {
+        var h3 = el.querySelector('[data-cf="title"]'), pp = el.querySelector('[data-cf="text"]'), ull = el.querySelector('[data-cf="list"]');
+        b.title = h3 ? h3.textContent.trim() : ""; b.text = pp ? pp.textContent.trim() : "";
+        b.items = ull ? (ull.innerText || "").split("\n").map(function (s) { return s.trim(); }).filter(Boolean) : [];
+        b.href = el.getAttribute("href") || ""; cardIdx++; b.num = ("0" + (builtinCards + cardIdx)).slice(-2);
+        model.push(b); continue;
+      }
       if (t === "button") { b.text = el.textContent.trim(); b.href = el.getAttribute("href") || ""; b.variant = el.classList.contains("btn--ghost") ? "ghost" : "solid"; }
       else if (t === "heading" || t === "text" || t === "quote") { b.text = el.textContent.trim(); }
       else if (t === "list") { b.items = (el.innerText || "").split("\n").map(function (s) { return s.trim(); }).filter(Boolean); }
@@ -861,7 +909,15 @@
       + '#ebCtx button:hover{background:#e7ddcf}#ebCtx button.on{background:#d7120a;color:#fff}'
       + '#ebCtx .lbl{font-weight:800;color:#a50d07;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;margin-right:.15rem}'
       + '#ebCtx .sep{width:1px;height:22px;background:rgba(28,23,20,.14);margin:0 .18rem}'
-      + '#ebCtx input{border:1px solid rgba(28,23,20,.2);border-radius:7px;padding:.32em .5em;font:inherit;width:170px}';
+      + '#ebCtx input{border:1px solid rgba(28,23,20,.2);border-radius:7px;padding:.32em .5em;font:inherit;width:170px}'
+      // Leistungs-Kachel: Einblend-Animation, bearbeitbare Felder, Hinzufügen-Slot
+      + '@keyframes ebCardIn{from{opacity:0;transform:scale(.82) translateY(12px)}to{opacity:1;transform:none}}'
+      + '.eb-card-in{animation:ebCardIn .55s cubic-bezier(.2,.8,.3,1)}'
+      + '[data-eb="card"]{cursor:default}'
+      + '[data-eb="card"] [data-cf][contenteditable]:hover{outline:2px dashed rgba(215,18,10,.4);outline-offset:2px}'
+      + '[data-eb="card"].eb-active{outline:2px solid #d7120a;outline-offset:4px}'
+      + '.eb-adder--card{border:2px dashed rgba(215,18,10,.45);border-radius:16px;min-height:150px;width:auto;margin:0;justify-content:center;gap:.35rem}'
+      + '.eb-adder--card .eb-plus{opacity:.9}';
     document.head.appendChild(st);
 
     var picker = document.createElement("input");
@@ -949,7 +1005,7 @@
     document.addEventListener("click", function (e) {
       var a = e.target.closest && e.target.closest("a[href]");
       if (!a) return;
-      if (a.closest("[data-ed-rich]") || a.querySelector("[data-ed],[data-ed-img]")) e.preventDefault();
+      if (a.closest("[data-ed-rich]") || a.querySelector("[data-ed],[data-ed-img]") || a.hasAttribute("data-eb")) e.preventDefault();
     }, true);
 
     var bar = document.createElement("div"); bar.id = "dvBar";
