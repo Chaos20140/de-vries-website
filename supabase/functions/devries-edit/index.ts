@@ -300,6 +300,27 @@ Deno.serve(async (req) => {
       return okShared ? json({ ok: true, updated: changedFiles.length }) : json({ error: "commit_failed" }, 500);
     }
 
+    if (body.action === "save-places") {
+      // Standorte der Startseiten-Route: data-places="A|B|C" auf #route in index.html. Nur Klartext.
+      const places = body.places;
+      if (!Array.isArray(places) || places.length < 1 || places.length > 30) return json({ error: "bad_places" }, 400);
+      const clean: string[] = [];
+      for (const p of places) {
+        if (typeof p !== "string") return json({ error: "bad_places" }, 400);
+        const s = p.replace(/\s+/g, " ").trim();
+        if (!s || s.length > 60) return json({ error: "bad_place_len" }, 400);
+        if (s.includes("|")) return json({ error: "pipe_not_allowed" }, 400); // | ist der Trenner
+        clean.push(s);
+      }
+      const val = esc(clean.join("|")); // fürs HTML-Attribut escapen (& < > ")
+      const f = await getFile("index.html");
+      const re = /(id="route"[^>]*\bdata-places=")([^"]*)(")/;
+      if (!re.test(f.text)) return json({ error: "marker_missing" }, 400);
+      const html = f.text.replace(re, (_m, a, _b, c) => a + val + c);
+      const r = await putFile("index.html", utf8B64(html), f.sha, "Editor: Standorte (Route) aktualisiert");
+      return r.ok ? json({ ok: true, count: clean.length }) : json({ error: "commit_failed" }, 500);
+    }
+
     if (body.action === "save-meta") {
       // SEO/Meta pro Seite: <title>, Meta-Description (+ OG/Twitter-Spiegel) und Bild-Alt-Texte.
       // Isoliert von save-page; nutzt dieselbe Härtung (Whitelist-Datei, esc, Längenlimits).

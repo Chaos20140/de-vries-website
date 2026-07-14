@@ -515,6 +515,84 @@
   }
   function msg(m) { var e = document.getElementById("dvMsg"); if (e) e.textContent = m; }
 
+  // ---- Bearbeitungs-Komfort: Toasts, Änderungs-Tracking ----
+  function toast(text, kind) {
+    var t = document.createElement("div"); t.className = "dv-toast" + (kind ? (" " + kind) : "");
+    t.textContent = text; document.body.appendChild(t);
+    requestAnimationFrame(function () { t.classList.add("show"); });
+    setTimeout(function () { t.classList.remove("show"); setTimeout(function () { if (t.parentNode) t.remove(); }, 320); }, kind === "err" ? 5200 : 3600);
+  }
+  function unsavedCount() {
+    return document.querySelectorAll(".dv-changed").length + Object.keys(pending).length + Object.keys(pendingPos).length;
+  }
+  function hasUnsaved() { return unsavedCount() > 0; }
+  function refreshSaveBtn() {
+    var b = document.getElementById("dvSave"); if (!b) return;
+    var n = unsavedCount();
+    b.textContent = n > 0 ? ("💾 Speichern (" + n + ")") : "💾 Diese Seite speichern";
+    b.classList.toggle("has-changes", n > 0);
+  }
+  function markChanged(el) { if (el && el.classList && !el.classList.contains("dv-changed")) el.classList.add("dv-changed"); refreshSaveBtn(); }
+  function clearChanged() {
+    var c = document.querySelectorAll(".dv-changed");
+    for (var i = 0; i < c.length; i++) c[i].classList.remove("dv-changed");
+    refreshSaveBtn();
+  }
+
+  // ---- Standorte (Route auf der Startseite) bearbeiten ----
+  function openPlaces() {
+    if (document.getElementById("dvPanel")) return;
+    var route = document.getElementById("route"); if (!route) return;
+    var model = (route.getAttribute("data-places") || "").split("|").filter(Boolean);
+    var wrap = document.createElement("div"); wrap.id = "dvPanel"; document.body.appendChild(wrap);
+    wrap.addEventListener("click", function (e) { if (e.target === wrap) wrap.remove(); });
+    function sync() {
+      var ins = wrap.querySelectorAll("input[data-i]"), m = [];
+      for (var i = 0; i < ins.length; i++) m[+ins[i].getAttribute("data-i")] = ins[i].value;
+      model = m.map(function (s) { return (s == null ? "" : s); });
+    }
+    function wireBtns(attr, fn) {
+      var b = wrap.querySelectorAll("[" + attr + "]");
+      for (var i = 0; i < b.length; i++) (function (el) { el.onclick = function () { fn(+el.getAttribute(attr)); }; })(b[i]);
+    }
+    function render() {
+      var h = '<div class="box"><h3>Standorte / Einzugsgebiet</h3><p class="sub">Orte auf der Karte der Startseite &ndash; die Reihenfolge entspricht dem Verlauf der Route. Max. 30.</p><div class="pl-list">';
+      for (var i = 0; i < model.length; i++) {
+        h += '<div class="pl-row"><input data-i="' + i + '" maxlength="60" placeholder="Ortsname">'
+          + '<button type="button" data-up="' + i + '" title="nach oben">↑</button>'
+          + '<button type="button" data-down="' + i + '" title="nach unten">↓</button>'
+          + '<button type="button" data-del="' + i + '" title="entfernen">✕</button></div>';
+      }
+      h += '</div><button type="button" class="pl-add" id="plAdd">➕ Ort hinzufügen</button>';
+      h += '<div class="row"><button class="cancel" id="plX">Abbrechen</button><button class="ok" id="plOk">Speichern</button></div></div>';
+      wrap.innerHTML = h;
+      var ins = wrap.querySelectorAll("input[data-i]");
+      for (var k = 0; k < ins.length; k++) ins[k].value = model[+ins[k].getAttribute("data-i")] || "";
+      wireBtns("data-del", function (i) { sync(); model.splice(i, 1); render(); });
+      wireBtns("data-up", function (i) { if (i > 0) { sync(); var t = model[i - 1]; model[i - 1] = model[i]; model[i] = t; render(); } });
+      wireBtns("data-down", function (i) { if (i < model.length - 1) { sync(); var t = model[i + 1]; model[i + 1] = model[i]; model[i] = t; render(); } });
+      document.getElementById("plAdd").onclick = function () { sync(); model.push(""); render(); var xs = wrap.querySelectorAll("input[data-i]"); if (xs.length) xs[xs.length - 1].focus(); };
+      document.getElementById("plX").onclick = function () { wrap.remove(); };
+      document.getElementById("plOk").onclick = doSave;
+    }
+    function doSave() {
+      sync();
+      var list = model.map(function (s) { return (s || "").replace(/\s+/g, " ").trim(); }).filter(Boolean);
+      if (!list.length) { toast("Bitte mindestens einen Ort angeben.", "err"); return; }
+      if (list.length > 30) { toast("Maximal 30 Orte möglich.", "err"); return; }
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].indexOf("|") >= 0) { toast("Ortsnamen dürfen kein senkrechtes | enthalten.", "err"); return; }
+        if (list[i].length > 60) { toast("Ortsname zu lang (max. 60 Zeichen).", "err"); return; }
+      }
+      var ok = document.getElementById("plOk"); ok.disabled = true; ok.textContent = "Speichert …";
+      call({ action: "save-places", places: list }).then(function (res) {
+        if (res.ok) { wrap.remove(); toast("✓ Standorte gespeichert. Neuaufbau in ~1-3 Min, danach auf Aktualisieren klicken.", "ok"); }
+        else { ok.disabled = false; ok.textContent = "Speichern"; toast(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : ("Fehler: " + ((res.d && res.d.error) || res.status)), "err"); }
+      }).catch(function () { ok.disabled = false; ok.textContent = "Speichern"; toast("Verbindungsfehler.", "err"); });
+    }
+    render();
+  }
+
   function start() {
     document.documentElement.classList.add("dv-editing"); // Magnetic-Buttons im Editor ruhig halten
     var mg = document.querySelectorAll("[data-magnetic]");
@@ -566,7 +644,18 @@
       + '.eb-libbox .cancel{background:#eee;border:0;border-radius:999px;padding:.55em 1.3em;font-weight:700;cursor:pointer}'
       + '.eb-libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:.5rem}'
       + '.eb-libgrid img{width:100%;height:78px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid transparent}'
-      + '.eb-libgrid img:hover{border-color:#d7120a}';
+      + '.eb-libgrid img:hover{border-color:#d7120a}'
+      // Bearbeitungs-Komfort: geänderte Felder markieren, Toasts, Standort-Editor
+      + '[data-ed].dv-changed,[data-ed-rich].dv-changed,[data-ed-img].dv-changed{outline:2px solid #e8a400 !important;outline-offset:2px;background:rgba(232,164,0,.12)}'
+      + '#dvBar .s.has-changes{box-shadow:0 0 0 3px rgba(232,164,0,.5)}'
+      + '.dv-toast{position:fixed;left:50%;bottom:76px;transform:translate(-50%,14px);z-index:2147483647;background:#2a2320;color:#fff;padding:.72rem 1.1rem;border-radius:12px;font:14px system-ui,-apple-system,sans-serif;line-height:1.4;max-width:min(92vw,460px);box-shadow:0 18px 45px -15px rgba(0,0,0,.65);opacity:0;transition:opacity .25s,transform .25s;text-align:center;pointer-events:none}'
+      + '.dv-toast.show{opacity:1;transform:translate(-50%,0)}'
+      + '.dv-toast.ok{background:#237a16}.dv-toast.err{background:#b3140c}'
+      + '#dvPanel .pl-list{margin:.4rem 0 .2rem}'
+      + '#dvPanel .pl-row{display:flex;gap:.35rem;align-items:center;margin:.32rem 0}'
+      + '#dvPanel .pl-row input{flex:1;margin:0}'
+      + '#dvPanel .pl-row button{background:#eee;border:0;border-radius:7px;width:32px;height:34px;cursor:pointer;font-size:.9rem;padding:0;flex:none;font-weight:700}'
+      + '#dvPanel .pl-add{background:#f0e9e0;color:#1c1714;border:0;border-radius:999px;padding:.5em 1.1em;font-weight:700;cursor:pointer;margin-top:.5rem}';
     document.head.appendChild(st);
 
     var picker = document.createElement("input");
@@ -580,7 +669,7 @@
         var max = 1400, w = im.width, h = im.height; if (w > max) { h = Math.round(h * max / w); w = max; }
         var c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(im, 0, 0, w, h);
         var du = c.toDataURL("image/jpeg", 0.82); target.src = du; pending[slot] = du.split(",")[1];
-        URL.revokeObjectURL(url); msg("Neues Bild gewählt – bitte speichern.");
+        URL.revokeObjectURL(url); markChanged(target); msg("Neues Bild gewählt – bitte speichern.");
       };
       im.src = url;
     });
@@ -592,14 +681,18 @@
       var el = eds[i];
       try { el.textContent = el.textContent; } catch (e) {}
       el.setAttribute("contenteditable", "true"); el.setAttribute("spellcheck", "false");
+      el.title = "Klicken zum Bearbeiten";
       el.addEventListener("keydown", noEnter);
+      el.addEventListener("input", function () { markChanged(this); });
     }
     // Rich-Felder (Absätze mit Links/Fett) editierbar machen – Tags bleiben erhalten
     var rds = document.querySelectorAll("[data-ed-rich]");
     for (var r0 = 0; r0 < rds.length; r0++) {
       var rel = rds[r0];
       rel.setAttribute("contenteditable", "true"); rel.setAttribute("spellcheck", "false");
+      rel.title = "Klicken zum Bearbeiten";
       rel.addEventListener("keydown", noEnter);
+      rel.addEventListener("input", function () { markChanged(this); });
     }
     // Bilder: Tippen = ersetzen (nur echte Klicks, isTrusted), Ziehen = Ausschnitt verschieben.
     function clampPct(v) { return v < 0 ? 0 : v > 100 ? 100 : v; }
@@ -626,7 +719,7 @@
           img.style.objectPosition = nx + "% " + ny + "%";
           pendingPos[img.getAttribute("data-ed-img")] = Math.round(nx) + "% " + Math.round(ny) + "%";
         });
-        img.addEventListener("pointerup", function () { if (dragging && didDrag) msg("Bildausschnitt geändert – bitte speichern."); dragging = false; });
+        img.addEventListener("pointerup", function () { if (dragging && didDrag) { markChanged(img); msg("Bildausschnitt geändert – bitte speichern."); } dragging = false; });
         img.addEventListener("click", function (e) {
           if (!e.isTrusted) return;
           e.preventDefault(); e.stopPropagation();
@@ -657,24 +750,38 @@
     }, true);
 
     var bar = document.createElement("div"); bar.id = "dvBar";
-    bar.innerHTML = '<span class="m" id="dvMsg">Bearbeitungsmodus aktiv · Text/Bild anklicken & ändern · andere Seiten normal über das Menü</span>'
+    var hasRoute = !!document.getElementById("route");
+    bar.innerHTML = '<span class="m" id="dvMsg">Bearbeitungsmodus aktiv · Text/Bild anklicken &amp; ändern · Strg+S speichert · andere Seiten über das Menü</span>'
       + '<button class="s" id="dvSave">💾 Diese Seite speichern</button>'
       + '<button class="x" id="dvSeo">🔍 SEO &amp; Titel</button>'
       + '<button class="x" id="dvShared">🧭 Menü &amp; Footer</button>'
+      + (hasRoute ? '<button class="x" id="dvPlaces">📍 Standorte</button>' : '')
       + '<button class="x" id="dvReload">🔄 Aktualisieren</button>'
       + '<button class="x" id="dvExit">🚪 Verlassen</button>';
     document.body.appendChild(bar);
+    var leaving = false;
     document.getElementById("dvSave").addEventListener("click", save);
     document.getElementById("dvSeo").addEventListener("click", openSeo);
     document.getElementById("dvShared").addEventListener("click", openShared);
+    if (hasRoute) document.getElementById("dvPlaces").addEventListener("click", openPlaces);
     // Cache umgehen + frisch laden (GitHub Pages cached Seiten einige Minuten)
     document.getElementById("dvReload").addEventListener("click", function () {
-      location.href = location.pathname + "?r=" + Date.now();
+      if (hasUnsaved() && !window.confirm("Es gibt ungespeicherte Änderungen. Wirklich neu laden? Die Änderungen gehen dann verloren.")) return;
+      leaving = true; location.href = location.pathname + "?r=" + Date.now();
     });
     document.getElementById("dvExit").addEventListener("click", function () {
+      if (hasUnsaved() && !window.confirm("Es gibt ungespeicherte Änderungen. Wirklich verlassen? Die Änderungen gehen dann verloren.")) return;
+      leaving = true;
       localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK);
       location.href = location.pathname; // ohne Cache-Buster, normaler Stand
     });
+    // Strg/Cmd+S speichert; Warnung vor Datenverlust beim ungewollten Verlassen
+    document.addEventListener("keydown", function (e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) { e.preventDefault(); save(); }
+    });
+    window.addEventListener("beforeunload", function (e) { if (!leaving && hasUnsaved()) { e.preventDefault(); e.returnValue = ""; } });
+    refreshSaveBtn();
+    toast("Bearbeitungsmodus aktiv. Klicke einen Text oder ein Bild an und ändere es – geänderte Felder werden gelb markiert. Speichern unten oder mit Strg+S.", "");
   }
 
   // Geteilte Menü-/Footer-Beschriftungen bearbeiten (Panel) -> save-shared -> alle Seiten
@@ -684,7 +791,8 @@
     ["Buttons", ["lbl-termin", "Termin buchen"]],
     ["Footer-Überschriften", ["lbl-foot-leistungen", "Leistungen"], ["lbl-foot-informationen", "Informationen"], ["lbl-foot-kontakt", "Kontakt"]],
     ["Footer-Links", ["lbl-galabau", "de Vries GaLa-Bau"], ["lbl-impressum", "Impressum"], ["lbl-datenschutz", "Datenschutz"], ["lbl-kontaktformular", "Kontaktformular"]],
-    ["Menü-Gruppen (mobil)", ["lbl-grp-leistungen", "Gruppe: Leistungen"], ["lbl-grp-mehr", "Gruppe: Mehr"]]
+    ["Menü-Gruppen (mobil)", ["lbl-grp-leistungen", "Gruppe: Leistungen"], ["lbl-grp-mehr", "Gruppe: Mehr"]],
+    ["Footer-Adresse & Öffnungszeiten", ["foot-addr-street", "Straße & Hausnr."], ["foot-addr-city", "PLZ & Ort"], ["foot-hours-label", "Überschrift (z. B. Öffnungszeiten)"], ["foot-hours-days", "Tage (z. B. Montag – Freitag)"], ["foot-hours-time", "Uhrzeit (z. B. 8:00 bis 16:00 Uhr)"]]
   ];
   function openShared() {
     if (document.getElementById("dvPanel")) return;
@@ -713,7 +821,7 @@
       for (var m = 0; m < ins.length; m++) { shared[ins[m].getAttribute("data-k")] = ins[m].value.replace(/\s+/g, " ").trim(); }
       var ok = document.getElementById("dvPok"); ok.disabled = true; ok.textContent = "Speichert …";
       call({ action: "save-shared", shared: shared }).then(function (res) {
-        if (res.ok) { close(); msg("✓ Menü/Footer gespeichert (alle Seiten) – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); }
+        if (res.ok) { close(); msg("✓ Menü/Footer gespeichert (alle Seiten) – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); toast("✓ Menü & Footer gespeichert (alle Seiten). Neuaufbau in ~1-3 Min.", "ok"); }
         else { ok.disabled = false; ok.textContent = "Übernehmen"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); }
       }).catch(function () { ok.disabled = false; ok.textContent = "Übernehmen"; msg("Verbindungsfehler."); });
     });
@@ -948,12 +1056,13 @@
     for (var ri = 0; ri < rds.length; ri++) { rich[rds[ri].getAttribute("data-ed-rich")] = rds[ri].innerHTML; }
     call({ action: "save-page", file: file, fields: fields, rich: rich, positions: pendingPos }).then(function (res) {
       if (!res.ok) {
-        msg(res.status === 401 ? "Falsches Passwort – bitte über /admin neu anmelden." : (res.status === 429 ? "Zu viele Versuche – bitte später." : "Fehler: " + (res.d.error || res.status)));
+        var em = res.status === 401 ? "Falsches Passwort – bitte über /admin neu anmelden." : (res.status === 429 ? "Zu viele Versuche – bitte später." : "Fehler: " + (res.d.error || res.status));
+        msg(em); toast(em, "err");
         if (btn) btn.disabled = false; return;
       }
       var slots = Object.keys(pending);
       (function next(k) {
-        if (k >= slots.length) { msg("✓ Gespeichert! Seite wird neu gebaut (~1–3 Min) – danach auf Aktualisieren klicken."); if (btn) btn.disabled = false; return; }
+        if (k >= slots.length) { clearChanged(); msg("✓ Gespeichert! Seite wird neu gebaut (~1–3 Min) – danach auf Aktualisieren klicken."); toast("✓ Gespeichert! Neuaufbau in ~1-3 Min, danach auf Aktualisieren klicken.", "ok"); if (btn) btn.disabled = false; return; }
         msg("Bild wird gespeichert …");
         call({ action: "upload-image", slot: slots[k], dataBase64: pending[slots[k]] }).then(function (r2) {
           if (r2.ok) delete pending[slots[k]]; next(k + 1);
