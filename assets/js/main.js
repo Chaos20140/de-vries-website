@@ -545,7 +545,10 @@
       + '#dvPanel .eb-row .t b{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:#a50d07;flex:1}'
       + '#dvPanel .eb-row .t button{background:#eee;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:.9rem;padding:0}'
       + '#dvPanel .eb-imgrow{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.4rem 0 .1rem}'
-      + '#dvPanel .eb-imgrow button{background:#f0e9e0;color:#1c1714;border-radius:999px;padding:.42em .95em;font-weight:700;font-size:.8rem;cursor:pointer}';
+      + '#dvPanel .eb-imgrow button{background:#f0e9e0;color:#1c1714;border-radius:999px;padding:.42em .95em;font-weight:700;font-size:.8rem;cursor:pointer}'
+      + '#dvPanel .eb-al-ctl{display:inline-flex;gap:.15rem;margin-right:.3rem}'
+      + '#dvPanel .eb-al-ctl button{background:#eee;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:.8rem;padding:0;color:#756a60}'
+      + '#dvPanel .eb-al-ctl button.on{background:#d7120a;color:#fff}';
     document.head.appendChild(st);
 
     var picker = document.createElement("input");
@@ -717,6 +720,7 @@
       else if (t === "image") model.push({ type: "image", slot: el.getAttribute("data-eb-slot") || "senioren-zuhause", src: el.getAttribute("data-eb-src") || "", alt: el.getAttribute("alt") || "" });
       else if (t === "columns") { var cd = el.children; model.push({ type: "columns", left: cd[0] ? cd[0].textContent.trim() : "", right: cd[1] ? cd[1].textContent.trim() : "" }); }
       else if (t === "faq") { var qa = [], dts = el.querySelectorAll("details"); for (var w = 0; w < dts.length; w++) { var su = dts[w].querySelector("summary"), dv = dts[w].querySelector("div"); qa.push(((su ? su.textContent.trim() : "") + " | " + (dv ? dv.textContent.trim() : ""))); } model.push({ type: "faq", text: qa.join("\n") }); }
+      if (model.length) model[model.length - 1].align = el.classList.contains("eb-al-left") ? "left" : el.classList.contains("eb-al-right") ? "right" : "center";
     }
     var wrap = document.createElement("div"); wrap.id = "dvPanel"; document.body.appendChild(wrap);
     // Bild-Upload für Bild-Blöcke (einmalig erzeugt, überlebt Re-Render)
@@ -750,8 +754,13 @@
       h += '<div class="eb-add-row"><button data-add="button">➕ Button</button><button data-add="heading">➕ Überschrift</button><button data-add="text">➕ Text</button><button data-add="list">➕ Liste</button><button data-add="image">➕ Bild</button><button data-add="columns">➕ Spalten</button><button data-add="faq">➕ FAQ</button><button data-add="quote">➕ Zitat</button><button data-add="divider">➕ Trenner</button></div><div>';
       if (!model.length) h += '<p class="sub">Noch keine Elemente – oben eins hinzufügen.</p>';
       for (var i = 0; i < model.length; i++) {
-        var b = model[i];
+        var b = model[i], al = b.align || "center";
         h += '<div class="eb-row"><div class="t"><b>' + label(b.type) + '</b>'
+          + '<span class="eb-al-ctl">'
+          + '<button data-al="left" data-i="' + i + '" class="' + (al === "left" ? "on" : "") + '" title="links ausrichten">◧</button>'
+          + '<button data-al="center" data-i="' + i + '" class="' + (al === "center" ? "on" : "") + '" title="mittig">▣</button>'
+          + '<button data-al="right" data-i="' + i + '" class="' + (al === "right" ? "on" : "") + '" title="rechts ausrichten">◨</button>'
+          + '</span>'
           + '<button data-up="' + i + '" title="nach oben">↑</button><button data-down="' + i + '" title="nach unten">↓</button><button data-del="' + i + '" title="entfernen">🗑</button></div>';
         if (b.type === "divider") {
           h += '<p class="sub" style="margin:.15rem 0 0">Waagerechte Trennlinie – keine Eingabe nötig.</p>';
@@ -792,6 +801,8 @@
       for (var q2 = 0; q2 < upB.length; q2++) { upB[q2].onclick = (function (idx) { return function () { sync(); upIdx = idx; imgPicker.click(); }; })(+upB[q2].getAttribute("data-up-img")); }
       var clrB = wrap.querySelectorAll("[data-clr-img]");
       for (var q3 = 0; q3 < clrB.length; q3++) { clrB[q3].onclick = (function (idx) { return function () { sync(); model[idx].src = ""; render(); }; })(+clrB[q3].getAttribute("data-clr-img")); }
+      var alB = wrap.querySelectorAll("[data-al]");
+      for (var q4 = 0; q4 < alB.length; q4++) { alB[q4].onclick = (function (idx, v) { return function () { sync(); model[idx].align = v; render(); }; })(+alB[q4].getAttribute("data-i"), alB[q4].getAttribute("data-al")); }
       var del = wrap.querySelectorAll("[data-del]");
       for (var d = 0; d < del.length; d++) { del[d].onclick = (function (i) { return function () { sync(); model.splice(i, 1); render(); }; })(+del[d].getAttribute("data-del")); }
       var up = wrap.querySelectorAll("[data-up]");
@@ -808,8 +819,8 @@
         var payload = [];
         for (var p = 0; p < model.length; p++) {
           var mb = model[p];
-          if (mb.type === "list") payload.push({ type: "list", items: (mb.text || "").split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean) });
-          else if (mb.type === "faq") payload.push({ type: "faq", items: (mb.text || "").split(/\n+/).map(function (line) { var parts = line.split("|"); return { q: (parts[0] || "").trim(), a: parts.slice(1).join("|").trim() }; }).filter(function (x) { return x.q; }) });
+          if (mb.type === "list") payload.push({ type: "list", align: mb.align, items: (mb.text || "").split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean) });
+          else if (mb.type === "faq") payload.push({ type: "faq", align: mb.align, items: (mb.text || "").split(/\n+/).map(function (line) { var parts = line.split("|"); return { q: (parts[0] || "").trim(), a: parts.slice(1).join("|").trim() }; }).filter(function (x) { return x.q; }) });
           else payload.push(mb);
         }
         call({ action: "save-blocks", file: file, zone: zone, blocks: payload }).then(function (res) {

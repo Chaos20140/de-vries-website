@@ -627,6 +627,10 @@ em { font-style: italic; }
 .eb-faq__item[open] summary { color: var(--red); }
 .eb-faq__item[open] summary::after { content: "–"; }
 .eb-faq__item > div { padding: 0 1rem 0.9rem; color: var(--ink-2); line-height: 1.65; }
+/* Ausrichtung einzelner Elemente (links / mitte / rechts), im Admin wählbar */
+.eb-zone > .eb-al-left { align-self: flex-start; text-align: left; }
+.eb-zone > .eb-al-right { align-self: flex-end; text-align: right; }
+.eb-zone > .eb-al-center { align-self: center; text-align: center; }
 .eb-wrap:has(.eb-zone:not(:empty)) { padding-block: clamp(2rem, 1rem + 3vw, 4.5rem); }
 @media (prefers-reduced-motion: reduce){
   .route__road-done { display: none; }

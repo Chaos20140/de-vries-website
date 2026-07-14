@@ -358,28 +358,30 @@ Deno.serve(async (req) => {
       let inner = "";
       for (const b of blocks) {
         const type = b && typeof b === "object" ? (b as any).type : null;
+        const av = (b as any) ? (b as any).align : "";
+        const alc = "eb-al-" + (av === "left" || av === "right" ? av : "center"); // Ausrichtung links/mitte/rechts
         if (type === "button") {
           const text = esc(String((b as any).text || "").slice(0, 80).trim());
           const href = String((b as any).href || "").trim();
           if (!text) continue;
           if (!safeHref(href)) return json({ error: "bad_href" }, 400);
           const ghost = (b as any).variant === "ghost";
-          inner += '<a class="btn' + (ghost ? " btn--ghost" : "") + '" data-eb="button"'
+          inner += '<a class="btn' + (ghost ? " btn--ghost" : "") + " " + alc + '" data-eb="button"'
             + (ghost ? ' data-eb-variant="ghost"' : "") + ' href="' + esc(href) + '">' + text + "</a>";
         } else if (type === "heading") {
           const text = esc(String((b as any).text || "").slice(0, 120).trim());
           if (!text) continue;
-          inner += '<h3 data-eb="heading">' + text + "</h3>";
+          inner += '<h3 class="' + alc + '" data-eb="heading">' + text + "</h3>";
         } else if (type === "text") {
           const text = esc(String((b as any).text || "").slice(0, 600).trim());
           if (!text) continue;
-          inner += '<p data-eb="text">' + text + "</p>";
+          inner += '<p class="' + alc + '" data-eb="text">' + text + "</p>";
         } else if (type === "quote") {
           const text = esc(String((b as any).text || "").slice(0, 400).trim());
           if (!text) continue;
-          inner += '<blockquote data-eb="quote">' + text + "</blockquote>";
+          inner += '<blockquote class="' + alc + '" data-eb="quote">' + text + "</blockquote>";
         } else if (type === "divider") {
-          inner += '<hr data-eb="divider">';
+          inner += '<hr class="' + alc + '" data-eb="divider">';
         } else if (type === "list") {
           const items = Array.isArray((b as any).items) ? (b as any).items : [];
           let li = "";
@@ -388,7 +390,7 @@ Deno.serve(async (req) => {
             if (t) li += "<li>" + t + "</li>";
           }
           if (!li) continue;
-          inner += '<ul data-eb="list">' + li + "</ul>";
+          inner += '<ul class="' + alc + '" data-eb="list">' + li + "</ul>";
         } else if (type === "image") {
           const slot = String((b as any).slot || "");
           const src0 = String((b as any).src || "").trim();
@@ -397,12 +399,12 @@ Deno.serve(async (req) => {
           else if (slot in IMG_SLOTS) src = IMG_SLOTS[slot];
           else return json({ error: "bad_slot", field: slot || src0 }, 400);
           const alt = esc(String((b as any).alt || "").slice(0, 160).trim());
-          inner += '<img data-eb="image" ' + (isUp ? 'data-eb-src="' + esc(src) + '"' : 'data-eb-slot="' + slot + '"') + ' src="' + esc(src) + '" alt="' + alt + '" loading="lazy">';
+          inner += '<img class="' + alc + '" data-eb="image" ' + (isUp ? 'data-eb-src="' + esc(src) + '"' : 'data-eb-slot="' + slot + '"') + ' src="' + esc(src) + '" alt="' + alt + '" loading="lazy">';
         } else if (type === "columns") {
           const l = esc(String((b as any).left || "").slice(0, 600).trim());
           const r = esc(String((b as any).right || "").slice(0, 600).trim());
           if (!l && !r) continue;
-          inner += '<div class="eb-cols" data-eb="columns"><div>' + (l ? "<p>" + l + "</p>" : "") + '</div><div>' + (r ? "<p>" + r + "</p>" : "") + "</div></div>";
+          inner += '<div class="eb-cols ' + alc + '" data-eb="columns"><div>' + (l ? "<p>" + l + "</p>" : "") + '</div><div>' + (r ? "<p>" + r + "</p>" : "") + "</div></div>";
         } else if (type === "faq") {
           const items = Array.isArray((b as any).items) ? (b as any).items : [];
           let d = "";
@@ -412,7 +414,7 @@ Deno.serve(async (req) => {
             if (q) d += "<details class=\"eb-faq__item\"><summary>" + q + "</summary><div>" + a + "</div></details>";
           }
           if (!d) continue;
-          inner += '<div class="eb-faq" data-eb="faq">' + d + "</div>";
+          inner += '<div class="eb-faq ' + alc + '" data-eb="faq">' + d + "</div>";
         } else {
           return json({ error: "bad_block_type" }, 400);
         }
