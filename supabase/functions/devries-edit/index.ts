@@ -434,6 +434,12 @@ Deno.serve(async (req) => {
           files.push({ path: "sitemap.xml", contentB64: utf8B64(sitemap) });
         }
       } catch { /* Sitemap optional */ }
+      // Öffentliche Nav-Liste (mit Titeln) pflegen -> Client blendet erstellte Seiten ins Menü ein.
+      let pubList: Array<{ file: string; title: string }> = [];
+      try { const pj = await getFile("pages.json"); const a = JSON.parse(pj.text); if (Array.isArray(a)) pubList = a.filter((x) => x && typeof x.file === "string"); } catch { /* noch keine */ }
+      pubList = pubList.filter((x) => x.file !== file);
+      pubList.push({ file, title });
+      files.push({ path: "pages.json", contentB64: utf8B64(JSON.stringify(pubList, null, 2)) });
       const okc = await commitMulti(files, "Editor: neue Seite erstellt (" + file + ")");
       return okc ? json({ ok: true, file }) : json({ error: "commit_failed" }, 500);
     }
@@ -456,6 +462,11 @@ Deno.serve(async (req) => {
         const re = new RegExp("[ \\t]*<url>\\s*<loc>[^<]*/" + file.replace(/\./g, "\\.") + "</loc>[\\s\\S]*?</url>\\s*", "i");
         putFiles.push({ path: "sitemap.xml", contentB64: utf8B64(sm.text.replace(re, "")) });
       } catch { /* Sitemap optional */ }
+      try {
+        const pj = await getFile("pages.json");
+        const a = JSON.parse(pj.text);
+        if (Array.isArray(a)) putFiles.push({ path: "pages.json", contentB64: utf8B64(JSON.stringify(a.filter((x: any) => !(x && x.file === file)), null, 2)) });
+      } catch { /* pages.json optional */ }
       const okc = await commitMulti(putFiles, "Editor: Seiten-Liste aktualisiert");
       return okc ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
     }

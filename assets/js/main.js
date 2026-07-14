@@ -454,10 +454,33 @@
     renderCal(); updateSummary();
   })();
 
+  /* ---------- erstellte Seiten ins Menü einblenden (alle Besucher) ---------- */
+  function injectCreatedPages() {
+    fetch("pages.json", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : []; }).then(function (list) {
+      if (!Array.isArray(list) || !list.length) return;
+      var ul = document.querySelector(".nav__links");
+      var mob = document.querySelector(".mobile-nav__body");
+      list.forEach(function (p) {
+        if (!p || typeof p.file !== "string" || !/^[a-z][a-z0-9-]{1,38}\.html$/.test(p.file)) return;
+        var title = (typeof p.title === "string" && p.title.trim()) ? p.title.trim() : p.file;
+        if (ul && !ul.querySelector('a[href="' + p.file + '"]')) {
+          var li = document.createElement("li");
+          var a = document.createElement("a"); a.setAttribute("href", p.file); a.textContent = title;
+          li.appendChild(a); ul.appendChild(li);
+        }
+        if (mob && !mob.querySelector('a.mnav__link[href="' + p.file + '"]')) {
+          var ma = document.createElement("a"); ma.className = "mnav__link"; ma.setAttribute("href", p.file); ma.textContent = title;
+          mob.appendChild(ma);
+        }
+      });
+    }).catch(function () {});
+  }
+
   /* ---------- boot ---------- */
   initLenis();
   initRoute();
   applyScroll();
+  injectCreatedPages();
 })();
 
 /* ============================================================
