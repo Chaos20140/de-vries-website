@@ -543,7 +543,9 @@
       + '#dvPanel .eb-row{border:1px solid rgba(28,23,20,.14);border-radius:10px;padding:.6rem .7rem;margin:.55rem 0;background:#faf6f0}'
       + '#dvPanel .eb-row .t{display:flex;gap:.4rem;align-items:center;margin-bottom:.35rem}'
       + '#dvPanel .eb-row .t b{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:#a50d07;flex:1}'
-      + '#dvPanel .eb-row .t button{background:#eee;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:.9rem;padding:0}';
+      + '#dvPanel .eb-row .t button{background:#eee;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:.9rem;padding:0}'
+      + '#dvPanel .eb-imgrow{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.4rem 0 .1rem}'
+      + '#dvPanel .eb-imgrow button{background:#f0e9e0;color:#1c1714;border-radius:999px;padding:.42em .95em;font-weight:700;font-size:.8rem;cursor:pointer}';
     document.head.appendChild(st);
 
     var picker = document.createElement("input");
@@ -712,18 +714,40 @@
       else if (t === "quote") model.push({ type: "quote", text: el.textContent.trim() });
       else if (t === "divider") model.push({ type: "divider" });
       else if (t === "list") { var items = [], lis = el.querySelectorAll("li"); for (var q = 0; q < lis.length; q++) items.push(lis[q].textContent.trim()); model.push({ type: "list", text: items.join("\n") }); }
-      else if (t === "image") model.push({ type: "image", slot: el.getAttribute("data-eb-slot") || "senioren-zuhause", alt: el.getAttribute("alt") || "" });
+      else if (t === "image") model.push({ type: "image", slot: el.getAttribute("data-eb-slot") || "senioren-zuhause", src: el.getAttribute("data-eb-src") || "", alt: el.getAttribute("alt") || "" });
       else if (t === "columns") { var cd = el.children; model.push({ type: "columns", left: cd[0] ? cd[0].textContent.trim() : "", right: cd[1] ? cd[1].textContent.trim() : "" }); }
+      else if (t === "faq") { var qa = [], dts = el.querySelectorAll("details"); for (var w = 0; w < dts.length; w++) { var su = dts[w].querySelector("summary"), dv = dts[w].querySelector("div"); qa.push(((su ? su.textContent.trim() : "") + " | " + (dv ? dv.textContent.trim() : ""))); } model.push({ type: "faq", text: qa.join("\n") }); }
     }
     var wrap = document.createElement("div"); wrap.id = "dvPanel"; document.body.appendChild(wrap);
-    function label(t) { return t === "button" ? "Button" : t === "heading" ? "Überschrift" : t === "quote" ? "Zitat" : t === "divider" ? "Trenner" : t === "list" ? "Liste" : t === "image" ? "Bild" : t === "columns" ? "Spalten" : "Text"; }
+    // Bild-Upload für Bild-Blöcke (einmalig erzeugt, überlebt Re-Render)
+    var imgPicker = document.createElement("input");
+    imgPicker.type = "file"; imgPicker.accept = "image/jpeg,image/png,image/webp"; imgPicker.style.display = "none";
+    document.body.appendChild(imgPicker);
+    var upIdx = -1;
+    imgPicker.addEventListener("change", function () {
+      var f = imgPicker.files && imgPicker.files[0], idx = upIdx; imgPicker.value = "";
+      if (!f || idx < 0) return;
+      if (f.size > 3000000) { var s0 = wrap.querySelector('[data-img-state="' + idx + '"]'); if (s0) s0.textContent = "Bild zu groß (max 3 MB)"; return; }
+      var st = wrap.querySelector('[data-img-state="' + idx + '"]'); if (st) st.textContent = "lädt hoch …";
+      var reader = new FileReader();
+      reader.onload = function () {
+        var b64 = String(reader.result || "").split(",")[1] || ""; if (!b64) { if (st) st.textContent = "Fehler"; return; }
+        call({ action: "upload-block-image", dataBase64: b64 }).then(function (res) {
+          if (res.ok && res.d && res.d.src) { sync(); model[idx].src = res.d.src; render(); }
+          else if (st) st.textContent = "Upload-Fehler (" + ((res.d && res.d.error) || res.status) + ")";
+        }).catch(function () { if (st) st.textContent = "Verbindungsfehler"; });
+      };
+      reader.readAsDataURL(f);
+    });
+    function closePanel() { wrap.remove(); imgPicker.remove(); }
+    function label(t) { return t === "button" ? "Button" : t === "heading" ? "Überschrift" : t === "quote" ? "Zitat" : t === "divider" ? "Trenner" : t === "list" ? "Liste" : t === "image" ? "Bild" : t === "columns" ? "Spalten" : t === "faq" ? "FAQ / Akkordeon" : "Text"; }
     function sync() {
       var ins = wrap.querySelectorAll("[data-f]");
       for (var k = 0; k < ins.length; k++) { var f = ins[k].getAttribute("data-f"), idx = +ins[k].getAttribute("data-i"); if (model[idx]) model[idx][f] = ins[k].value; }
     }
     function render() {
       var h = '<div class="box"><h3>Elemente &amp; Buttons</h3><p class="sub">Erscheinen auf dieser Seite über dem Footer. Reihenfolge mit den Pfeilen, danach Speichern.</p>';
-      h += '<div class="eb-add-row"><button data-add="button">➕ Button</button><button data-add="heading">➕ Überschrift</button><button data-add="text">➕ Text</button><button data-add="list">➕ Liste</button><button data-add="image">➕ Bild</button><button data-add="columns">➕ Spalten</button><button data-add="quote">➕ Zitat</button><button data-add="divider">➕ Trenner</button></div><div>';
+      h += '<div class="eb-add-row"><button data-add="button">➕ Button</button><button data-add="heading">➕ Überschrift</button><button data-add="text">➕ Text</button><button data-add="list">➕ Liste</button><button data-add="image">➕ Bild</button><button data-add="columns">➕ Spalten</button><button data-add="faq">➕ FAQ</button><button data-add="quote">➕ Zitat</button><button data-add="divider">➕ Trenner</button></div><div>';
       if (!model.length) h += '<p class="sub">Noch keine Elemente – oben eins hinzufügen.</p>';
       for (var i = 0; i < model.length; i++) {
         var b = model[i];
@@ -736,10 +760,15 @@
         } else if (b.type === "image") {
           h += '<select data-f="slot" data-i="' + i + '">';
           for (var si = 0; si < EB_SLOTS.length; si++) h += '<option value="' + EB_SLOTS[si][0] + '">' + EB_SLOTS[si][1] + '</option>';
-          h += '</select><input data-f="alt" data-i="' + i + '" maxlength="160" placeholder="Alt-Text (Bildbeschreibung für Google/Barrierefreiheit)">';
+          h += '</select><div class="eb-imgrow"><button type="button" data-up-img="' + i + '">📤 Eigenes Bild hochladen</button>'
+            + (b.src ? '<button type="button" data-clr-img="' + i + '">✕ entfernen</button>' : '')
+            + '<span class="sub" data-img-state="' + i + '">' + (b.src ? "eigenes Bild ✓" : "oder Bild oben wählen") + '</span></div>'
+            + '<input data-f="alt" data-i="' + i + '" maxlength="160" placeholder="Alt-Text (Bildbeschreibung)">';
         } else if (b.type === "columns") {
           h += '<textarea data-f="left" data-i="' + i + '" maxlength="600" placeholder="Linke Spalte"></textarea>'
             + '<textarea data-f="right" data-i="' + i + '" maxlength="600" placeholder="Rechte Spalte"></textarea>';
+        } else if (b.type === "faq") {
+          h += '<textarea data-f="text" data-i="' + i + '" maxlength="6000" placeholder="Eine Frage pro Zeile im Format:  Frage | Antwort"></textarea>';
         } else {
           var max = b.type === "text" ? 600 : b.type === "quote" ? 400 : b.type === "heading" ? 120 : 80;
           h += '<input data-f="text" data-i="' + i + '" maxlength="' + max + '" placeholder="Beschriftung / Text">';
@@ -758,7 +787,11 @@
     }
     function bind() {
       var add = wrap.querySelectorAll("[data-add]");
-      for (var a = 0; a < add.length; a++) { add[a].onclick = (function (t) { return function () { sync(); model.push(t === "button" ? { type: "button", text: "", href: "", variant: "solid" } : t === "divider" ? { type: "divider" } : t === "image" ? { type: "image", slot: "senioren-zuhause", alt: "" } : t === "columns" ? { type: "columns", left: "", right: "" } : { type: t, text: "" }); render(); }; })(add[a].getAttribute("data-add")); }
+      for (var a = 0; a < add.length; a++) { add[a].onclick = (function (t) { return function () { sync(); model.push(t === "button" ? { type: "button", text: "", href: "", variant: "solid" } : t === "divider" ? { type: "divider" } : t === "image" ? { type: "image", slot: "senioren-zuhause", src: "", alt: "" } : t === "columns" ? { type: "columns", left: "", right: "" } : { type: t, text: "" }); render(); }; })(add[a].getAttribute("data-add")); }
+      var upB = wrap.querySelectorAll("[data-up-img]");
+      for (var q2 = 0; q2 < upB.length; q2++) { upB[q2].onclick = (function (idx) { return function () { sync(); upIdx = idx; imgPicker.click(); }; })(+upB[q2].getAttribute("data-up-img")); }
+      var clrB = wrap.querySelectorAll("[data-clr-img]");
+      for (var q3 = 0; q3 < clrB.length; q3++) { clrB[q3].onclick = (function (idx) { return function () { sync(); model[idx].src = ""; render(); }; })(+clrB[q3].getAttribute("data-clr-img")); }
       var del = wrap.querySelectorAll("[data-del]");
       for (var d = 0; d < del.length; d++) { del[d].onclick = (function (i) { return function () { sync(); model.splice(i, 1); render(); }; })(+del[d].getAttribute("data-del")); }
       var up = wrap.querySelectorAll("[data-up]");
@@ -767,8 +800,8 @@
       for (var n = 0; n < dn.length; n++) { dn[n].onclick = (function (i) { return function () { sync(); if (i < model.length - 1) { var m = model[i + 1]; model[i + 1] = model[i]; model[i] = m; } render(); }; })(+dn[n].getAttribute("data-down")); }
       var sels = wrap.querySelectorAll('select[data-f="variant"]');
       for (var s = 0; s < sels.length; s++) { var idx = +sels[s].getAttribute("data-i"); if (model[idx]) sels[s].value = model[idx].variant || "solid"; }
-      document.getElementById("ebX").onclick = function () { wrap.remove(); };
-      wrap.onclick = function (e) { if (e.target === wrap) wrap.remove(); };
+      document.getElementById("ebX").onclick = function () { closePanel(); };
+      wrap.onclick = function (e) { if (e.target === wrap) closePanel(); };
       document.getElementById("ebOk").onclick = function () {
         sync();
         var ok = document.getElementById("ebOk"); ok.disabled = true; ok.textContent = "Speichert …";
@@ -776,10 +809,11 @@
         for (var p = 0; p < model.length; p++) {
           var mb = model[p];
           if (mb.type === "list") payload.push({ type: "list", items: (mb.text || "").split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean) });
+          else if (mb.type === "faq") payload.push({ type: "faq", items: (mb.text || "").split(/\n+/).map(function (line) { var parts = line.split("|"); return { q: (parts[0] || "").trim(), a: parts.slice(1).join("|").trim() }; }).filter(function (x) { return x.q; }) });
           else payload.push(mb);
         }
         call({ action: "save-blocks", file: file, zone: zone, blocks: payload }).then(function (res) {
-          if (res.ok) { wrap.remove(); msg("✓ Elemente gespeichert – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); }
+          if (res.ok) { closePanel(); msg("✓ Elemente gespeichert – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); }
           else { ok.disabled = false; ok.textContent = "Speichern"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); }
         }).catch(function () { ok.disabled = false; ok.textContent = "Speichern"; msg("Verbindungsfehler."); });
       };

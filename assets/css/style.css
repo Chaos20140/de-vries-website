@@ -619,6 +619,14 @@ em { font-style: italic; }
 .eb-cols > div { min-width: 0; }
 .eb-cols p { max-width: none; margin: 0; }
 @media (max-width: 640px) { .eb-cols { grid-template-columns: 1fr; } }
+.eb-faq { width: 100%; max-width: 60ch; text-align: left; display: grid; gap: 0.6rem; }
+.eb-faq__item { border: 1px solid var(--line); border-radius: 12px; background: var(--paper-2); overflow: hidden; }
+.eb-faq__item summary { cursor: pointer; font-family: var(--display); font-size: 1.1rem; padding: 0.85rem 1rem; list-style: none; display: flex; justify-content: space-between; gap: 1rem; }
+.eb-faq__item summary::-webkit-details-marker { display: none; }
+.eb-faq__item summary::after { content: "+"; color: var(--red); font-weight: 700; }
+.eb-faq__item[open] summary { color: var(--red); }
+.eb-faq__item[open] summary::after { content: "–"; }
+.eb-faq__item > div { padding: 0 1rem 0.9rem; color: var(--ink-2); line-height: 1.65; }
 .eb-wrap:has(.eb-zone:not(:empty)) { padding-block: clamp(2rem, 1rem + 3vw, 4.5rem); }
 @media (prefers-reduced-motion: reduce){
   .route__road-done { display: none; }

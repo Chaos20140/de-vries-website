@@ -391,14 +391,28 @@ Deno.serve(async (req) => {
           inner += '<ul data-eb="list">' + li + "</ul>";
         } else if (type === "image") {
           const slot = String((b as any).slot || "");
-          if (!(slot in IMG_SLOTS)) return json({ error: "bad_slot", field: slot }, 400);
+          const src0 = String((b as any).src || "").trim();
+          let src = "", isUp = false;
+          if (/^assets\/img\/uploads\/[a-z0-9-]{8,60}\.(jpg|jpeg|png|webp)$/i.test(src0)) { src = src0; isUp = true; }
+          else if (slot in IMG_SLOTS) src = IMG_SLOTS[slot];
+          else return json({ error: "bad_slot", field: slot || src0 }, 400);
           const alt = esc(String((b as any).alt || "").slice(0, 160).trim());
-          inner += '<img data-eb="image" data-eb-slot="' + slot + '" src="' + IMG_SLOTS[slot] + '" alt="' + alt + '" loading="lazy">';
+          inner += '<img data-eb="image" ' + (isUp ? 'data-eb-src="' + esc(src) + '"' : 'data-eb-slot="' + slot + '"') + ' src="' + esc(src) + '" alt="' + alt + '" loading="lazy">';
         } else if (type === "columns") {
           const l = esc(String((b as any).left || "").slice(0, 600).trim());
           const r = esc(String((b as any).right || "").slice(0, 600).trim());
           if (!l && !r) continue;
           inner += '<div class="eb-cols" data-eb="columns"><div>' + (l ? "<p>" + l + "</p>" : "") + '</div><div>' + (r ? "<p>" + r + "</p>" : "") + "</div></div>";
+        } else if (type === "faq") {
+          const items = Array.isArray((b as any).items) ? (b as any).items : [];
+          let d = "";
+          for (const it of items.slice(0, 15)) {
+            const q = esc(String((it && (it as any).q) || "").slice(0, 200).trim());
+            const a = esc(String((it && (it as any).a) || "").slice(0, 800).trim());
+            if (q) d += "<details class=\"eb-faq__item\"><summary>" + q + "</summary><div>" + a + "</div></details>";
+          }
+          if (!d) continue;
+          inner += '<div class="eb-faq" data-eb="faq">' + d + "</div>";
         } else {
           return json({ error: "bad_block_type" }, 400);
         }
@@ -485,6 +499,65 @@ Deno.serve(async (req) => {
       } catch { /* pages.json optional */ }
       const okc = await commitMulti(putFiles, "Editor: Seiten-Liste aktualisiert");
       return okc ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
+    }
+
+    if (body.action === "upload-block-image") {
+      // Freies Bild für einen Bild-Block hochladen. Dateiname ist SERVER-generiert (UUID) ->
+      // kein Pfad-Trick möglich; Typ per Magic-Bytes, Größe gedeckelt.
+      const data = body.dataBase64 as string;
+      if (typeof data !== "string" || data.length > 3_000_000) return json({ error: "image_too_big" }, 400);
+      const head = atob(data.slice(0, 32));
+      const bts = [...head].map((c) => c.charCodeAt(0));
+      const ext = (bts[0] === 0xFF && bts[1] === 0xD8) ? "jpg"
+                : (bts[0] === 0x89 && bts[1] === 0x50 && bts[2] === 0x4E && bts[3] === 0x47) ? "png"
+                : (head.slice(0, 4) === "RIFF") ? "webp" : "";
+      if (!ext) return json({ error: "not_image" }, 400);
+      const src = "assets/img/uploads/" + crypto.randomUUID() + "." + ext;
+      const r = await putFile(src, data, undefined, "Editor: Block-Bild hochgeladen");
+      return r.ok ? json({ ok: true, src }) : json({ error: "commit_failed" }, 500);
+    }
+
+    if (body.action === "duplicate-page") {
+      // Bestehende (gültige) Seite als neue Unterseite kopieren.
+      const source = String(body.source || "");
+      if (!(await isValidPage(source))) return json({ error: "bad_source" }, 400);
+      const slug = String(body.slug || "").toLowerCase().trim();
+      if (!/^[a-z][a-z0-9-]{1,38}$/.test(slug)) return json({ error: "bad_slug" }, 400);
+      const file = slug + ".html";
+      if (PAGES.has(file) || RESERVED_SLUGS.has(slug)) return json({ error: "reserved" }, 400);
+      const title = String(body.title || "").trim();
+      if (title.length < 2 || title.length > 80) return json({ error: "bad_title" }, 400);
+      const extra = await extraPages();
+      if (extra.includes(file)) return json({ error: "exists" }, 400);
+      if (extra.length >= 50) return json({ error: "limit" }, 400);
+      try { await getFile(file); return json({ error: "exists" }, 400); } catch { /* frei */ }
+      const srcFile = await getFile(source);
+      const et = esc(title);
+      let html = srcFile.text
+        .replace(/<title>[\s\S]*?<\/title>/, () => "<title>" + et + " | de Vries</title>")
+        .replace(/(<meta property="og:title" content=")[^"]*(">)/, (_m, a, b2) => a + et + " | de Vries" + b2)
+        .replace(/(<meta name="twitter:title" content=")[^"]*(">)/, (_m, a, b2) => a + et + " | de Vries" + b2);
+      html = html.split("/" + source + '"').join("/" + file + '"'); // canonical + og:url auf neue Datei
+      const files: { path: string; contentB64: string }[] = [
+        { path: file, contentB64: utf8B64(html) },
+        { path: PAGES_MANIFEST, contentB64: utf8B64(JSON.stringify([...extra, file].sort(), null, 2)) },
+      ];
+      let pubList: Array<{ file: string; title: string }> = [];
+      try { const pj = await getFile("pages.json"); const a = JSON.parse(pj.text); if (Array.isArray(a)) pubList = a.filter((x) => x && typeof x.file === "string"); } catch { /* leer */ }
+      pubList = pubList.filter((x) => x.file !== file);
+      pubList.push({ file, title });
+      files.push({ path: "pages.json", contentB64: utf8B64(JSON.stringify(pubList, null, 2)) });
+      try {
+        const sm = await getFile("sitemap.xml");
+        let sitemap = sm.text;
+        if (sitemap.indexOf("/" + file + "<") < 0 && sitemap.indexOf("</urlset>") >= 0) {
+          const entry = "  <url>\n    <loc>https://chaos20140.github.io/de-vries-website/" + file + "</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n";
+          sitemap = sitemap.replace("</urlset>", entry + "</urlset>");
+          files.push({ path: "sitemap.xml", contentB64: utf8B64(sitemap) });
+        }
+      } catch { /* Sitemap optional */ }
+      const okc = await commitMulti(files, "Editor: Seite dupliziert (" + source + " -> " + file + ")");
+      return okc ? json({ ok: true, file }) : json({ error: "commit_failed" }, 500);
     }
 
     return json({ error: "bad_action" }, 400);

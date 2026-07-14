@@ -15,7 +15,7 @@
   h1{font-size:1.45rem;margin-bottom:.3rem}
   p.sub{color:var(--muted);font-size:.95rem;margin-bottom:1.3rem}
   label{display:block;font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.35rem}
-  input{width:100%;padding:.8rem .9rem;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--paper)}
+  input,select{width:100%;padding:.8rem .9rem;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--paper)}
   .btn{display:inline-flex;align-items:center;gap:.4em;border:0;border-radius:999px;background:var(--red);color:#fff;font-weight:700;font-size:1rem;padding:.85em 1.6em;cursor:pointer;margin-top:1.1rem;transition:transform .15s,opacity .2s}
   .btn:hover{transform:translateY(-1px)} .btn:disabled{opacity:.5;cursor:not-allowed}
   .btn.ghost{background:#eee;color:var(--ink)}
@@ -84,6 +84,17 @@
     <div class="status" id="npStatus"></div>
     <div id="myPages" class="grid" style="margin-top:.7rem"></div>
 
+    <div class="grp">Seite duplizieren</div>
+    <p class="muted" style="margin:-.2rem 0 .6rem">Eine bestehende Seite als neue Unterseite kopieren – guter Startpunkt mit fertigem Inhalt.</p>
+    <label for="dupSrc">Vorlage (welche Seite kopieren?)</label>
+    <select id="dupSrc"></select>
+    <label for="dupSlug" style="margin-top:.6rem">Adresse der neuen Seite</label>
+    <input id="dupSlug" placeholder="preise-2" maxlength="39" autocapitalize="off" autocomplete="off" spellcheck="false">
+    <label for="dupTitle" style="margin-top:.6rem">Titel der neuen Seite</label>
+    <input id="dupTitle" placeholder="Unsere Preise" maxlength="80">
+    <button class="btn" id="dupGo">⧉ Duplizieren</button>
+    <div class="status" id="dupStatus"></div>
+
     <div class="foot">
       <span class="muted">Änderungen sind nach dem Speichern in ~1–3 Min live. Sitzung endet automatisch nach 3 Std.</span>
       <button class="btn ghost" id="logout" style="margin:0">Verlassen</button>
@@ -142,8 +153,9 @@
   function loadMyPages(){
     var box=$("myPages"); if(!box) return; box.innerHTML="";
     callFn({action:"list-pages"}).then(function(res){
-      if(!res.ok || !res.d || !res.d.pages || !res.d.pages.length) return;
-      res.d.pages.forEach(function(f){
+      var pages = (res.ok && res.d && Array.isArray(res.d.pages)) ? res.d.pages : [];
+      populateDupSrc(pages);
+      pages.forEach(function(f){
         var card=document.createElement("div"); card.className="page";
         var a=document.createElement("a"); a.href="../"+f; a.textContent=f;
         a.style.fontWeight="700"; a.style.textDecoration="none"; a.style.color="var(--ink)";
@@ -183,6 +195,26 @@
     try{ localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK); }catch(e){}
     $("dash").classList.add("hidden"); $("login").classList.remove("hidden");
     var pwEl=$("pw"); if(pwEl) pwEl.value=""; setS("");
+  });
+
+  function populateDupSrc(created){
+    var sel=$("dupSrc"); if(!sel) return; sel.innerHTML="";
+    PAGES.forEach(function(p){ var o=document.createElement("option"); o.value=p[0]; o.textContent=p[1]; sel.appendChild(o); });
+    (created||[]).forEach(function(f){ var o=document.createElement("option"); o.value=f; o.textContent=f+" (eigene)"; sel.appendChild(o); });
+  }
+
+  $("dupGo").addEventListener("click", function(){
+    var src=$("dupSrc").value, slug=($("dupSlug").value||"").toLowerCase().trim(), title=($("dupTitle").value||"").trim(), st=$("dupStatus");
+    if(!/^[a-z][a-z0-9-]{1,38}$/.test(slug)){ st.textContent="Adresse: nur a–z, 0–9 und Bindestrich, mit Buchstabe beginnen."; st.className="status err"; return; }
+    if(title.length<2){ st.textContent="Bitte einen Titel eingeben."; st.className="status err"; return; }
+    if(!src){ st.textContent="Bitte eine Vorlage wählen."; st.className="status err"; return; }
+    var b=$("dupGo"); b.disabled=true; st.textContent="Dupliziere …"; st.className="status";
+    callFn({action:"duplicate-page", source:src, slug:slug, title:title}).then(function(res){
+      b.disabled=false;
+      if(res.ok){ st.textContent="✓ Erstellt: "+res.d.file+" – Neuaufbau ~1–3 Min, dann bearbeitbar."; st.className="status ok"; $("dupSlug").value=""; $("dupTitle").value=""; loadMyPages(); }
+      else if(res.status===401){ st.textContent="Sitzung abgelaufen – bitte neu anmelden."; st.className="status err"; }
+      else { st.textContent="Fehler: "+((res.d&&res.d.error)||res.status); st.className="status err"; }
+    }).catch(function(){ b.disabled=false; st.textContent="Verbindungsfehler."; st.className="status err"; });
   });
 
   $("npGo").addEventListener("click", function(){
