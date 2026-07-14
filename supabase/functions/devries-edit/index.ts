@@ -402,9 +402,11 @@ Deno.serve(async (req) => {
         const av = (b as any) ? (b as any).align : "";
         const wv = (b as any) ? (b as any).width : "";
         const sv = (b as any) ? (b as any).space : "";
+        const fsv = (b as any) ? (b as any).size : "";
         const alc = "eb-al-" + (av === "left" || av === "right" ? av : "center") // Ausrichtung
           + " eb-w-" + (wv === "narrow" || wv === "wide" || wv === "full" ? wv : "normal") // Breite
-          + " eb-sp-" + (sv === "small" || sv === "large" ? sv : "normal"); // Abstand
+          + " eb-sp-" + (sv === "small" || sv === "large" ? sv : "normal") // Abstand
+          + " eb-fs-" + (fsv === "s" || fsv === "l" || fsv === "xl" ? fsv : "m"); // Textgröße
         if (type === "button") {
           const text = esc(String((b as any).text || "").slice(0, 80).trim());
           const href = String((b as any).href || "").trim();

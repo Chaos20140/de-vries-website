@@ -524,7 +524,7 @@
     setTimeout(function () { t.classList.remove("show"); setTimeout(function () { if (t.parentNode) t.remove(); }, 320); }, kind === "err" ? 5200 : 3600);
   }
   function unsavedCount() {
-    return document.querySelectorAll(".dv-changed").length + Object.keys(pending).length + Object.keys(pendingPos).length;
+    return document.querySelectorAll(".dv-changed").length + Object.keys(pending).length + Object.keys(pendingPos).length + Object.keys(dirtyZones).length;
   }
   function hasUnsaved() { return unsavedCount() > 0; }
   function refreshSaveBtn() {
@@ -618,6 +618,156 @@
     g.addEventListener("click", function (e) { if (e.target === g) close(); });
   }
 
+  // ===== Inline-Element-System: subtiles "+" mit Fächer-Menü, Live-Bearbeitung direkt auf der Seite =====
+  var EB_IMG = { "hero": "assets/img/senioren-zuhause.jpg", "senioren-zuhause": "assets/img/senioren-zuhause.jpg", "senioren-familie": "assets/img/senioren-familie.jpg", "senioren-pflege": "assets/img/senioren-pflege.jpg", "senioren-entlastung": "assets/img/senioren-entlastung.jpg", "haushalt-alltag": "assets/img/haushalt-alltag.jpg", "haushalt-reinigung": "assets/img/haushalt-reinigung.jpg" };
+  var EB_SLOTS = [["senioren-zuhause", "Senioren zuhause"], ["senioren-familie", "Familie / Team"], ["senioren-pflege", "Pflege"], ["senioren-entlastung", "Entlastung"], ["haushalt-alltag", "Haushalt: Alltag"], ["haushalt-reinigung", "Haushalt: Reinigung"]];
+  var EB_TYPES = [
+    { t: "text", ic: "¶", lbl: "Text" }, { t: "heading", ic: "H", lbl: "Titel" },
+    { t: "button", ic: "⬢", lbl: "Button" }, { t: "image", ic: "🖼", lbl: "Bild" },
+    { t: "list", ic: "☰", lbl: "Liste" }, { t: "quote", ic: "❝", lbl: "Zitat" },
+    { t: "divider", ic: "—", lbl: "Linie" }
+  ];
+  var dirtyZones = {}, ebActive = null, ebImgPicker = null, ebCtx = null;
+  var EB_SIZES = ["s", "m", "l", "xl"], EB_WIDTHS = ["narrow", "normal", "wide", "full"], EB_ALIGN = ["left", "center", "right"];
+  function ebLabel(t) { return t === "text" ? "Text" : t === "heading" ? "Titel" : t === "button" ? "Button" : t === "image" ? "Bild" : t === "list" ? "Liste" : t === "quote" ? "Zitat" : "Linie"; }
+  function ebClass(b) { return "eb-al-" + (b.align || "center") + " eb-w-" + (b.width || "normal") + " eb-sp-" + (b.space || "normal") + " eb-fs-" + (b.size || "m"); }
+  function ebGet(el, prefix, vals, def) { for (var i = 0; i < vals.length; i++) if (el.classList.contains(prefix + vals[i])) return vals[i]; return def; }
+  function ebSet(el, prefix, vals, val) { for (var i = 0; i < vals.length; i++) el.classList.remove(prefix + vals[i]); el.classList.add(prefix + val); ebDirty(el); }
+  function ebDirty(el) { var z = el.closest ? el.closest("[data-ed-zone]") : null; if (z) { dirtyZones[z.getAttribute("data-ed-zone")] = true; refreshSaveBtn(); } }
+  function ebBuild(type) {
+    var b = { align: "center", width: "normal", space: "normal", size: "m" }, el;
+    if (type === "button") { el = document.createElement("a"); el.href = "#"; el.setAttribute("data-eb", "button"); el.className = "btn " + ebClass(b); el.textContent = "Button-Text"; }
+    else if (type === "heading") { el = document.createElement("h3"); el.setAttribute("data-eb", "heading"); el.className = ebClass(b); el.textContent = "Neue Überschrift"; }
+    else if (type === "text") { el = document.createElement("p"); el.setAttribute("data-eb", "text"); el.className = ebClass(b); el.textContent = "Hier deinen Text schreiben …"; }
+    else if (type === "quote") { el = document.createElement("blockquote"); el.setAttribute("data-eb", "quote"); el.className = ebClass(b); el.textContent = "Zitat …"; }
+    else if (type === "divider") { el = document.createElement("hr"); el.setAttribute("data-eb", "divider"); el.className = ebClass(b); }
+    else if (type === "list") { el = document.createElement("ul"); el.setAttribute("data-eb", "list"); el.className = ebClass(b); ["Erster Punkt", "Zweiter Punkt"].forEach(function (x) { var li = document.createElement("li"); li.textContent = x; el.appendChild(li); }); }
+    else if (type === "image") { el = document.createElement("img"); el.setAttribute("data-eb", "image"); el.setAttribute("data-eb-slot", "senioren-zuhause"); el.className = ebClass(b); el.src = EB_IMG["senioren-zuhause"]; el.alt = ""; }
+    return el;
+  }
+  function ebEnhance(el) {
+    var t = el.getAttribute("data-eb");
+    if (t === "text" || t === "heading" || t === "quote" || t === "list" || t === "button") { el.setAttribute("contenteditable", "true"); el.setAttribute("spellcheck", "false"); }
+    el.addEventListener("focusin", function () { ebSelect(el); });
+    el.addEventListener("click", function (e) { if (t === "button") e.preventDefault(); ebSelect(el); });
+    el.addEventListener("input", function () { ebDirty(el); });
+  }
+  function ebSelect(el) { if (ebActive && ebActive !== el) ebActive.classList.remove("eb-active"); ebActive = el; el.classList.add("eb-active"); ebShowCtx(el); }
+  function ebPickImage(el) {
+    if (!ebImgPicker) { ebImgPicker = document.createElement("input"); ebImgPicker.type = "file"; ebImgPicker.accept = "image/jpeg,image/png,image/webp"; ebImgPicker.style.display = "none"; document.body.appendChild(ebImgPicker); }
+    ebImgPicker.onchange = function () {
+      var f = ebImgPicker.files && ebImgPicker.files[0]; ebImgPicker.value = ""; if (!f) return;
+      if (f.size > 3000000) { toast("Bild zu groß (max. 3 MB).", "err"); return; }
+      var rd = new FileReader(); rd.onload = function () {
+        var b64 = String(rd.result || "").split(",")[1] || ""; if (!b64) return; toast("Bild wird hochgeladen …", "");
+        call({ action: "upload-block-image", dataBase64: b64 }).then(function (res) {
+          if (res.ok && res.d && res.d.src) { el.setAttribute("data-eb-src", res.d.src); el.src = res.d.src; ebDirty(el); toast("Bild eingefügt.", "ok"); }
+          else toast("Upload fehlgeschlagen.", "err");
+        }).catch(function () { toast("Verbindungsfehler.", "err"); });
+      }; rd.readAsDataURL(f);
+    };
+    ebImgPicker.click();
+  }
+  function ebLib(el) {
+    var ov = document.createElement("div"); ov.className = "eb-libov";
+    ov.innerHTML = '<div class="eb-libbox"><h4>Mediathek &ndash; Bild wählen</h4><div class="eb-libgrid">lädt …</div><div class="row"><button class="cancel" type="button" id="ebLibX">Schließen</button></div></div>';
+    document.body.appendChild(ov);
+    var grid = ov.querySelector(".eb-libgrid");
+    document.getElementById("ebLibX").onclick = function () { ov.remove(); };
+    ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
+    call({ action: "list-uploads" }).then(function (res) {
+      var ups = (res.ok && res.d && res.d.uploads) ? res.d.uploads : [];
+      if (!ups.length) { grid.textContent = "Noch keine hochgeladenen Bilder."; return; }
+      grid.innerHTML = "";
+      ups.forEach(function (u) { var im = document.createElement("img"); im.src = u; im.loading = "lazy"; im.onclick = function () { el.setAttribute("data-eb-src", u); el.src = u; ebDirty(el); ov.remove(); }; grid.appendChild(im); });
+    }).catch(function () { grid.textContent = "Fehler beim Laden."; });
+  }
+  function ebMove(el, dir) {
+    var zone = el.closest("[data-ed-zone]"); if (!zone) return; var sib = el, found = null;
+    if (dir < 0) { sib = el.previousElementSibling; while (sib && !sib.hasAttribute("data-eb")) sib = sib.previousElementSibling; if (sib) { zone.insertBefore(el, sib); found = 1; } }
+    else { sib = el.nextElementSibling; while (sib && !sib.hasAttribute("data-eb")) sib = sib.nextElementSibling; if (sib) { zone.insertBefore(sib, el); found = 1; } }
+    if (found) ebDirty(el);
+  }
+  function ebEnsureCtx() { if (ebCtx) return ebCtx; ebCtx = document.createElement("div"); ebCtx.id = "ebCtx"; document.body.appendChild(ebCtx); return ebCtx; }
+  function ebHideCtx() { if (ebCtx) ebCtx.classList.remove("show"); if (ebActive) { ebActive.classList.remove("eb-active"); ebActive = null; } }
+  function ebShowCtx(el) {
+    var c = ebEnsureCtx(), t = el.getAttribute("data-eb");
+    var al = ebGet(el, "eb-al-", EB_ALIGN, "center"), w = ebGet(el, "eb-w-", EB_WIDTHS, "normal");
+    var h = '<span class="lbl">' + ebLabel(t) + '</span>';
+    if (t !== "divider" && t !== "image") h += '<button data-a="fsd" title="kleiner">A−</button><button data-a="fsu" title="größer">A+</button><span class="sep"></span>';
+    h += '<button data-a="all" class="' + (al === "left" ? "on" : "") + '" title="links">◧</button><button data-a="alc" class="' + (al === "center" ? "on" : "") + '" title="mittig">▣</button><button data-a="alr" class="' + (al === "right" ? "on" : "") + '" title="rechts">◨</button>';
+    h += '<span class="sep"></span><button data-a="w" title="Breite ändern">↔ ' + w + '</button>';
+    if (t === "image") h += '<span class="sep"></span><button data-a="imgup">📤 Bild</button><button data-a="imglib">🖼 Mediathek</button>';
+    if (t === "button") h += '<span class="sep"></span><input data-a="href" placeholder="Link, z. B. kontakt.html">';
+    h += '<span class="sep"></span><button data-a="up" title="nach oben">↑</button><button data-a="down" title="nach unten">↓</button><button data-a="del" title="löschen">🗑</button>';
+    c.innerHTML = h; c.classList.add("show");
+    if (t === "button") { var hi = c.querySelector('input[data-a="href"]'); var hv = el.getAttribute("href") || ""; hi.value = hv === "#" ? "" : hv; hi.oninput = function () { el.setAttribute("href", hi.value.trim() || "#"); ebDirty(el); }; }
+    var bs = c.querySelectorAll("button[data-a]");
+    for (var i = 0; i < bs.length; i++) (function (btn) {
+      btn.onclick = function () {
+        var a = btn.getAttribute("data-a"); var cur;
+        if (a === "fsd") { cur = EB_SIZES.indexOf(ebGet(el, "eb-fs-", EB_SIZES, "m")); ebSet(el, "eb-fs-", EB_SIZES, EB_SIZES[Math.max(0, cur - 1)]); }
+        else if (a === "fsu") { cur = EB_SIZES.indexOf(ebGet(el, "eb-fs-", EB_SIZES, "m")); ebSet(el, "eb-fs-", EB_SIZES, EB_SIZES[Math.min(EB_SIZES.length - 1, cur + 1)]); }
+        else if (a === "all") ebSet(el, "eb-al-", EB_ALIGN, "left");
+        else if (a === "alc") ebSet(el, "eb-al-", EB_ALIGN, "center");
+        else if (a === "alr") ebSet(el, "eb-al-", EB_ALIGN, "right");
+        else if (a === "w") { cur = EB_WIDTHS.indexOf(ebGet(el, "eb-w-", EB_WIDTHS, "normal")); ebSet(el, "eb-w-", EB_WIDTHS, EB_WIDTHS[(cur + 1) % EB_WIDTHS.length]); }
+        else if (a === "imgup") ebPickImage(el);
+        else if (a === "imglib") ebLib(el);
+        else if (a === "up") ebMove(el, -1);
+        else if (a === "down") ebMove(el, 1);
+        else if (a === "del") { if (window.confirm("Dieses Element löschen?")) { var z = el.closest("[data-ed-zone]"); el.remove(); if (z) { dirtyZones[z.getAttribute("data-ed-zone")] = true; refreshSaveBtn(); } ebHideCtx(); return; } }
+        if (a !== "del" && a !== "imgup" && a !== "imglib") ebShowCtx(el); // Panel aktualisieren
+      };
+    })(bs[i]);
+  }
+  function ebAdd(zone, type) {
+    var el = ebBuild(type), adder = zone.querySelector(".eb-adder");
+    if (adder) zone.insertBefore(el, adder); else zone.appendChild(el);
+    ebEnhance(el);
+    dirtyZones[zone.getAttribute("data-ed-zone")] = true; refreshSaveBtn();
+    if (type === "image") { ebSelect(el); ebPickImage(el); return; }
+    if (type === "divider") { ebSelect(el); return; }
+    el.focus();
+    try { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch (e) {}
+    ebSelect(el);
+  }
+  function ebEnhanceZone(zone) {
+    var ebs = zone.querySelectorAll("[data-eb]");
+    for (var i = 0; i < ebs.length; i++) ebEnhance(ebs[i]);
+    var adder = document.createElement("div"); adder.className = "eb-adder";
+    var plus = document.createElement("button"); plus.type = "button"; plus.className = "eb-plus"; plus.textContent = "+"; plus.title = "Element hinzufügen";
+    var fan = document.createElement("div"); fan.className = "eb-fan";
+    EB_TYPES.forEach(function (ty) { var b = document.createElement("button"); b.type = "button"; b.innerHTML = '<span class="ei">' + ty.ic + '</span>' + ty.lbl; b.onclick = function () { adder.classList.remove("open"); ebAdd(zone, ty.t); }; fan.appendChild(b); });
+    plus.onclick = function () { adder.classList.toggle("open"); };
+    adder.appendChild(plus); adder.appendChild(fan); zone.appendChild(adder);
+  }
+  function ebSerialize(zone) {
+    var model = [], ebs = zone.querySelectorAll("[data-eb]");
+    for (var i = 0; i < ebs.length; i++) {
+      var el = ebs[i], t = el.getAttribute("data-eb"), b = { type: t };
+      if (t === "button") { b.text = el.textContent.trim(); b.href = el.getAttribute("href") || ""; b.variant = el.classList.contains("btn--ghost") ? "ghost" : "solid"; }
+      else if (t === "heading" || t === "text" || t === "quote") { b.text = el.textContent.trim(); }
+      else if (t === "list") { b.items = (el.innerText || "").split("\n").map(function (s) { return s.trim(); }).filter(Boolean); }
+      else if (t === "image") { b.slot = el.getAttribute("data-eb-slot") || "senioren-zuhause"; b.src = el.getAttribute("data-eb-src") || ""; b.alt = el.getAttribute("alt") || ""; var wm = (el.style.width || "").match(/(\d+)/); b.w = el.getAttribute("data-eb-w") || (wm ? wm[1] : ""); }
+      else if (t !== "divider") continue;
+      b.align = ebGet(el, "eb-al-", EB_ALIGN, "center"); b.width = ebGet(el, "eb-w-", EB_WIDTHS, "normal");
+      b.space = ebGet(el, "eb-sp-", ["small", "large", "normal"], "normal"); b.size = ebGet(el, "eb-fs-", EB_SIZES, "m");
+      model.push(b);
+    }
+    return model;
+  }
+  function ebSaveZones() {
+    var names = Object.keys(dirtyZones), chain = Promise.resolve(), okAll = true;
+    names.forEach(function (zn) {
+      chain = chain.then(function () {
+        var zone = document.querySelector('[data-ed-zone="' + zn + '"]'); if (!zone) { delete dirtyZones[zn]; return; }
+        return call({ action: "save-blocks", file: file, zone: zn, blocks: ebSerialize(zone) }).then(function (res) { if (res.ok) delete dirtyZones[zn]; else okAll = false; });
+      });
+    });
+    return chain.then(function () { return okAll; });
+  }
+
   function start() {
     document.documentElement.classList.add("dv-editing"); // Magnetic-Buttons im Editor ruhig halten
     var mg = document.querySelectorAll("[data-magnetic]");
@@ -643,7 +793,7 @@
       + '#dvPanel .ok{background:#d7120a;color:#fff}#dvPanel .cancel{background:#eee;color:#1c1714}'
       + '#dvPanel textarea{width:100%;padding:.5rem .6rem;border:1px solid rgba(28,23,20,.18);border-radius:8px;font:inherit;resize:vertical;min-height:66px}'
       + '#dvPanel .hint{display:flex;justify-content:space-between;font-size:.72rem;color:#a0968c;margin:.16rem 0 .1rem}'
-      + '[data-ed-zone]{outline:2px dashed rgba(215,18,10,.5);outline-offset:5px;min-height:28px}'
+      + '[data-ed-zone]{position:relative;min-height:0}'
       + '.eb-add{display:inline-flex;gap:.4em;margin:1.4rem auto;border:0;border-radius:999px;background:#1c1714;color:#fff;font-weight:700;font-size:.82rem;padding:.55em 1.15em;cursor:pointer}'
       + '#dvPanel select{width:100%;padding:.5rem .6rem;border:1px solid rgba(28,23,20,.18);border-radius:8px;font:inherit;margin-top:.3rem}'
       + '#dvPanel .eb-add-row{display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0 .2rem}'
@@ -692,7 +842,26 @@
       + '.dv-guide__step span{color:#5f564e;font-size:.9rem}'
       + '.dv-guide__foot{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1.2rem;flex-wrap:wrap}'
       + '.dv-guide__foot .hint{color:#a0968c;font-size:.82rem;flex:1;min-width:150px}'
-      + '.dv-guide__box .go{background:#d7120a;color:#fff;border:0;border-radius:999px;padding:.7em 1.6em;font-weight:700;font-size:1rem;cursor:pointer}';
+      + '.dv-guide__box .go{background:#d7120a;color:#fff;border:0;border-radius:999px;padding:.7em 1.6em;font-weight:700;font-size:1rem;cursor:pointer}'
+      // Inline-Element-System: subtiles "+" mit Fächer, Kontext-Leiste
+      + '.eb-adder{display:flex;flex-direction:column;align-items:center;margin:1rem auto .2rem;width:100%}'
+      + '.eb-plus{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:#d7120a;color:#fff;border:0;font-size:1.5rem;line-height:1;cursor:pointer;box-shadow:0 8px 20px -8px rgba(215,18,10,.65);transition:transform .18s,opacity .18s;opacity:.5}'
+      + '.eb-adder:hover .eb-plus,.eb-adder.open .eb-plus{opacity:1;transform:scale(1.08)}'
+      + '.eb-fan{display:flex;gap:.45rem;flex-wrap:wrap;justify-content:center;max-width:360px;max-height:0;overflow:hidden;opacity:0;transform:translateY(6px) scale(.96);transition:max-height .3s ease,opacity .24s,transform .3s ease;pointer-events:none}'
+      + '.eb-adder:hover .eb-fan,.eb-adder.open .eb-fan{max-height:240px;opacity:1;transform:none;margin-top:.6rem;pointer-events:auto}'
+      + '.eb-fan button{display:flex;flex-direction:column;align-items:center;gap:.2rem;background:#fff;color:#1c1714;border:1px solid rgba(28,23,20,.16);border-radius:13px;padding:.55rem;min-width:66px;cursor:pointer;font-size:.72rem;font-weight:700;box-shadow:0 10px 24px -14px rgba(0,0,0,.45);transition:transform .12s,border-color .12s}'
+      + '.eb-fan button:hover{border-color:#d7120a;color:#d7120a;transform:translateY(-2px)}'
+      + '.eb-fan button .ei{font-size:1.15rem;font-weight:800}'
+      + '.eb-zone [data-eb]{transition:outline .12s}'
+      + '.eb-zone [data-eb][contenteditable]:hover{outline:2px dashed rgba(215,18,10,.35);outline-offset:3px}'
+      + '.eb-zone [data-eb].eb-active{outline:2px solid #d7120a;outline-offset:3px}'
+      + '#ebCtx{position:fixed;left:50%;transform:translateX(-50%);bottom:72px;z-index:2147483646;background:#fff;border:1px solid rgba(28,23,20,.16);border-radius:12px;box-shadow:0 20px 50px -18px rgba(0,0,0,.5);display:none;gap:.28rem;align-items:center;padding:.4rem .5rem;flex-wrap:wrap;max-width:94vw;font:13px system-ui,-apple-system,sans-serif}'
+      + '#ebCtx.show{display:flex}'
+      + '#ebCtx button{background:#f0e9e0;color:#1c1714;border:0;border-radius:8px;min-width:32px;height:30px;padding:0 .55em;cursor:pointer;font-weight:700;font-size:.85rem}'
+      + '#ebCtx button:hover{background:#e7ddcf}#ebCtx button.on{background:#d7120a;color:#fff}'
+      + '#ebCtx .lbl{font-weight:800;color:#a50d07;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;margin-right:.15rem}'
+      + '#ebCtx .sep{width:1px;height:22px;background:rgba(28,23,20,.14);margin:0 .18rem}'
+      + '#ebCtx input{border:1px solid rgba(28,23,20,.2);border-radius:7px;padding:.32em .5em;font:inherit;width:170px}';
     document.head.appendChild(st);
 
     var picker = document.createElement("input");
@@ -767,15 +936,12 @@
     }
     // Frei-Element-Zonen: pro Zone einen Verwalten-Button einfügen
     var zones = document.querySelectorAll("[data-ed-zone]");
-    for (var z = 0; z < zones.length; z++) {
-      (function (zoneEl) {
-        var trig = document.createElement("button");
-        trig.type = "button"; trig.className = "eb-add";
-        trig.textContent = "➕ Buttons / Elemente hier verwalten";
-        if (zoneEl.parentNode) zoneEl.parentNode.insertBefore(trig, zoneEl.nextSibling);
-        trig.addEventListener("click", function () { openBlocks(zoneEl); });
-      })(zones[z]);
-    }
+    for (var z = 0; z < zones.length; z++) ebEnhanceZone(zones[z]);
+    // Kontext-Leiste ausblenden, wenn außerhalb eines Elements/der Leiste geklickt wird
+    document.addEventListener("mousedown", function (e) {
+      if (e.target.closest && (e.target.closest("[data-eb]") || e.target.closest("#ebCtx") || e.target.closest(".eb-adder"))) return;
+      ebHideCtx();
+    }, true);
 
     // Links sollen im Edit-Modus NICHT navigieren, wenn sie editierbaren Inhalt enthalten
     // (Karten-Links) oder selbst in einem Rich-Feld liegen (Link-Text bearbeitbar).
@@ -1104,7 +1270,15 @@
       }
       var slots = Object.keys(pending);
       (function next(k) {
-        if (k >= slots.length) { clearChanged(); msg("✓ Gespeichert! Seite wird neu gebaut (~1–3 Min) – danach auf Aktualisieren klicken."); toast("✓ Gespeichert! Neuaufbau in ~1-3 Min, danach auf Aktualisieren klicken.", "ok"); if (btn) btn.disabled = false; return; }
+        if (k >= slots.length) {
+          ebSaveZones().then(function (zonesOk) {
+            clearChanged();
+            if (zonesOk) { msg("✓ Gespeichert! Seite wird neu gebaut (~1–3 Min) – danach auf Aktualisieren klicken."); toast("✓ Gespeichert! Neuaufbau in ~1-3 Min, danach auf Aktualisieren klicken.", "ok"); }
+            else { msg("Teilweise gespeichert – einige Element-Zonen konnten nicht gesichert werden."); toast("Einige eingefügte Elemente konnten nicht gespeichert werden.", "err"); }
+            if (btn) btn.disabled = false;
+          });
+          return;
+        }
         msg("Bild wird gespeichert …");
         call({ action: "upload-image", slot: slots[k], dataBase64: pending[slots[k]] }).then(function (r2) {
           if (r2.ok) delete pending[slots[k]]; next(k + 1);

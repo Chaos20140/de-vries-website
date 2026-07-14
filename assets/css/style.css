@@ -638,6 +638,10 @@ em { font-style: italic; }
 /* Abstand pro Element (normal = Basis-Abstand der Zone) */
 .eb-zone > .eb-sp-small { margin-block: -0.45rem; }
 .eb-zone > .eb-sp-large { margin-block: 1.1rem; }
+/* Textgröße pro Element (m = Basisgröße) */
+.eb-zone > .eb-fs-s { font-size: 0.85em; }
+.eb-zone > .eb-fs-l { font-size: 1.3em; }
+.eb-zone > .eb-fs-xl { font-size: 1.65em; }
 .eb-wrap:has(.eb-zone:not(:empty)) { padding-block: clamp(2rem, 1rem + 3vw, 4.5rem); }
 @media (prefers-reduced-motion: reduce){
   .route__road-done { display: none; }
