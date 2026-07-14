@@ -627,11 +627,11 @@
 
   // Geteilte Menü-/Footer-Beschriftungen bearbeiten (Panel) -> save-shared -> alle Seiten
   var SHARED_ORDER = [
-    ["Menü", ["lbl-start", "Start"], ["lbl-senioren", "Seniorenbetreuung"], ["lbl-haushalt", "Haushaltshilfe"], ["lbl-stellen", "Stellenangebote"], ["lbl-kontakt", "Kontakt (mobil)"]],
+    ["Menü", ["lbl-start", "Start"], ["lbl-senioren", "Seniorenbetreuung"], ["lbl-haushalt", "Haushaltshilfe"], ["lbl-verhinderung", "Verhinderungspflege"], ["lbl-stellen", "Stellenangebote"], ["lbl-kontakt", "Kontakt (mobil)"]],
     ["Menü-Dropdown", ["lbl-uebersicht", "Übersicht"], ["lbl-entlastung", "Entlastungsbetrag"], ["lbl-pflege", "Pflegesachleistungen"]],
     ["Buttons", ["lbl-termin", "Termin buchen"]],
     ["Footer-Überschriften", ["lbl-foot-leistungen", "Leistungen"], ["lbl-foot-informationen", "Informationen"], ["lbl-foot-kontakt", "Kontakt"]],
-    ["Footer-Links", ["lbl-impressum", "Impressum"], ["lbl-datenschutz", "Datenschutz"], ["lbl-kontaktformular", "Kontaktformular"]],
+    ["Footer-Links", ["lbl-galabau", "de Vries GaLa-Bau"], ["lbl-impressum", "Impressum"], ["lbl-datenschutz", "Datenschutz"], ["lbl-kontaktformular", "Kontaktformular"]],
     ["Menü-Gruppen (mobil)", ["lbl-grp-leistungen", "Gruppe: Leistungen"], ["lbl-grp-mehr", "Gruppe: Mehr"]]
   ];
   function openShared() {
@@ -678,25 +678,35 @@
       if (t === "button") model.push({ type: "button", text: el.textContent.trim(), href: el.getAttribute("href") || "", variant: el.classList.contains("btn--ghost") ? "ghost" : "solid" });
       else if (t === "heading") model.push({ type: "heading", text: el.textContent.trim() });
       else if (t === "text") model.push({ type: "text", text: el.textContent.trim() });
+      else if (t === "quote") model.push({ type: "quote", text: el.textContent.trim() });
+      else if (t === "divider") model.push({ type: "divider" });
+      else if (t === "list") { var items = [], lis = el.querySelectorAll("li"); for (var q = 0; q < lis.length; q++) items.push(lis[q].textContent.trim()); model.push({ type: "list", text: items.join("\n") }); }
     }
     var wrap = document.createElement("div"); wrap.id = "dvPanel"; document.body.appendChild(wrap);
-    function label(t) { return t === "button" ? "Button" : t === "heading" ? "Überschrift" : "Text"; }
+    function label(t) { return t === "button" ? "Button" : t === "heading" ? "Überschrift" : t === "quote" ? "Zitat" : t === "divider" ? "Trenner" : t === "list" ? "Liste" : "Text"; }
     function sync() {
       var ins = wrap.querySelectorAll("[data-f]");
       for (var k = 0; k < ins.length; k++) { var f = ins[k].getAttribute("data-f"), idx = +ins[k].getAttribute("data-i"); if (model[idx]) model[idx][f] = ins[k].value; }
     }
     function render() {
       var h = '<div class="box"><h3>Elemente &amp; Buttons</h3><p class="sub">Erscheinen auf dieser Seite über dem Footer. Reihenfolge mit den Pfeilen, danach Speichern.</p>';
-      h += '<div class="eb-add-row"><button data-add="button">➕ Button</button><button data-add="heading">➕ Überschrift</button><button data-add="text">➕ Text</button></div><div>';
+      h += '<div class="eb-add-row"><button data-add="button">➕ Button</button><button data-add="heading">➕ Überschrift</button><button data-add="text">➕ Text</button><button data-add="list">➕ Liste</button><button data-add="quote">➕ Zitat</button><button data-add="divider">➕ Trenner</button></div><div>';
       if (!model.length) h += '<p class="sub">Noch keine Elemente – oben eins hinzufügen.</p>';
       for (var i = 0; i < model.length; i++) {
-        var b = model[i], max = b.type === "text" ? 600 : b.type === "heading" ? 120 : 80;
+        var b = model[i];
         h += '<div class="eb-row"><div class="t"><b>' + label(b.type) + '</b>'
-          + '<button data-up="' + i + '" title="nach oben">↑</button><button data-down="' + i + '" title="nach unten">↓</button><button data-del="' + i + '" title="entfernen">🗑</button></div>'
-          + '<input data-f="text" data-i="' + i + '" maxlength="' + max + '" placeholder="Beschriftung / Text">';
-        if (b.type === "button") {
-          h += '<input data-f="href" data-i="' + i + '" maxlength="200" placeholder="Link: termin.html · tel:051531552 · https://…">'
-            + '<select data-f="variant" data-i="' + i + '"><option value="solid">Gefüllt (rot)</option><option value="ghost">Umrandet</option></select>';
+          + '<button data-up="' + i + '" title="nach oben">↑</button><button data-down="' + i + '" title="nach unten">↓</button><button data-del="' + i + '" title="entfernen">🗑</button></div>';
+        if (b.type === "divider") {
+          h += '<p class="sub" style="margin:.15rem 0 0">Waagerechte Trennlinie – keine Eingabe nötig.</p>';
+        } else if (b.type === "list") {
+          h += '<textarea data-f="text" data-i="' + i + '" maxlength="1600" placeholder="Ein Listenpunkt pro Zeile"></textarea>';
+        } else {
+          var max = b.type === "text" ? 600 : b.type === "quote" ? 400 : b.type === "heading" ? 120 : 80;
+          h += '<input data-f="text" data-i="' + i + '" maxlength="' + max + '" placeholder="Beschriftung / Text">';
+          if (b.type === "button") {
+            h += '<input data-f="href" data-i="' + i + '" maxlength="200" placeholder="Link: termin.html · tel:051531552 · https://…">'
+              + '<select data-f="variant" data-i="' + i + '"><option value="solid">Gefüllt (rot)</option><option value="ghost">Umrandet</option></select>';
+          }
         }
         h += '</div>';
       }
@@ -708,7 +718,7 @@
     }
     function bind() {
       var add = wrap.querySelectorAll("[data-add]");
-      for (var a = 0; a < add.length; a++) { add[a].onclick = (function (t) { return function () { sync(); model.push(t === "button" ? { type: "button", text: "", href: "", variant: "solid" } : { type: t, text: "" }); render(); }; })(add[a].getAttribute("data-add")); }
+      for (var a = 0; a < add.length; a++) { add[a].onclick = (function (t) { return function () { sync(); model.push(t === "button" ? { type: "button", text: "", href: "", variant: "solid" } : t === "divider" ? { type: "divider" } : { type: t, text: "" }); render(); }; })(add[a].getAttribute("data-add")); }
       var del = wrap.querySelectorAll("[data-del]");
       for (var d = 0; d < del.length; d++) { del[d].onclick = (function (i) { return function () { sync(); model.splice(i, 1); render(); }; })(+del[d].getAttribute("data-del")); }
       var up = wrap.querySelectorAll("[data-up]");
@@ -722,7 +732,13 @@
       document.getElementById("ebOk").onclick = function () {
         sync();
         var ok = document.getElementById("ebOk"); ok.disabled = true; ok.textContent = "Speichert …";
-        call({ action: "save-blocks", file: file, zone: zone, blocks: model }).then(function (res) {
+        var payload = [];
+        for (var p = 0; p < model.length; p++) {
+          var mb = model[p];
+          if (mb.type === "list") payload.push({ type: "list", items: (mb.text || "").split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean) });
+          else payload.push(mb);
+        }
+        call({ action: "save-blocks", file: file, zone: zone, blocks: payload }).then(function (res) {
           if (res.ok) { wrap.remove(); msg("✓ Elemente gespeichert – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); }
           else { ok.disabled = false; ok.textContent = "Speichern"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); }
         }).catch(function () { ok.disabled = false; ok.textContent = "Speichern"; msg("Verbindungsfehler."); });

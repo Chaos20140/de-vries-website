@@ -26,6 +26,8 @@ const esc = (s: string) =>
 // Erlaubte Link-Ziele (kein javascript:, data: o.ä.)
 function safeHref(h: string): boolean {
   h = (h || "").trim();
+  // Attribut-Ausbruch / Markup-Injection generell ausschließen (unabhängig vom Schema).
+  if (/["'<>`]/.test(h)) return false;
   return /^https?:\/\//i.test(h) || /^mailto:/i.test(h) || /^tel:/i.test(h)
       || /^[\w./-]+\.html(#[\w-]+)?$/i.test(h) || /^#[\w-]+$/.test(h);
 }
@@ -44,7 +46,7 @@ function sanitizeRich(html: string): string {
   s = s.replace(/&lt;a\b[\s\S]*?&gt;/gi, (m) => {
     const hm = m.match(/href=(?:&quot;|&#39;)([\s\S]*?)(?:&quot;|&#39;)/i);
     const href = hm ? hm[1] : "";
-    return safeHref(href) ? '<a href="' + href + '">' : "";
+    return safeHref(href) ? '<a href="' + esc(href) + '">' : "";
   });
   s = s.replace(/&lt;\/a&gt;/gi, "</a>");
   s = s.replace(/&lt;\/?[a-z][\s\S]*?&gt;/gi, ""); // übrige (nicht erlaubte) Tags raus, Text bleibt
@@ -80,6 +82,23 @@ const PAGES = new Set([
   "pflegeleistungen.html","kontakt.html","stellenangebote.html","impressum.html",
   "datenschutz.html","termin.html","verhinderungspflege.html",
 ]);
+// Dynamische Liste selbst erstellter Seiten (Manifest im Repo, Jekyll-ausgeschlossen via "_").
+const PAGES_MANIFEST = "_pages.json";
+// Reservierte Slugs (nie als eigene Seite anlegbar/überschreibbar/löschbar).
+const RESERVED_SLUGS = new Set(["index", "admin", "404", "sitemap", "robots", "template", "pages", "assets", "supabase", "termin-status", "readme", "curadoma"]);
+async function extraPages(): Promise<string[]> {
+  try {
+    const mf = await getFile(PAGES_MANIFEST);
+    const a = JSON.parse(mf.text);
+    // Defense-in-Depth: selbst ein manuell vergiftetes Manifest kann keine Builtin-/Reserved-Seite exponieren.
+    return Array.isArray(a) ? a.filter((x) =>
+      typeof x === "string" && /^[a-z][a-z0-9-]{1,38}\.html$/.test(x)
+      && !PAGES.has(x) && !RESERVED_SLUGS.has(x.replace(/\.html$/, ""))) : [];
+  } catch { return []; }
+}
+async function isValidPage(file: string): Promise<boolean> {
+  return PAGES.has(file) || (await extraPages()).includes(file);
+}
 
 function gh(path: string, init: RequestInit = {}) {
   return fetch(`https://api.github.com/repos/${GH_REPO}/${path}`, {
@@ -104,6 +123,10 @@ function utf8B64(str: string) {
 function putFile(path: string, contentB64: string, sha: string | undefined, message: string) {
   return gh(`contents/${path}`, { method: "PUT",
     body: JSON.stringify({ message, content: contentB64, sha, branch: GH_BRANCH }) });
+}
+function ghDelete(path: string, sha: string, message: string) {
+  return gh(`contents/${encodeURIComponent(path)}`, { method: "DELETE",
+    body: JSON.stringify({ message, sha, branch: GH_BRANCH }) });
 }
 // Mehrere Dateien in EINEM Commit ändern (Git Data API) – für geteilte Blöcke (Menü/Footer),
 // damit alle Seiten konsistent in einem einzigen Build aktualisiert werden.
@@ -139,22 +162,29 @@ Deno.serve(async (req) => {
   const xff = (req.headers.get("x-forwarded-for") || "").split(",").map((s) => s.trim()).filter(Boolean);
   const ip = xff[xff.length - 1] || "unknown";
 
-  // Rate-Limit (Brute-Force-Schutz): pro IP >=10 ODER global >=60 Fehlversuche in 15 Min -> 429.
-  // Der globale Zähler fängt verteilte Versuche ab (IP-Rotation); harte Sperre nur 15 Min und
-  // betrifft nur den Editor, nie die öffentliche Seite.
-  const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-  const [perIp, global] = await Promise.all([
-    admin.from("devries_edit_log").select("*", { count: "exact", head: true }).eq("ip", ip).eq("ok", false).gte("created_at", since),
-    admin.from("devries_edit_log").select("*", { count: "exact", head: true }).eq("ok", false).gte("created_at", since),
-  ]);
-  if ((perIp.count || 0) >= 10 || (global.count || 0) >= 60) return json({ error: "rate_limited" }, 429);
+  // Body-Größe VOR dem Parsen deckeln (Bild-Upload base64 <=3 MB + JSON-Overhead).
+  const clen = Number(req.headers.get("content-length") || "0");
+  if (clen > 5_000_000) return json({ error: "too_large" }, 413);
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "bad_json" }, 400); }
 
+  // Passwort ZUERST prüfen: ein KORREKTES Passwort wird NIE ratenlimitiert -> kein Lockout des
+  // Inhabers durch fremde Fehlversuche. Rate-Limit (Brute-Force-Schutz) greift NUR im Fehlerpfad:
+  // pro IP >=10 ODER global >=60 Fehlversuche in 15 Min -> 429.
   const ok = typeof body.password === "string" && ctEq(body.password, EDIT_PW);
-  await admin.from("devries_edit_log").insert({ ip, ok });
-  if (!ok) { await new Promise((r) => setTimeout(r, 600)); return json({ error: "unauthorized" }, 401); }
+  if (!ok) {
+    const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const [perIp, global] = await Promise.all([
+      admin.from("devries_edit_log").select("*", { count: "exact", head: true }).eq("ip", ip).eq("ok", false).gte("created_at", since),
+      admin.from("devries_edit_log").select("*", { count: "exact", head: true }).eq("ok", false).gte("created_at", since),
+    ]);
+    if ((perIp.count || 0) >= 10 || (global.count || 0) >= 60) return json({ error: "rate_limited" }, 429);
+    await admin.from("devries_edit_log").insert({ ip, ok: false });
+    await new Promise((r) => setTimeout(r, 600));
+    return json({ error: "unauthorized" }, 401);
+  }
+  await admin.from("devries_edit_log").insert({ ip, ok: true });
 
   try {
     if (body.action === "save-home") {
@@ -177,7 +207,7 @@ Deno.serve(async (req) => {
 
     if (body.action === "save-page") {
       const file = body.file as string;
-      if (!PAGES.has(file)) return json({ error: "bad_file" }, 400);
+      if (!(await isValidPage(file))) return json({ error: "bad_file" }, 400);
       const fields = (body.fields || {}) as Record<string, string>;
       const rich   = (body.rich   || {}) as Record<string, string>;
       const positions = (body.positions || {}) as Record<string, string>;
@@ -248,7 +278,7 @@ Deno.serve(async (req) => {
         if (typeof shared[k] !== "string" || shared[k].length > 200) return json({ error: "too_long", field: k }, 400);
       }
       const changedFiles: { path: string; contentB64: string }[] = [];
-      for (const page of PAGES) {
+      for (const page of [...PAGES, ...(await extraPages())]) {
         const f = await getFile(page);
         let html = f.text, changed = false;
         for (const k of keys) {
@@ -268,7 +298,7 @@ Deno.serve(async (req) => {
       // SEO/Meta pro Seite: <title>, Meta-Description (+ OG/Twitter-Spiegel) und Bild-Alt-Texte.
       // Isoliert von save-page; nutzt dieselbe Härtung (Whitelist-Datei, esc, Längenlimits).
       const file = body.file as string;
-      if (!PAGES.has(file)) return json({ error: "bad_file" }, 400);
+      if (!(await isValidPage(file))) return json({ error: "bad_file" }, 400);
       const rawTitle = typeof body.title === "string" ? body.title.trim() : "";
       const title = rawTitle ? rawTitle : null;                 // leerer Titel -> unverändert lassen
       const desc  = typeof body.description === "string" ? body.description : null;
@@ -314,7 +344,7 @@ Deno.serve(async (req) => {
       // Frei hinzufügbare Elemente (Buttons/Überschriften/Text) in einer Zone einer Seite.
       // Sicherheit: Zone-Inhalt wird KOMPLETT aus validierten Daten neu erzeugt (kein HTML-Durchreichen).
       const file = body.file as string;
-      if (!PAGES.has(file)) return json({ error: "bad_file" }, 400);
+      if (!(await isValidPage(file))) return json({ error: "bad_file" }, 400);
       const zone = body.zone as string;
       if (!/^[a-z0-9-]{1,32}$/.test(zone)) return json({ error: "bad_key", field: "zone" }, 400);
       const blocks = Array.isArray(body.blocks) ? body.blocks : null;
@@ -329,7 +359,7 @@ Deno.serve(async (req) => {
           if (!safeHref(href)) return json({ error: "bad_href" }, 400);
           const ghost = (b as any).variant === "ghost";
           inner += '<a class="btn' + (ghost ? " btn--ghost" : "") + '" data-eb="button"'
-            + (ghost ? ' data-eb-variant="ghost"' : "") + ' href="' + href + '">' + text + "</a>";
+            + (ghost ? ' data-eb-variant="ghost"' : "") + ' href="' + esc(href) + '">' + text + "</a>";
         } else if (type === "heading") {
           const text = esc(String((b as any).text || "").slice(0, 120).trim());
           if (!text) continue;
@@ -338,6 +368,21 @@ Deno.serve(async (req) => {
           const text = esc(String((b as any).text || "").slice(0, 600).trim());
           if (!text) continue;
           inner += '<p data-eb="text">' + text + "</p>";
+        } else if (type === "quote") {
+          const text = esc(String((b as any).text || "").slice(0, 400).trim());
+          if (!text) continue;
+          inner += '<blockquote data-eb="quote">' + text + "</blockquote>";
+        } else if (type === "divider") {
+          inner += '<hr data-eb="divider">';
+        } else if (type === "list") {
+          const items = Array.isArray((b as any).items) ? (b as any).items : [];
+          let li = "";
+          for (const it of items.slice(0, 20)) {
+            const t = esc(String(it || "").slice(0, 200).trim());
+            if (t) li += "<li>" + t + "</li>";
+          }
+          if (!li) continue;
+          inner += '<ul data-eb="list">' + li + "</ul>";
         } else {
           return json({ error: "bad_block_type" }, 400);
         }
@@ -349,6 +394,70 @@ Deno.serve(async (req) => {
       html = html.replace(re, (_m, open, _tag, _old, close) => open + inner + close);
       const r = await putFile(file, utf8B64(html), f.sha, "Editor: Elemente/Buttons aktualisiert (" + file + ")");
       return r.ok ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
+    }
+
+    if (body.action === "list-pages") {
+      return json({ ok: true, pages: await extraPages() });
+    }
+
+    if (body.action === "create-page") {
+      // Neue Seite aus _template.html. Slug streng validiert (kein Pfad-Trick, kein Überschreiben).
+      const slug = String(body.slug || "").toLowerCase().trim();
+      if (!/^[a-z][a-z0-9-]{1,38}$/.test(slug)) return json({ error: "bad_slug" }, 400);
+      const file = slug + ".html";
+      if (PAGES.has(file) || RESERVED_SLUGS.has(slug)) return json({ error: "reserved" }, 400);
+      const title = String(body.title || "").trim();
+      if (title.length < 2 || title.length > 80) return json({ error: "bad_title" }, 400);
+      const desc = String(body.description || "").trim().slice(0, 320);
+      const extra = await extraPages();
+      if (extra.includes(file)) return json({ error: "exists" }, 400);
+      if (extra.length >= 50) return json({ error: "limit" }, 400);
+      // Echte Repo-Existenzprüfung: niemals eine bereits vorhandene Datei überschreiben.
+      let existsInRepo = false;
+      try { await getFile(file); existsInRepo = true; } catch { /* nicht vorhanden -> ok */ }
+      if (existsInRepo) return json({ error: "exists" }, 400);
+      let tpl: { sha: string; text: string };
+      try { tpl = await getFile("_template.html"); } catch { return json({ error: "no_template" }, 500); }
+      const et = esc(title), ed = esc(desc || title);
+      const pageHtml = tpl.text.split("@@TITLE@@").join(et).split("@@DESC@@").join(ed).split("@@SLUG@@").join(file);
+      const newManifest = JSON.stringify([...extra, file].sort(), null, 2);
+      const files: { path: string; contentB64: string }[] = [
+        { path: file, contentB64: utf8B64(pageHtml) },
+        { path: PAGES_MANIFEST, contentB64: utf8B64(newManifest) },
+      ];
+      try {
+        const sm = await getFile("sitemap.xml");
+        let sitemap = sm.text;
+        if (sitemap.indexOf("/" + file + "<") < 0 && sitemap.indexOf("</urlset>") >= 0) {
+          const entry = "  <url>\n    <loc>https://chaos20140.github.io/de-vries-website/" + file + "</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n";
+          sitemap = sitemap.replace("</urlset>", entry + "</urlset>");
+          files.push({ path: "sitemap.xml", contentB64: utf8B64(sitemap) });
+        }
+      } catch { /* Sitemap optional */ }
+      const okc = await commitMulti(files, "Editor: neue Seite erstellt (" + file + ")");
+      return okc ? json({ ok: true, file }) : json({ error: "commit_failed" }, 500);
+    }
+
+    if (body.action === "delete-page") {
+      // Nur selbst erstellte Seiten (Manifest) löschbar – Builtin-Seiten NIE.
+      const file = String(body.file || "");
+      const extra = await extraPages();
+      if (!extra.includes(file)) return json({ error: "not_deletable" }, 400);
+      try {
+        const sha = (await getFile(file)).sha;
+        const dr = await ghDelete(file, sha, "Editor: Seite gelöscht (" + file + ")");
+        if (!dr.ok) return json({ error: "delete_failed" }, 500);
+      } catch { /* Datei evtl. schon weg -> Manifest trotzdem bereinigen */ }
+      const putFiles: { path: string; contentB64: string }[] = [
+        { path: PAGES_MANIFEST, contentB64: utf8B64(JSON.stringify(extra.filter((p) => p !== file), null, 2)) },
+      ];
+      try {
+        const sm = await getFile("sitemap.xml");
+        const re = new RegExp("[ \\t]*<url>\\s*<loc>[^<]*/" + file.replace(/\./g, "\\.") + "</loc>[\\s\\S]*?</url>\\s*", "i");
+        putFiles.push({ path: "sitemap.xml", contentB64: utf8B64(sm.text.replace(re, "")) });
+      } catch { /* Sitemap optional */ }
+      const okc = await commitMulti(putFiles, "Editor: Seiten-Liste aktualisiert");
+      return okc ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
     }
 
     return json({ error: "bad_action" }, 400);
