@@ -359,7 +359,11 @@ Deno.serve(async (req) => {
       for (const b of blocks) {
         const type = b && typeof b === "object" ? (b as any).type : null;
         const av = (b as any) ? (b as any).align : "";
-        const alc = "eb-al-" + (av === "left" || av === "right" ? av : "center"); // Ausrichtung links/mitte/rechts
+        const wv = (b as any) ? (b as any).width : "";
+        const sv = (b as any) ? (b as any).space : "";
+        const alc = "eb-al-" + (av === "left" || av === "right" ? av : "center") // Ausrichtung
+          + " eb-w-" + (wv === "narrow" || wv === "wide" || wv === "full" ? wv : "normal") // Breite
+          + " eb-sp-" + (sv === "small" || sv === "large" ? sv : "normal"); // Abstand
         if (type === "button") {
           const text = esc(String((b as any).text || "").slice(0, 80).trim());
           const href = String((b as any).href || "").trim();
@@ -399,7 +403,9 @@ Deno.serve(async (req) => {
           else if (slot in IMG_SLOTS) src = IMG_SLOTS[slot];
           else return json({ error: "bad_slot", field: slot || src0 }, 400);
           const alt = esc(String((b as any).alt || "").slice(0, 160).trim());
-          inner += '<img class="' + alc + '" data-eb="image" ' + (isUp ? 'data-eb-src="' + esc(src) + '"' : 'data-eb-slot="' + slot + '"') + ' src="' + esc(src) + '" alt="' + alt + '" loading="lazy">';
+          const iw = parseInt(String((b as any).w || ""), 10);
+          const hasW = iw >= 20 && iw <= 100; // per Ziehen gesetzte Bildbreite in %
+          inner += '<img class="' + alc + '" data-eb="image" ' + (isUp ? 'data-eb-src="' + esc(src) + '"' : 'data-eb-slot="' + slot + '"') + (hasW ? ' data-eb-w="' + iw + '" style="width:' + iw + '%"' : "") + ' src="' + esc(src) + '" alt="' + alt + '" loading="lazy">';
         } else if (type === "columns") {
           const l = esc(String((b as any).left || "").slice(0, 600).trim());
           const r = esc(String((b as any).right || "").slice(0, 600).trim());
@@ -481,11 +487,20 @@ Deno.serve(async (req) => {
       const file = String(body.file || "");
       const extra = await extraPages();
       if (!extra.includes(file)) return json({ error: "not_deletable" }, 400);
+      // Upload-Bilder dieser Seite merken (für Verwaisten-Cleanup danach).
+      let pageImgs: string[] = [], pageSha = "";
       try {
-        const sha = (await getFile(file)).sha;
-        const dr = await ghDelete(file, sha, "Editor: Seite gelöscht (" + file + ")");
+        const pf = await getFile(file);
+        pageSha = pf.sha;
+        const set = new Set<string>();
+        const reI = /assets\/img\/uploads\/[a-z0-9-]{8,60}\.(?:jpg|jpeg|png|webp)/gi;
+        let mm; while ((mm = reI.exec(pf.text))) set.add(mm[0]);
+        pageImgs = [...set];
+      } catch { /* evtl. schon weg */ }
+      if (pageSha) {
+        const dr = await ghDelete(file, pageSha, "Editor: Seite gelöscht (" + file + ")");
         if (!dr.ok) return json({ error: "delete_failed" }, 500);
-      } catch { /* Datei evtl. schon weg -> Manifest trotzdem bereinigen */ }
+      }
       const putFiles: { path: string; contentB64: string }[] = [
         { path: PAGES_MANIFEST, contentB64: utf8B64(JSON.stringify(extra.filter((p) => p !== file), null, 2)) },
       ];
@@ -500,6 +515,18 @@ Deno.serve(async (req) => {
         if (Array.isArray(a)) putFiles.push({ path: "pages.json", contentB64: utf8B64(JSON.stringify(a.filter((x: any) => !(x && x.file === file)), null, 2)) });
       } catch { /* pages.json optional */ }
       const okc = await commitMulti(putFiles, "Editor: Seiten-Liste aktualisiert");
+      // Verwaiste Upload-Bilder entfernen: jede ANDERE Seite EINMAL lesen, nur ungenutzte löschen.
+      if (pageImgs.length) {
+        const others = [...PAGES, ...extra].filter((p) => p !== file);
+        const usedElsewhere = new Set<string>();
+        for (const pg of others) {
+          try { const t = (await getFile(pg)).text; for (const img of pageImgs) if (!usedElsewhere.has(img) && t.includes(img)) usedElsewhere.add(img); } catch { /* skip */ }
+        }
+        for (const img of pageImgs) {
+          if (usedElsewhere.has(img)) continue;
+          try { const ish = (await getFile(img)).sha; await ghDelete(img, ish, "Editor: verwaistes Bild entfernt"); } catch { /* schon weg */ }
+        }
+      }
       return okc ? json({ ok: true }) : json({ error: "commit_failed" }, 500);
     }
 
@@ -560,6 +587,33 @@ Deno.serve(async (req) => {
       } catch { /* Sitemap optional */ }
       const okc = await commitMulti(files, "Editor: Seite dupliziert (" + source + " -> " + file + ")");
       return okc ? json({ ok: true, file }) : json({ error: "commit_failed" }, 500);
+    }
+
+    if (body.action === "list-uploads") {
+      // Mediathek: hochgeladene Block-Bilder auflisten.
+      try {
+        const r = await gh("contents/assets/img/uploads");
+        if (!r.ok) return json({ ok: true, uploads: [] });
+        const arr = await r.json();
+        const uploads = Array.isArray(arr)
+          ? arr.filter((f: any) => f && typeof f.name === "string" && /^[a-z0-9-]{8,60}\.(jpg|jpeg|png|webp)$/i.test(f.name)).map((f: any) => "assets/img/uploads/" + f.name)
+          : [];
+        return json({ ok: true, uploads });
+      } catch { return json({ ok: true, uploads: [] }); }
+    }
+
+    if (body.action === "delete-upload") {
+      // Mediathek: Bild löschen – NUR wenn es auf keiner Seite mehr verwendet wird.
+      const src = String(body.src || "");
+      if (!/^assets\/img\/uploads\/[a-z0-9-]{8,60}\.(jpg|jpeg|png|webp)$/i.test(src)) return json({ error: "bad_src" }, 400);
+      for (const pg of [...PAGES, ...(await extraPages())]) {
+        try { if ((await getFile(pg)).text.includes(src)) return json({ error: "in_use" }, 409); } catch { /* skip */ }
+      }
+      try {
+        const sh = (await getFile(src)).sha;
+        const dr = await ghDelete(src, sh, "Editor: Bild aus Mediathek gelöscht");
+        return dr.ok ? json({ ok: true }) : json({ error: "delete_failed" }, 500);
+      } catch { return json({ ok: true }); }
     }
 
     return json({ error: "bad_action" }, 400);

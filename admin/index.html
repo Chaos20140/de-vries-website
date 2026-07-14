@@ -26,6 +26,10 @@
   .head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.3rem}
   .pill{font-size:.74rem;font-weight:700;color:var(--ok);background:rgba(59,147,43,.12);border-radius:999px;padding:.3em .8em}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.6rem;margin:.4rem 0 .2rem}
+  .mediagrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:.5rem;margin:.3rem 0 .2rem}
+  .mediagrid .mi{position:relative}
+  .mediagrid img{width:100%;height:82px;object-fit:cover;border-radius:9px;border:1px solid var(--line)}
+  .mediagrid .mi button{position:absolute;top:5px;right:5px;background:rgba(215,18,10,.92);color:#fff;border:0;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:.78rem;line-height:1;padding:0}
   a.page{display:flex;flex-direction:column;gap:.15rem;text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:11px;padding:.75rem .85rem;background:var(--paper);transition:border-color .15s,transform .15s}
   a.page:hover{border-color:var(--red);transform:translateY(-2px)}
   a.page b{font-size:.96rem}
@@ -95,6 +99,10 @@
     <button class="btn" id="dupGo">⧉ Duplizieren</button>
     <div class="status" id="dupStatus"></div>
 
+    <div class="grp">Mediathek</div>
+    <p class="muted" style="margin:-.2rem 0 .6rem">Hochgeladene Block-Bilder. Ungenutzte kannst du hier löschen (verwendete sind geschützt).</p>
+    <div id="mediaGrid" class="mediagrid"></div>
+
     <div class="foot">
       <span class="muted">Änderungen sind nach dem Speichern in ~1–3 Min live. Sitzung endet automatisch nach 3 Std.</span>
       <button class="btn ghost" id="logout" style="margin:0">Verlassen</button>
@@ -142,6 +150,30 @@
       a.appendChild(b); a.appendChild(s); grid.appendChild(a);
     });
     loadMyPages();
+    loadMedia();
+  }
+
+  function loadMedia(){
+    var g=$("mediaGrid"); if(!g) return; g.innerHTML="";
+    callFn({action:"list-uploads"}).then(function(res){
+      var ups=(res.ok&&res.d&&Array.isArray(res.d.uploads))?res.d.uploads:[];
+      if(!ups.length){ g.innerHTML='<p class="muted" style="grid-column:1/-1">Noch keine hochgeladenen Bilder.</p>'; return; }
+      ups.forEach(function(u){
+        if(!/^assets\/img\/uploads\/[a-z0-9-]{8,60}\.(jpg|jpeg|png|webp)$/i.test(u)) return;
+        var d=document.createElement("div"); d.className="mi";
+        var im=document.createElement("img"); im.src="../"+u; im.loading="lazy";
+        var b=document.createElement("button"); b.type="button"; b.textContent="✕"; b.title="Löschen";
+        b.onclick=function(){
+          if(!window.confirm("Dieses Bild löschen?")) return; b.disabled=true;
+          callFn({action:"delete-upload",src:u}).then(function(r2){
+            if(r2.ok) loadMedia();
+            else if(r2.status===409){ b.disabled=false; window.alert("Dieses Bild wird noch auf einer Seite verwendet und ist deshalb geschützt."); }
+            else { b.disabled=false; window.alert("Löschen fehlgeschlagen: "+((r2.d&&r2.d.error)||r2.status)); }
+          }).catch(function(){ b.disabled=false; window.alert("Verbindungsfehler."); });
+        };
+        d.appendChild(im); d.appendChild(b); g.appendChild(d);
+      });
+    });
   }
 
   function callFn(p){

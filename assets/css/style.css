@@ -631,6 +631,13 @@ em { font-style: italic; }
 .eb-zone > .eb-al-left { align-self: flex-start; text-align: left; }
 .eb-zone > .eb-al-right { align-self: flex-end; text-align: right; }
 .eb-zone > .eb-al-center { align-self: center; text-align: center; }
+/* Breite (schmal/normal/breit/voll) – „normal" nutzt die Eigenbreite des Elements */
+.eb-zone > .eb-w-narrow { max-width: 340px; }
+.eb-zone > .eb-w-wide { max-width: 820px; }
+.eb-zone > .eb-w-full { max-width: 100%; width: 100%; }
+/* Abstand pro Element (normal = Basis-Abstand der Zone) */
+.eb-zone > .eb-sp-small { margin-block: -0.45rem; }
+.eb-zone > .eb-sp-large { margin-block: 1.1rem; }
 .eb-wrap:has(.eb-zone:not(:empty)) { padding-block: clamp(2rem, 1rem + 3vw, 4.5rem); }
 @media (prefers-reduced-motion: reduce){
   .route__road-done { display: none; }
