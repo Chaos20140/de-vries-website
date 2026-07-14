@@ -6,5 +6,9 @@
   {
     "file": "cms-lay.html",
     "title": "Layout"
+  },
+  {
+    "file": "cms-media.html",
+    "title": "Media"
   }
 ]
