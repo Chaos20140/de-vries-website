@@ -77,27 +77,28 @@
     try { var len = p.getTotalLength(); p.style.setProperty("--len", len); } catch (e) {}
   });
 
-  /* ---------- counters ---------- */
+  /* ---------- counters (Zielzahl steht editierbar im Element-Text) ---------- */
   function animateCount(el) {
-    var target = parseFloat(el.getAttribute("data-count"));
-    var dec = (el.getAttribute("data-count").split(".")[1] || "").length;
+    if (document.documentElement.classList.contains("dv-editing")) return; // im Editor echten Wert zeigen, nicht animieren
+    var raw = el.getAttribute("data-count");
+    var target = raw != null ? parseFloat(raw) : parseInt((el.textContent || "").replace(/[^\d]/g, ""), 10);
+    if (!isFinite(target) || !target) return;
     var dur = 1600, start = null;
     function step(ts) {
       if (!start) start = ts;
       var p = Math.min((ts - start) / dur, 1);
       var eased = 1 - Math.pow(1 - p, 3);
-      var val = target * eased;
-      el.textContent = dec ? val.toFixed(dec) : Math.round(val).toLocaleString("de-DE");
+      el.textContent = Math.round(target * eased).toLocaleString("de-DE");
       if (p < 1) requestAnimationFrame(step);
-      else el.textContent = dec ? target.toFixed(dec) : Math.round(target).toLocaleString("de-DE");
+      else el.textContent = target.toLocaleString("de-DE");
     }
-    if (reduce) { el.textContent = dec ? target.toFixed(dec) : target.toLocaleString("de-DE"); }
+    if (reduce) { el.textContent = target.toLocaleString("de-DE"); }
     else requestAnimationFrame(step);
   }
   var countIO = new IntersectionObserver(function (entries) {
     entries.forEach(function (en) { if (en.isIntersecting) { animateCount(en.target); countIO.unobserve(en.target); } });
   }, { threshold: 0.6 });
-  $$("[data-count]").forEach(function (el) { countIO.observe(el); });
+  $$("[data-countup],[data-count]").forEach(function (el) { countIO.observe(el); });
 
   /* ---------- magnetic buttons ---------- */
   if (!isTouch && !reduce) {
@@ -593,6 +594,30 @@
     render();
   }
 
+  // ---- Onboarding / Hilfe für Erstnutzer ----
+  function openGuide() {
+    if (document.getElementById("dvGuide")) return;
+    var steps = [
+      ["✍️", "Texte & Zahlen ändern", "Alles mit rot gestricheltem Rahmen anklicken und direkt überschreiben – auch Zahlen wie 25+ oder 1998."],
+      ["🖼️", "Bilder", "Bild anklicken zum Ersetzen. Mit gedrückter Maus ziehen verschiebt den Bildausschnitt."],
+      ["💾", "Speichern", "Geänderte Felder werden gelb markiert. Unten auf Speichern klicken oder Strg+S drücken. Live in etwa 1–3 Minuten."],
+      ["🧭", "Menü, Footer & Kontakt", "Über den Knopf Menü & Footer änderst du, was auf allen Seiten gleich ist: Menü-Namen, Adresse, Öffnungszeiten sowie Telefon und E-Mail (mit Klick-Link)."],
+      ["📍", "Standorte", "Über den Knopf Standorte die Orte auf der Karte der Startseite hinzufügen, umbenennen und sortieren."],
+      ["➕", "Neue Elemente", "Ganz unten auf der Seite die markierte Zone Buttons / Elemente hier verwalten – dort Buttons, Texte, Bilder und mehr einfügen."],
+      ["🔍", "SEO & Titel", "Seitentitel und Google-Beschreibung je Seite anpassen."]
+    ];
+    var h = '<div class="dv-guide__box"><h3>Willkommen im Bearbeitungsmodus 👋</h3><p class="lead">Kurz erklärt – so änderst du deine Seite selbst. Keine Sorge, du kannst nichts kaputt machen: gespeichert wird erst, wenn du auf Speichern klickst.</p>';
+    for (var i = 0; i < steps.length; i++) {
+      h += '<div class="dv-guide__step"><div class="ic">' + steps[i][0] + '</div><div><b>' + steps[i][1] + '</b><span>' + steps[i][2] + '</span></div></div>';
+    }
+    h += '<div class="dv-guide__foot"><span class="hint">Diesen Hinweis öffnest du jederzeit über ❓ Hilfe unten in der Leiste.</span><button class="go" id="dvGuideGo">Los geht\'s</button></div></div>';
+    var g = document.createElement("div"); g.id = "dvGuide"; g.className = "dv-guide"; g.innerHTML = h;
+    document.body.appendChild(g);
+    function close() { g.remove(); }
+    document.getElementById("dvGuideGo").addEventListener("click", close);
+    g.addEventListener("click", function (e) { if (e.target === g) close(); });
+  }
+
   function start() {
     document.documentElement.classList.add("dv-editing"); // Magnetic-Buttons im Editor ruhig halten
     var mg = document.querySelectorAll("[data-magnetic]");
@@ -655,7 +680,19 @@
       + '#dvPanel .pl-row{display:flex;gap:.35rem;align-items:center;margin:.32rem 0}'
       + '#dvPanel .pl-row input{flex:1;margin:0}'
       + '#dvPanel .pl-row button{background:#eee;border:0;border-radius:7px;width:32px;height:34px;cursor:pointer;font-size:.9rem;padding:0;flex:none;font-weight:700}'
-      + '#dvPanel .pl-add{background:#f0e9e0;color:#1c1714;border:0;border-radius:999px;padding:.5em 1.1em;font-weight:700;cursor:pointer;margin-top:.5rem}';
+      + '#dvPanel .pl-add{background:#f0e9e0;color:#1c1714;border:0;border-radius:999px;padding:.5em 1.1em;font-weight:700;cursor:pointer;margin-top:.5rem}'
+      // Onboarding-/Hilfe-Overlay
+      + '.dv-guide{position:fixed;inset:0;z-index:2147483647;background:rgba(28,23,20,.62);display:flex;align-items:center;justify-content:center;padding:1rem;font:15px/1.55 system-ui,-apple-system,sans-serif}'
+      + '.dv-guide__box{background:#fff;color:#1c1714;border-radius:18px;max-width:560px;width:100%;max-height:88vh;overflow:auto;padding:1.6rem 1.7rem;box-shadow:0 50px 100px -40px rgba(0,0,0,.7)}'
+      + '.dv-guide__box h3{margin:0 0 .2rem;font-size:1.4rem}'
+      + '.dv-guide__box .lead{color:#756a60;margin:0 0 1rem;font-size:.95rem}'
+      + '.dv-guide__step{display:flex;gap:.8rem;align-items:flex-start;padding:.62rem 0;border-top:1px solid rgba(28,23,20,.1)}'
+      + '.dv-guide__step .ic{flex:none;width:34px;height:34px;border-radius:9px;background:rgba(215,18,10,.1);display:grid;place-items:center;font-size:1.05rem}'
+      + '.dv-guide__step b{display:block;margin-bottom:.08rem;font-size:.98rem}'
+      + '.dv-guide__step span{color:#5f564e;font-size:.9rem}'
+      + '.dv-guide__foot{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1.2rem;flex-wrap:wrap}'
+      + '.dv-guide__foot .hint{color:#a0968c;font-size:.82rem;flex:1;min-width:150px}'
+      + '.dv-guide__box .go{background:#d7120a;color:#fff;border:0;border-radius:999px;padding:.7em 1.6em;font-weight:700;font-size:1rem;cursor:pointer}';
     document.head.appendChild(st);
 
     var picker = document.createElement("input");
@@ -756,6 +793,7 @@
       + '<button class="x" id="dvSeo">🔍 SEO &amp; Titel</button>'
       + '<button class="x" id="dvShared">🧭 Menü &amp; Footer</button>'
       + (hasRoute ? '<button class="x" id="dvPlaces">📍 Standorte</button>' : '')
+      + '<button class="x" id="dvGuideBtn">❓ Hilfe</button>'
       + '<button class="x" id="dvReload">🔄 Aktualisieren</button>'
       + '<button class="x" id="dvExit">🚪 Verlassen</button>';
     document.body.appendChild(bar);
@@ -764,6 +802,7 @@
     document.getElementById("dvSeo").addEventListener("click", openSeo);
     document.getElementById("dvShared").addEventListener("click", openShared);
     if (hasRoute) document.getElementById("dvPlaces").addEventListener("click", openPlaces);
+    document.getElementById("dvGuideBtn").addEventListener("click", openGuide);
     // Cache umgehen + frisch laden (GitHub Pages cached Seiten einige Minuten)
     document.getElementById("dvReload").addEventListener("click", function () {
       if (hasUnsaved() && !window.confirm("Es gibt ungespeicherte Änderungen. Wirklich neu laden? Die Änderungen gehen dann verloren.")) return;
@@ -781,7 +820,9 @@
     });
     window.addEventListener("beforeunload", function (e) { if (!leaving && hasUnsaved()) { e.preventDefault(); e.returnValue = ""; } });
     refreshSaveBtn();
-    toast("Bearbeitungsmodus aktiv. Klicke einen Text oder ein Bild an und ändere es – geänderte Felder werden gelb markiert. Speichern unten oder mit Strg+S.", "");
+    var seenGuide = false; try { seenGuide = sessionStorage.getItem("dv_guide_seen") === "1"; } catch (e) {}
+    if (!seenGuide) { openGuide(); try { sessionStorage.setItem("dv_guide_seen", "1"); } catch (e) {} }
+    else { toast("Bearbeitungsmodus aktiv. Text/Bild anklicken & ändern. ❓ Hilfe unten erklärt alles. Speichern: Strg+S.", ""); }
   }
 
   // Geteilte Menü-/Footer-Beschriftungen bearbeiten (Panel) -> save-shared -> alle Seiten
@@ -792,7 +833,8 @@
     ["Footer-Überschriften", ["lbl-foot-leistungen", "Leistungen"], ["lbl-foot-informationen", "Informationen"], ["lbl-foot-kontakt", "Kontakt"]],
     ["Footer-Links", ["lbl-galabau", "de Vries GaLa-Bau"], ["lbl-impressum", "Impressum"], ["lbl-datenschutz", "Datenschutz"], ["lbl-kontaktformular", "Kontaktformular"]],
     ["Menü-Gruppen (mobil)", ["lbl-grp-leistungen", "Gruppe: Leistungen"], ["lbl-grp-mehr", "Gruppe: Mehr"]],
-    ["Footer-Adresse & Öffnungszeiten", ["foot-addr-street", "Straße & Hausnr."], ["foot-addr-city", "PLZ & Ort"], ["foot-hours-label", "Überschrift (z. B. Öffnungszeiten)"], ["foot-hours-days", "Tage (z. B. Montag – Freitag)"], ["foot-hours-time", "Uhrzeit (z. B. 8:00 bis 16:00 Uhr)"]]
+    ["Footer-Adresse & Öffnungszeiten", ["foot-addr-street", "Straße & Hausnr."], ["foot-addr-city", "PLZ & Ort"], ["foot-hours-label", "Überschrift (z. B. Öffnungszeiten)"], ["foot-hours-days", "Tage (z. B. Montag – Freitag)"], ["foot-hours-time", "Uhrzeit (z. B. 8:00 bis 16:00 Uhr)"]],
+    ["Kontaktdaten (auf allen Seiten)", ["contact-phone", "Telefon (ändert Anzeige + Anruf-Link)"], ["contact-email", "E-Mail (ändert Anzeige + Mail-Link)"]]
   ];
   function openShared() {
     if (document.getElementById("dvPanel")) return;

@@ -293,6 +293,26 @@ Deno.serve(async (req) => {
           const nh = html.replace(re, (_m, a, _b, c) => a + nv + c);
           if (nh !== html) { html = nh; changed = true; }
         }
+        // Kontaktdaten: tel:/mailto:-Links + schema.org an den neuen Anzeigetext angleichen
+        if (keys.includes("contact-phone")) {
+          const digits = (shared["contact-phone"] || "").replace(/[^\d]/g, "");
+          if (digits.length >= 3 && digits.length <= 20) {
+            const nh = html.replace(/href="tel:[^"]*"/g, 'href="tel:' + digits + '"');
+            if (nh !== html) { html = nh; changed = true; }
+            const intl = digits.startsWith("0") ? "+49" + digits.slice(1) : digits;
+            const ns = html.replace(/("telephone":\s*")[^"]*(")/g, (_m, a, b) => a + intl + b);
+            if (ns !== html) { html = ns; changed = true; }
+          }
+        }
+        if (keys.includes("contact-email")) {
+          const em = (shared["contact-email"] || "").trim();
+          if (em.length <= 120 && /^[^\s<>"'`]+@[^\s<>"'`]+\.[^\s<>"'`]+$/.test(em)) {
+            const nh = html.replace(/href="mailto:[^"]*"/g, 'href="mailto:' + em + '"');
+            if (nh !== html) { html = nh; changed = true; }
+            const ns = html.replace(/("email":\s*")[^"]*(")/g, (_m, a, b) => a + esc(em) + b);
+            if (ns !== html) { html = ns; changed = true; }
+          }
+        }
         if (changed) changedFiles.push({ path: page, contentB64: utf8B64(html) });
       }
       if (!changedFiles.length) return json({ error: "marker_missing" }, 400);
