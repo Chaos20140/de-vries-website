@@ -471,8 +471,22 @@ Deno.serve(async (req) => {
         } else if (type === "columns") {
           const l = esc(String((b as any).left || "").slice(0, 600).trim());
           const r = esc(String((b as any).right || "").slice(0, 600).trim());
-          if (!l && !r) continue;
-          inner += '<div class="eb-cols ' + alc + '" data-eb="columns"><div>' + (l ? "<p>" + l + "</p>" : "") + '</div><div>' + (r ? "<p>" + r + "</p>" : "") + "</div></div>";
+          // Optionales Bild je Spalte: entweder hochgeladener Pfad ODER Slot aus der Whitelist; sonst verworfen.
+          const colImg = (srcRaw: unknown, slotRaw: unknown, altRaw: unknown): string => {
+            const src0 = String(srcRaw || "").trim(), slot = String(slotRaw || "");
+            let src = "", isUp = false;
+            if (/^assets\/img\/uploads\/[a-z0-9-]{8,60}\.(jpg|jpeg|png|webp)$/i.test(src0)) { src = src0; isUp = true; }
+            else if (slot && slot in IMG_SLOTS) src = IMG_SLOTS[slot];
+            else return "";
+            const alt = esc(String(altRaw || "").slice(0, 160).trim());
+            return '<img class="eb-col-img" data-eb-col-img="1" ' + (isUp ? 'data-eb-src="' + esc(src) + '"' : 'data-eb-slot="' + slot + '"')
+              + ' src="' + esc(src) + '" alt="' + alt + '" loading="lazy">';
+          };
+          const lImg = colImg((b as any).leftSrc, (b as any).leftSlot, (b as any).leftAlt);
+          const rImg = colImg((b as any).rightSrc, (b as any).rightSlot, (b as any).rightAlt);
+          if (!l && !r && !lImg && !rImg) continue;
+          inner += '<div class="eb-cols ' + alc + '" data-eb="columns"><div>' + lImg + (l ? "<p>" + l + "</p>" : "")
+            + '</div><div>' + rImg + (r ? "<p>" + r + "</p>" : "") + "</div></div>";
         } else if (type === "faq") {
           const items = Array.isArray((b as any).items) ? (b as any).items : [];
           let d = "";
@@ -489,7 +503,7 @@ Deno.serve(async (req) => {
           const text = esc(String((b as any).text || "").slice(0, 600).trim());
           const href = String((b as any).href || "").trim();
           if (href && href !== "#" && !safeHref(href)) return json({ error: "bad_href" }, 400);
-          const num = /^\d{1,2}$/.test(String((b as any).num || "")) ? String((b as any).num) : "";
+          const num = esc(String((b as any).num || "").replace(/\s+/g, " ").trim().slice(0, 4)); // frei wählbar (z. B. 05, 5, A1)
           const cItems = Array.isArray((b as any).items) ? (b as any).items : [];
           let cli = "";
           for (const it of cItems.slice(0, 8)) { const t = esc(String(it || "").slice(0, 120).trim()); if (t) cli += "<li>" + t + "</li>"; }

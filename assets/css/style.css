@@ -618,6 +618,9 @@ em { font-style: italic; }
 .eb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.2rem, 0.6rem + 2vw, 2.8rem); text-align: left; width: 100%; max-width: var(--wrap); }
 .eb-cols > div { min-width: 0; }
 .eb-cols p { max-width: none; margin: 0; }
+/* optionales Bild je Spalte */
+.eb-cols .eb-col-img { display: block; width: 100%; height: auto; border-radius: var(--radius-lg); margin: 0 0 0.8rem; box-shadow: 0 24px 50px -38px rgba(28,23,20,0.55); }
+.eb-cols > div:has(.eb-col-img) p { margin-top: 0; }
 @media (max-width: 640px) { .eb-cols { grid-template-columns: 1fr; } }
 .eb-faq { width: 100%; max-width: 60ch; text-align: left; display: grid; gap: 0.6rem; }
 .eb-faq__item { border: 1px solid var(--line); border-radius: 12px; background: var(--paper-2); overflow: hidden; }

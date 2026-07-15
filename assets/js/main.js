@@ -686,7 +686,7 @@
     }
     else if (type === "card") {
       el = document.createElement("div"); el.setAttribute("data-eb-href", "#"); el.setAttribute("data-eb", "card"); el.className = "scard";
-      el.innerHTML = '<span class="scard__num">05</span><div class="scard__icon">' + CARD_ICON + '</div>'
+      el.innerHTML = '<span class="scard__num" data-cf="num">05</span><div class="scard__icon">' + CARD_ICON + '</div>'
         + '<h3 data-cf="title">Neue Leistung</h3>'
         + '<p data-cf="text">Kurze Beschreibung der Leistung – hier eintragen.</p>'
         + '<ul class="scard__list" data-cf="list"><li>Stichpunkt eins</li><li>Stichpunkt zwei</li><li>Stichpunkt drei</li></ul>'
@@ -754,26 +754,26 @@
     try { s.focus(); var r = document.createRange(); r.selectNodeContents(s); var sl = window.getSelection(); sl.removeAllRanges(); sl.addRange(r); } catch (e2) {}
   }
   // ---- Undo: Schnappschuss der Zone vor jeder strukturellen Änderung ----
-  var ebUndoStack = [];
+  var ebUndoStack = [], ebRedoStack = [];
   function ebZoneOf(el) { return el && el.closest ? (el.closest("[data-ed-zone]") || el.closest("[data-foot-zone]")) : null; }
   function ebZoneParts(z) {
     var parts = [], kids = z.children;
     for (var i = 0; i < kids.length; i++) if (!kids[i].classList.contains("eb-adder") && !kids[i].classList.contains("eb-footaddbtn")) parts.push(kids[i].outerHTML);
     return parts.join("");
   }
+  function ebZoneFrom(el) { return (el && el.hasAttribute && (el.hasAttribute("data-ed-zone") || el.hasAttribute("data-foot-zone"))) ? el : ebZoneOf(el); }
   function ebSnapshot(el) {
-    var z = (el && el.hasAttribute && (el.hasAttribute("data-ed-zone") || el.hasAttribute("data-foot-zone"))) ? el : ebZoneOf(el);
-    if (!z) return;
+    var z = ebZoneFrom(el); if (!z) return;
     ebUndoStack.push({ zone: z, html: ebZoneParts(z) });
     if (ebUndoStack.length > 30) ebUndoStack.shift();
+    ebRedoStack.length = 0; // neue Änderung -> Wiederherstellen verfällt
     refreshUndoBtn();
   }
-  function ebUndo() {
-    var s = ebUndoStack.pop();
-    if (!s) { toast("Nichts zum Rückgängigmachen.", ""); return; }
-    var z = s.zone, kids = [].slice.call(z.children);
+  // Zonen-Inhalt ersetzen und alles neu verdrahten (wiederhergestellte Elemente haben keine Listener)
+  function ebApply(z, html) {
+    var kids = [].slice.call(z.children);
     for (var i = 0; i < kids.length; i++) if (!kids[i].classList.contains("eb-adder") && !kids[i].classList.contains("eb-footaddbtn")) kids[i].remove();
-    var tmp = document.createElement("div"); tmp.innerHTML = s.html;
+    var tmp = document.createElement("div"); tmp.innerHTML = html;
     var anchor = z.querySelector(".eb-adder") || z.querySelector(".eb-footaddbtn");
     while (tmp.firstChild) { if (anchor) z.insertBefore(tmp.firstChild, anchor); else z.appendChild(tmp.firstChild); }
     var ebs = z.querySelectorAll("[data-eb]");
@@ -781,9 +781,25 @@
     ebHideCtx();
     if (z.hasAttribute("data-foot-zone")) dirtyFooter = true; else dirtyZones[z.getAttribute("data-ed-zone")] = true;
     refreshSaveBtn(); refreshUndoBtn();
+  }
+  function ebUndo() {
+    var s = ebUndoStack.pop();
+    if (!s) { toast("Nichts zum Rückgängigmachen.", ""); return; }
+    ebRedoStack.push({ zone: s.zone, html: ebZoneParts(s.zone) }); // aktuellen Stand für Wiederherstellen sichern
+    ebApply(s.zone, s.html);
     toast("↩ Rückgängig gemacht.", "ok");
   }
-  function refreshUndoBtn() { var b = document.getElementById("dvUndo"); if (b) b.disabled = !ebUndoStack.length; }
+  function ebRedo() {
+    var s = ebRedoStack.pop();
+    if (!s) { toast("Nichts zum Wiederherstellen.", ""); return; }
+    ebUndoStack.push({ zone: s.zone, html: ebZoneParts(s.zone) });
+    ebApply(s.zone, s.html);
+    toast("↪ Wiederhergestellt.", "ok");
+  }
+  function refreshUndoBtn() {
+    var b = document.getElementById("dvUndo"); if (b) b.disabled = !ebUndoStack.length;
+    var r = document.getElementById("dvRedo"); if (r) r.disabled = !ebRedoStack.length;
+  }
   function ebPositionCtx(el) {
     var c = ebCtx; if (!c || !el || !c.classList.contains("show")) return;
     var r = el.getBoundingClientRect(), cw = c.offsetWidth, chh = c.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
@@ -800,6 +816,7 @@
     var t = el.getAttribute("data-eb");
     if (t === "card") {
       if (el.tagName === "A") el = ebCardToDiv(el); // Link -> div, damit die Felder zuverlässig editierbar sind
+      var cn = el.querySelector('[data-cf="num"]') || el.querySelector(".scard__num"); if (cn) cn.setAttribute("data-cf", "num");
       var ct = el.querySelector('[data-cf="title"]') || el.querySelector("h3"); if (ct) ct.setAttribute("data-cf", "title");
       var cx = el.querySelector('[data-cf="text"]') || el.querySelector("p"); if (cx) cx.setAttribute("data-cf", "text");
       var cl = el.querySelector('[data-cf="list"]') || el.querySelector("ul.scard__list"); if (cl) cl.setAttribute("data-cf", "list");
@@ -861,6 +878,35 @@
       }; rd.readAsDataURL(f);
     };
     ebImgPicker.click();
+  }
+  // Bild in einer Spalte setzen/ersetzen bzw. entfernen
+  function ebColPick(blockEl, side) {
+    var cds = blockEl.querySelectorAll(":scope > div"), col = cds[side === "right" ? 1 : 0];
+    if (!col) return;
+    if (!ebImgPicker) { ebImgPicker = document.createElement("input"); ebImgPicker.type = "file"; ebImgPicker.accept = "image/jpeg,image/png,image/webp"; ebImgPicker.style.display = "none"; document.body.appendChild(ebImgPicker); }
+    ebImgPicker.onchange = function () {
+      var f = ebImgPicker.files && ebImgPicker.files[0]; ebImgPicker.value = ""; if (!f) return;
+      if (f.size > 3000000) { toast("Bild zu groß (max. 3 MB).", "err"); return; }
+      var rd = new FileReader(); rd.onload = function () {
+        var b64 = String(rd.result || "").split(",")[1] || ""; if (!b64) return; toast("Bild wird hochgeladen …", "");
+        call({ action: "upload-block-image", dataBase64: b64 }).then(function (res) {
+          if (res.ok && res.d && res.d.src) {
+            ebSnapshot(blockEl);
+            var img = col.querySelector("img.eb-col-img");
+            if (!img) { img = document.createElement("img"); img.className = "eb-col-img"; img.setAttribute("data-eb-col-img", "1"); img.alt = ""; col.insertBefore(img, col.firstChild); }
+            img.setAttribute("data-eb-src", res.d.src); img.removeAttribute("data-eb-slot"); img.src = res.d.src;
+            ebDirty(blockEl); ebShowCtx(blockEl); toast("Bild eingefügt.", "ok");
+          } else toast("Upload fehlgeschlagen.", "err");
+        }).catch(function () { toast("Verbindungsfehler.", "err"); });
+      }; rd.readAsDataURL(f);
+    };
+    ebImgPicker.click();
+  }
+  function ebColRemove(blockEl, side) {
+    var cds = blockEl.querySelectorAll(":scope > div"), col = cds[side === "right" ? 1 : 0];
+    if (!col) return;
+    var img = col.querySelector("img.eb-col-img"); if (!img) return;
+    ebSnapshot(blockEl); img.remove(); ebDirty(blockEl); ebShowCtx(blockEl);
   }
   function ebLib(el) {
     var ov = document.createElement("div"); ov.className = "eb-libov";
@@ -925,6 +971,12 @@
     h += '<span class="sep"></span><button data-a="w" title="Breite ändern">↔ ' + w + '</button>';
     if (t === "image") h += '<span class="sep"></span><button data-a="imgup">📤 Bild</button><button data-a="imglib">🖼 Mediathek</button>';
     if (t === "faq") h += '<span class="sep"></span><button data-a="faqadd">＋ Frage</button>';
+    if (t === "columns") {
+      var cds3 = el.querySelectorAll(":scope > div");
+      var hasL = !!(cds3[0] && cds3[0].querySelector("img.eb-col-img")), hasR = !!(cds3[1] && cds3[1].querySelector("img.eb-col-img"));
+      h += '<span class="sep"></span><button data-a="colimgL" title="Bild in der linken Spalte">🖼 Links</button>' + (hasL ? '<button data-a="colrmL" title="Bild links entfernen">✕</button>' : '')
+        + '<button data-a="colimgR" title="Bild in der rechten Spalte">🖼 Rechts</button>' + (hasR ? '<button data-a="colrmR" title="Bild rechts entfernen">✕</button>' : '');
+    }
     if (t === "button") h += '<span class="sep"></span><input data-a="href" placeholder="Link, z. B. kontakt.html">';
     h += '<span class="sep"></span><button data-a="up" title="nach oben">↑</button><button data-a="down" title="nach unten">↓</button><button data-a="del" title="löschen">🗑</button>';
     c.innerHTML = h; c.classList.add("show");
@@ -944,8 +996,12 @@
         else if (a === "up") ebMove(el, -1);
         else if (a === "down") ebMove(el, 1);
         else if (a === "faqadd") ebFaqAdd(el);
+        else if (a === "colimgL") ebColPick(el, "left");
+        else if (a === "colimgR") ebColPick(el, "right");
+        else if (a === "colrmL") ebColRemove(el, "left");
+        else if (a === "colrmR") ebColRemove(el, "right");
         else if (a === "del") { if (window.confirm("Dieses Element löschen?")) { var z = el.closest("[data-ed-zone]"); ebSnapshot(el); el.remove(); if (z) { dirtyZones[z.getAttribute("data-ed-zone")] = true; refreshSaveBtn(); } ebHideCtx(); return; } }
-        if (a !== "del" && a !== "imgup" && a !== "imglib" && a !== "faqadd") ebShowCtx(el); // Panel aktualisieren
+        if (a !== "del" && a !== "imgup" && a !== "imglib" && a !== "faqadd" && a.indexOf("col") !== 0) ebShowCtx(el); // Panel aktualisieren
       };
     })(bs[i]);
     ebPositionCtx(el);
@@ -957,6 +1013,9 @@
     ebEnhance(el);
     dirtyZones[zone.getAttribute("data-ed-zone")] = true; refreshSaveBtn();
     if (type === "card") {
+      // Nummer als Vorschlag hochzählen (bleibt danach frei editierbar)
+      var nEl2 = el.querySelector('[data-cf="num"]');
+      if (nEl2 && zone.parentNode) { var cnt = zone.parentNode.querySelectorAll(".scard").length; nEl2.textContent = cnt < 10 ? ("0" + cnt) : String(cnt); }
       el.classList.add("eb-card-in"); setTimeout(function () { el.classList.remove("eb-card-in"); }, 650);
       var ct = el.querySelector('[data-cf="title"]'); if (ct) { ct.focus(); try { var rr = document.createRange(); rr.selectNodeContents(ct); var ss = window.getSelection(); ss.removeAllRanges(); ss.addRange(rr); } catch (e) {} }
       ebSelect(el); return;
@@ -974,49 +1033,53 @@
     var adder = document.createElement("div"); adder.className = "eb-adder" + (isCards ? " eb-adder--card" : "");
     var plus = document.createElement("button"); plus.type = "button"; plus.className = "eb-plus"; plus.textContent = "+"; plus.title = isCards ? "Neue Leistung hinzufügen" : "Element hinzufügen";
     var fan = document.createElement("div"); fan.className = "eb-fan";
-    var cap = document.createElement("span"); cap.className = "eb-fan-cap"; // zeigt den Namen des gehoverten Typs
     var types = isCards ? [{ t: "card", ic: "➕", lbl: "Neue Leistung" }] : EB_TYPES;
-    // Buttons auf einem Halbkreis-Bogen über dem "+" verteilen
-    var n = types.length, R = n > 5 ? 148 : (n > 1 ? 108 : 76);
+    // Buttons (Icon + Name) auf einem Halbkreis-Bogen über dem "+" verteilen
+    var n = types.length, R = n > 5 ? 172 : (n > 1 ? 120 : 84);
     types.forEach(function (ty, i2) {
       var b = document.createElement("button"); b.type = "button"; b.title = ty.lbl;
-      b.innerHTML = '<span class="ei">' + ty.ic + '</span>';
+      b.innerHTML = '<span class="ei">' + ty.ic + '</span><span class="el">' + ty.lbl + '</span>';
       var ang = (n === 1) ? 90 : (180 - (i2 / (n - 1)) * 180);       // 180° = links … 0° = rechts
       var rad = ang * Math.PI / 180;
       b.style.setProperty("--x", Math.round(Math.cos(rad) * R) + "px");
       b.style.setProperty("--y", Math.round(-Math.sin(rad) * R) + "px"); // negativ = nach oben
       b.style.transitionDelay = (i2 * 28) + "ms";
-      b.onmouseenter = function () { cap.textContent = ty.lbl; };
-      b.onmouseleave = function () { cap.textContent = ""; };
-      b.onclick = function () { adder.classList.remove("open"); cap.textContent = ""; ebAdd(zone, ty.t); };
+      b.onclick = function () { adder.classList.remove("open"); ebAdd(zone, ty.t); };
       fan.appendChild(b);
     });
     // Öffnen bei Hover (mit Nachlauf, damit der Weg zum Bogen nicht abbricht) + Klick-Toggle für Touch
     var closeT = null;
     function openFan() { if (closeT) { clearTimeout(closeT); closeT = null; } adder.classList.add("open"); }
-    function closeFanSoon() { if (closeT) clearTimeout(closeT); closeT = setTimeout(function () { adder.classList.remove("open"); cap.textContent = ""; }, 380); }
+    function closeFanSoon() { if (closeT) clearTimeout(closeT); closeT = setTimeout(function () { adder.classList.remove("open"); }, 380); }
     adder.addEventListener("mouseenter", openFan);
     adder.addEventListener("mouseleave", closeFanSoon);
-    plus.onclick = function () { if (adder.classList.contains("open")) { adder.classList.remove("open"); cap.textContent = ""; } else openFan(); };
-    adder.appendChild(fan); adder.appendChild(plus); adder.appendChild(cap); zone.appendChild(adder);
+    plus.onclick = function () { if (adder.classList.contains("open")) adder.classList.remove("open"); else openFan(); };
+    adder.appendChild(fan); adder.appendChild(plus); zone.appendChild(adder);
   }
   function ebSerialize(zone) {
     var model = [], ebs = zone.querySelectorAll("[data-eb]");
-    var builtinCards = 0, cardIdx = 0;
-    if (zone.hasAttribute("data-ed-cards") && zone.parentNode) builtinCards = zone.parentNode.querySelectorAll(".scard:not([data-eb])").length;
     for (var i = 0; i < ebs.length; i++) {
       var el = ebs[i], t = el.getAttribute("data-eb"), b = { type: t };
       if (t === "card") {
         var h3 = el.querySelector('[data-cf="title"]'), pp = el.querySelector('[data-cf="text"]'), ull = el.querySelector('[data-cf="list"]');
         b.title = h3 ? h3.textContent.trim() : ""; b.text = pp ? pp.textContent.trim() : "";
         b.items = []; if (ull) { var clis = ull.querySelectorAll("li"); for (var cq = 0; cq < clis.length; cq++) { var ct2 = ebLiText(clis[cq]); if (ct2) b.items.push(ct2); } }
-        b.href = el.getAttribute("data-eb-href") || el.getAttribute("href") || ""; cardIdx++; b.num = ("0" + (builtinCards + cardIdx)).slice(-2);
+        var nEl = el.querySelector('[data-cf="num"]');
+        b.href = el.getAttribute("data-eb-href") || el.getAttribute("href") || "";
+        b.num = nEl ? nEl.textContent.replace(/\s+/g, " ").trim().slice(0, 4) : ""; // frei editierbar
         model.push(b); continue;
       }
       if (t === "button") { b.text = el.textContent.trim(); b.href = el.getAttribute("href") || ""; b.variant = el.classList.contains("btn--ghost") ? "ghost" : "solid"; }
       else if (t === "heading" || t === "text" || t === "quote") { b.text = el.textContent.trim(); }
       else if (t === "list") { b.items = []; var lis2 = el.querySelectorAll("li"); for (var lq = 0; lq < lis2.length; lq++) { var lt = ebLiText(lis2[lq]); if (lt) b.items.push(lt); } }
-      else if (t === "columns") { var cds2 = el.querySelectorAll(":scope > div"); b.left = cds2[0] ? cds2[0].textContent.replace(/\s+/g, " ").trim() : ""; b.right = cds2[1] ? cds2[1].textContent.replace(/\s+/g, " ").trim() : ""; }
+      else if (t === "columns") {
+        var cds2 = el.querySelectorAll(":scope > div");
+        b.left = cds2[0] ? cds2[0].textContent.replace(/\s+/g, " ").trim() : "";
+        b.right = cds2[1] ? cds2[1].textContent.replace(/\s+/g, " ").trim() : "";
+        var lim = cds2[0] ? cds2[0].querySelector("img.eb-col-img") : null, rim = cds2[1] ? cds2[1].querySelector("img.eb-col-img") : null;
+        b.leftSrc = lim ? (lim.getAttribute("data-eb-src") || "") : ""; b.leftSlot = lim ? (lim.getAttribute("data-eb-slot") || "") : ""; b.leftAlt = lim ? (lim.getAttribute("alt") || "") : "";
+        b.rightSrc = rim ? (rim.getAttribute("data-eb-src") || "") : ""; b.rightSlot = rim ? (rim.getAttribute("data-eb-slot") || "") : ""; b.rightAlt = rim ? (rim.getAttribute("alt") || "") : "";
+      }
       else if (t === "faq") { b.items = []; var dts2 = el.querySelectorAll("details"); for (var dq = 0; dq < dts2.length; dq++) { var sq = dts2[dq].querySelector("summary"), aq = dts2[dq].querySelector("div"); var qq = sq ? sq.textContent.replace(/\s+/g, " ").trim() : "", aa = aq ? aq.textContent.replace(/\s+/g, " ").trim() : ""; if (qq) b.items.push({ q: qq, a: aa }); } }
       else if (t === "image") { b.slot = el.getAttribute("data-eb-slot") || "senioren-zuhause"; b.src = el.getAttribute("data-eb-src") || ""; b.alt = el.getAttribute("alt") || ""; var wm = (el.style.width || "").match(/(\d+)/); b.w = el.getAttribute("data-eb-w") || (wm ? wm[1] : ""); }
       else if (t !== "divider") continue;
@@ -1150,11 +1213,11 @@
       + '.eb-adder:hover .eb-plus,.eb-adder.open .eb-plus{opacity:1;transform:scale(1.08)}'
       // Halbkreis-Fächer: Buttons fahren aus der Mitte auf einen Bogen über dem "+"
       + '.eb-fan{position:absolute;left:50%;top:50%;width:0;height:0;z-index:3}'
-      + '.eb-fan button{position:absolute;left:0;top:0;width:46px;height:46px;margin:-23px 0 0 -23px;display:grid;place-items:center;background:#fff;color:#1c1714;border:1px solid rgba(28,23,20,.16);border-radius:50%;cursor:pointer;box-shadow:0 10px 24px -10px rgba(0,0,0,.5);opacity:0;transform:translate(0,0) scale(.3);pointer-events:none;transition:transform .32s cubic-bezier(.2,.9,.3,1),opacity .22s,border-color .12s,color .12s}'
+      + '.eb-fan button{position:absolute;left:0;top:0;width:62px;height:62px;margin:-31px 0 0 -31px;display:grid;place-items:center;align-content:center;gap:2px;background:#fff;color:#1c1714;border:1px solid rgba(28,23,20,.16);border-radius:15px;cursor:pointer;box-shadow:0 10px 24px -10px rgba(0,0,0,.5);opacity:0;transform:translate(0,0) scale(.3);pointer-events:none;transition:transform .32s cubic-bezier(.2,.9,.3,1),opacity .22s,border-color .12s,color .12s;padding:0}'
       + '.eb-adder.open .eb-fan button{opacity:1;transform:translate(var(--x),var(--y)) scale(1);pointer-events:auto}'
       + '.eb-fan button:hover{border-color:#d7120a;color:#d7120a}'
-      + '.eb-fan button .ei{font-size:1.1rem;font-weight:800;line-height:1}'
-      + '.eb-fan-cap{position:absolute;left:50%;transform:translateX(-50%);top:calc(50% + 30px);font:600 .74rem system-ui,-apple-system,sans-serif;color:#d7120a;white-space:nowrap;pointer-events:none;z-index:3}'
+      + '.eb-fan button .ei{font-size:1.05rem;font-weight:800;line-height:1}'
+      + '.eb-fan button .el{font-size:.52rem;font-weight:800;line-height:1.05;letter-spacing:.01em;max-width:56px;text-align:center;overflow-wrap:anywhere}'
       // ✕ pro Listenpunkt (nur im Editor, erscheint beim Überfahren)
       + '.eb-li-x{border:0;background:rgba(215,18,10,.14);color:#d7120a;border-radius:50%;width:18px;height:18px;font-size:.58rem;line-height:1;cursor:pointer;padding:0;margin-left:.45em;opacity:0;transition:opacity .15s;vertical-align:middle;font-weight:700}'
       + 'li:hover > .eb-li-x,li:focus-within > .eb-li-x{opacity:1}'
@@ -1285,6 +1348,7 @@
     bar.innerHTML = '<span class="m" id="dvMsg">Bearbeitungsmodus aktiv · Text/Bild anklicken &amp; ändern · Strg+S speichert · andere Seiten über das Menü</span>'
       + '<button class="s" id="dvSave">💾 Diese Seite speichern</button>'
       + '<button class="x" id="dvUndo" disabled>↩ Rückgängig</button>'
+      + '<button class="x" id="dvRedo" disabled>↪ Wiederherstellen</button>'
       + '<button class="x" id="dvSeo">🔍 SEO &amp; Titel</button>'
       + '<button class="x" id="dvShared">🧭 Menü &amp; Footer</button>'
       + (hasRoute ? '<button class="x" id="dvPlaces">📍 Standorte</button>' : '')
@@ -1311,14 +1375,15 @@
     });
     // Strg/Cmd+S speichert; Warnung vor Datenverlust beim ungewollten Verlassen
     document.getElementById("dvUndo").addEventListener("click", ebUndo);
+    document.getElementById("dvRedo").addEventListener("click", ebRedo);
     document.addEventListener("keydown", function (e) {
       if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) { e.preventDefault(); save(); }
-      // Strg+Z: nur außerhalb von Textfeldern -> Element-Undo; im Text macht der Browser sein eigenes Undo
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
-        var ae = document.activeElement;
-        if (ae && (ae.isContentEditable || ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
-        e.preventDefault(); ebUndo();
-      }
+      if (!(e.ctrlKey || e.metaKey)) return;
+      var ae = document.activeElement;
+      if (ae && (ae.isContentEditable || ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return; // im Text: Browser-Undo
+      // Strg+Z = rückgängig · Strg+Umschalt+Z bzw. Strg+Y = wiederherstellen
+      if (!e.shiftKey && (e.key === "z" || e.key === "Z")) { e.preventDefault(); ebUndo(); }
+      else if ((e.shiftKey && (e.key === "z" || e.key === "Z")) || e.key === "y" || e.key === "Y") { e.preventDefault(); ebRedo(); }
     });
     window.addEventListener("beforeunload", function (e) { if (!leaving && hasUnsaved()) { e.preventDefault(); e.returnValue = ""; } });
     refreshSaveBtn(); refreshUndoBtn();
