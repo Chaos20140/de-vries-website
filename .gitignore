@@ -1,3 +1,11 @@
+# KI-Assistenz-Notizen: nur lokal, nie ins Repo und nie deployen
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.cursorrules
+.cursor/
+.github/copilot-instructions.md
+
 # Build/analysis artifacts — not part of the deployed site
 .scrape/
 .playwright-mcp/
