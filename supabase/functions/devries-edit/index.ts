@@ -190,7 +190,11 @@ Deno.serve(async (req) => {
   if (clen > 5_000_000) return json({ error: "too_large" }, 413);
 
   let body: any;
-  try { body = await req.json(); } catch { return json({ error: "bad_json" }, 400); }
+  let raw: string;
+  try { raw = await req.text(); } catch { return json({ error: "bad_json" }, 400); }
+  // Zweite Grenze am tatsächlichen Body: Content-Length kann fehlen (chunked) oder gefälscht sein.
+  if (raw.length > 5_000_000) return json({ error: "too_large" }, 413);
+  try { body = JSON.parse(raw); } catch { return json({ error: "bad_json" }, 400); }
 
   // Passwort ZUERST prüfen: ein KORREKTES Passwort wird NIE ratenlimitiert -> kein Lockout des
   // Inhabers durch fremde Fehlversuche. Rate-Limit (Brute-Force-Schutz) greift NUR im Fehlerpfad:
@@ -326,7 +330,7 @@ Deno.serve(async (req) => {
         if (keys.includes("contact-email")) {
           const em = (shared["contact-email"] || "").trim();
           if (em.length <= 120 && /^[^\s<>"'`]+@[^\s<>"'`]+\.[^\s<>"'`]+$/.test(em)) {
-            const nh = html.replace(/href="mailto:[^"]*"/g, 'href="mailto:' + em + '"');
+            const nh = html.replace(/href="mailto:[^"]*"/g, () => 'href="mailto:' + em + '"'); // Funktion: sonst würde $& im Wert expandieren
             if (nh !== html) { html = nh; changed = true; }
             const ns = html.replace(/("email":\s*")[^"]*(")/g, (_m, a, b) => a + esc(em) + b);
             if (ns !== html) { html = ns; changed = true; }
