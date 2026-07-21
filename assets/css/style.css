@@ -271,9 +271,11 @@ em { font-style: italic; }
 .mnav__link[aria-current="page"] { color: var(--red); }
 
 /* aufklappbarer Eintrag (Seniorenbetreuung) */
-.mnav__toggle { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; width: 100%; background: none; border: 0; cursor: pointer; text-align: left; }
+.mnav__row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.mnav__row .mnav__link { flex: 1 1 auto; opacity: 1; transform: none; }
+.mnav__expand { flex: none; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -0.35rem -0.4rem; background: none; border: 0; cursor: pointer; color: var(--paper); -webkit-tap-highlight-color: transparent; }
 .mnav__chev { flex: none; opacity: 0.55; transition: transform var(--t-fast), opacity var(--t-fast); }
-.mnav__toggle[aria-expanded="true"] .mnav__chev { transform: rotate(180deg); opacity: 1; }
+.mnav__expand[aria-expanded="true"] .mnav__chev { transform: rotate(180deg); opacity: 1; }
 
 /* sub-group — aufklappbar, dezente Einrückung */
 .mnav__sub { display: flex; flex-direction: column; padding-left: 1.15rem; max-height: 0; margin: 0; opacity: 0; overflow: hidden; transition: max-height 0.35s var(--ease), opacity 0.3s var(--ease), margin 0.35s var(--ease); }
@@ -291,13 +293,15 @@ em { font-style: italic; }
 .mnav__contact svg { color: var(--red); flex: none; }
 
 /* staggered reveal */
-.mnav__link, .mnav__label, .mobile-nav__foot > * { opacity: 0; transform: translateX(-22px); }
+.mnav__link, .mnav__label, .mnav__row, .mobile-nav__foot > * { opacity: 0; transform: translateX(-22px); }
 .mobile-nav.is-open .mnav__link,
 .mobile-nav.is-open .mnav__label,
+.mobile-nav.is-open .mnav__row,
 .mobile-nav.is-open .mobile-nav__foot > * { animation: navIn 0.5s var(--ease) forwards; animation-delay: calc(var(--i) * 45ms + 0.12s); }
+.mobile-nav.is-open .mnav__row .mnav__link { animation: none; }
 @keyframes navIn { to { opacity: 1; transform: translateX(0); } }
 @media (prefers-reduced-motion: reduce) {
-  .mnav__link, .mnav__label, .mobile-nav__foot > * { opacity: 1; transform: none; animation: none; }
+  .mnav__link, .mnav__label, .mnav__row, .mobile-nav__foot > * { opacity: 1; transform: none; animation: none; }
   .mnav__sub { transition: none; }
 }
 

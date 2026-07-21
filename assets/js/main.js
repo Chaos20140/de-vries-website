@@ -35,8 +35,8 @@
   if (mobileNav) {
     $("#mobileClose", mobileNav) && $("#mobileClose", mobileNav).addEventListener("click", function () { setMobile(false); });
     $$("a[href]", mobileNav).forEach(function (a) { a.addEventListener("click", function () { setMobile(false); }); });
-    // aufklappbare Einträge (z. B. Seniorenbetreuung)
-    $$(".mnav__toggle", mobileNav).forEach(function (btn) {
+    // aufklappbare Einträge (z. B. Seniorenbetreuung): Pfeil-Button klappt auf, Label ist ein normaler Link
+    $$(".mnav__expand", mobileNav).forEach(function (btn) {
       btn.addEventListener("click", function () {
         var sub = document.getElementById(btn.getAttribute("aria-controls"));
         var open = btn.getAttribute("aria-expanded") === "true";
