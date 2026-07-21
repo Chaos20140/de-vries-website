@@ -30,25 +30,35 @@
     document.documentElement.classList.toggle("lenis-stopped", open);
     document.body.style.overflow = open ? "hidden" : "";
     if (lenis) { open ? lenis.stop() : lenis.start(); }
+    if (open) {
+      var cl = document.getElementById("mobileClose"); if (cl) cl.focus();
+    } else {
+      // aufgeklappte Untermenues beim Schliessen zuruecksetzen (sonst beim naechsten Oeffnen noch offen)
+      $$(".mnav__sub.is-open", mobileNav).forEach(function (s) { s.classList.remove("is-open"); });
+      $$(".mnav__toggle", mobileNav).forEach(function (t) { t.setAttribute("aria-expanded", "false"); });
+      if (burger) burger.focus();
+    }
   }
   if (burger) burger.addEventListener("click", function () { setMobile(true); });
   if (mobileNav) {
     $("#mobileClose", mobileNav) && $("#mobileClose", mobileNav).addEventListener("click", function () { setMobile(false); });
-    // normale Links schließen das Menü — NUR nicht der aufklappbare Eintrag
-    $$("a[href]:not(.mnav__toggle)", mobileNav).forEach(function (a) { a.addEventListener("click", function () { setMobile(false); }); });
-    // aufklappbarer Eintrag (z. B. Seniorenbetreuung): Tippen klappt die Unterseiten auf/zu.
-    // Ist ein <a href> → falls JS mal nicht läuft, führt es zumindest zur Seite statt ins Leere.
-    $$(".mnav__toggle", mobileNav).forEach(function (btn) {
-      btn.addEventListener("click", function (e) {
+    // Klick-Delegation: gilt auch fuer spaeter injizierte Links (Menue/erstellte Seiten).
+    // Normale Links schliessen das Menue; der aufklappbare Eintrag klappt nur auf/zu.
+    mobileNav.addEventListener("click", function (e) {
+      var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+      if (!a || !mobileNav.contains(a)) return;
+      if (a.classList.contains("mnav__toggle")) {
         e.preventDefault();
-        var sub = document.getElementById(btn.getAttribute("aria-controls"));
-        var open = btn.getAttribute("aria-expanded") === "true";
-        btn.setAttribute("aria-expanded", open ? "false" : "true");
+        var sub = document.getElementById(a.getAttribute("aria-controls"));
+        var open = a.getAttribute("aria-expanded") === "true";
+        a.setAttribute("aria-expanded", open ? "false" : "true");
         if (sub) sub.classList.toggle("is-open", !open);
-      });
+      } else {
+        setMobile(false);
+      }
     });
   }
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") setMobile(false); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && mobileNav && mobileNav.classList.contains("is-open")) setMobile(false); });
 
   /* ---------- active nav link ---------- */
   (function () {
@@ -270,6 +280,32 @@
         try { localStorage.setItem(KEY, "1"); } catch (e) {}
         cookie.classList.remove("is-in");
       });
+    });
+  })();
+
+  /* ---------- Google Maps erst nach Einwilligung laden (DSGVO, Zwei-Klick) ---------- */
+  (function () {
+    var box = document.querySelector(".map-consent");
+    if (!box) return;
+    var src = box.getAttribute("data-map-embed") || "";
+    if (!/^https:\/\/(maps|www)\.google\.com\//.test(src)) return; // nur echte Google-Maps-Embeds zulassen
+    var MKEY = "dv-map-consent";
+    function load() {
+      var f = document.createElement("iframe");
+      f.src = src;
+      f.title = box.getAttribute("data-map-title") || "Standort auf Google Maps";
+      f.loading = "lazy";
+      f.setAttribute("referrerpolicy", "no-referrer");
+      f.setAttribute("allowfullscreen", "");
+      if (box.parentNode) box.parentNode.replaceChild(f, box);
+    }
+    var already = false;
+    try { already = localStorage.getItem(MKEY) === "1"; } catch (e) {}
+    if (already) { load(); return; }
+    var btn = box.querySelector(".map-consent__btn");
+    if (btn) btn.addEventListener("click", function () {
+      try { localStorage.setItem(MKEY, "1"); } catch (e) {}
+      load();
     });
   })();
 
@@ -1810,20 +1846,24 @@
     });
   }
 
+  var dvSaving = false;
   function save() {
+    if (dvSaving) return; // Reentrancy-Schutz: kein paralleles Doppel-Speichern (z. B. schnelles Strg+S)
+    dvSaving = true;
     var btn = document.getElementById("dvSave"); if (btn) btn.disabled = true;
     msg("Wird gespeichert …");
     var fields = {}, eds = document.querySelectorAll("[data-ed]");
     for (var i = 0; i < eds.length; i++) { fields[eds[i].getAttribute("data-ed")] = eds[i].textContent.replace(/\s+/g, " ").trim(); }
     var rich = {}, rds = document.querySelectorAll("[data-ed-rich]");
     for (var ri = 0; ri < rds.length; ri++) { rich[rds[ri].getAttribute("data-ed-rich")] = rds[ri].innerHTML; }
+    var sentPos = Object.keys(pendingPos); // nur DIESE Ausschnitte gehen jetzt raus; waehrenddessen neu gezogene bleiben erhalten
     call({ action: "save-page", file: file, fields: fields, rich: rich, positions: pendingPos }).then(function (res) {
       if (!res.ok) {
         var em = res.status === 401 ? "Falsches Passwort – bitte über /admin neu anmelden." : (res.status === 429 ? "Zu viele Versuche – bitte später." : "Fehler: " + (res.d.error || res.status));
         msg(em); toast(em, "err");
-        if (btn) btn.disabled = false; return;
+        dvSaving = false; if (btn) btn.disabled = false; return;
       }
-      for (var pk in pendingPos) delete pendingPos[pk]; // Bildausschnitte sind mit save-page erledigt
+      for (var pk = 0; pk < sentPos.length; pk++) delete pendingPos[sentPos[pk]]; // nur die tatsaechlich gesendeten Bildausschnitte entfernen
       var slots = Object.keys(pending), upFail = 0;
       function finish() {
         ebSaveAll().then(function (zonesOk) {
@@ -1834,8 +1874,8 @@
             msg("Teilweise gespeichert – " + what + " konnten nicht gesichert werden. Bitte noch einmal speichern.");
             toast("Teilweise gespeichert: " + what + " konnten nicht gesichert werden. Bitte erneut speichern.", "err");
           }
-          if (btn) btn.disabled = false;
-        }).catch(function () { msg("Verbindungsfehler beim Speichern der Elemente."); toast("Verbindungsfehler – bitte erneut speichern.", "err"); if (btn) btn.disabled = false; });
+          dvSaving = false; if (btn) btn.disabled = false;
+        }).catch(function () { msg("Verbindungsfehler beim Speichern der Elemente."); toast("Verbindungsfehler – bitte erneut speichern.", "err"); dvSaving = false; if (btn) btn.disabled = false; });
       }
       (function next(k) {
         if (k >= slots.length) { finish(); return; }
@@ -1845,7 +1885,7 @@
           next(k + 1);
         }).catch(function () { upFail++; next(k + 1); }); // ohne catch bliebe der Speichern-Knopf für immer deaktiviert
       })(0);
-    }).catch(function () { msg("Verbindungsfehler."); if (btn) btn.disabled = false; });
+    }).catch(function () { msg("Verbindungsfehler."); dvSaving = false; if (btn) btn.disabled = false; });
   }
 
   if (document.body) start();

@@ -504,6 +504,12 @@ em { font-style: italic; }
 .info-item a:hover { color: var(--red); }
 .map-wrap { border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--line); aspect-ratio: 16/10; }
 .map-wrap iframe { width: 100%; height: 100%; border: 0; filter: grayscale(0.2) contrast(1.05); }
+.map-consent { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; text-align: center; padding: 1.6rem; background: var(--paper-2); }
+.map-consent__txt { max-width: 44ch; color: var(--ink-2); font-size: 0.95rem; line-height: 1.5; }
+.map-consent__btn { cursor: pointer; }
+.map-consent__note { font-size: 0.82rem; color: var(--muted); }
+.map-consent__note a { text-decoration: underline; }
+.map-consent__note a:hover { color: var(--red); }
 @media (max-width: 860px){ .contact-grid { grid-template-columns: 1fr; } }
 
 /* ---------- 16. PAGE HERO (sub pages) ---------- */

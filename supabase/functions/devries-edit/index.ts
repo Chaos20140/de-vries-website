@@ -3,7 +3,9 @@
 // bearbeitbaren Feldern/Bildern. Der GitHub-Token bleibt server-seitig (Secret)
 // und darf NUR dieses eine Repo beschreiben. Deploy mit --no-verify-jwt
 // (das Passwort ist die Zugangskontrolle).
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+// Whitelist-Membership NUR über eigene Properties prüfen (kein __proto__/constructor über die Prototypkette).
+const has = (o: Record<string, unknown>, k: string): boolean => Object.prototype.hasOwnProperty.call(o, k);
 
 // CORS auf die echte Editor-Domain beschränken (per Env überschreibbar). Auth läuft ohnehin über
 // das Passwort im Body (keine Cookies), aber so kann kein fremder Origin die Antworten auslesen.
@@ -219,7 +221,7 @@ Deno.serve(async (req) => {
     if (body.action === "save-home") {
       const fields = (body.fields || {}) as Record<string, string>;
       for (const k of Object.keys(fields)) {
-        if (!(k in HOME_FIELDS)) return json({ error: "bad_field", field: k }, 400);
+        if (!has(HOME_FIELDS, k)) return json({ error: "bad_field", field: k }, 400);
         if (typeof fields[k] !== "string" || fields[k].length > HOME_FIELDS[k])
           return json({ error: "too_long", field: k }, 400);
       }
@@ -249,7 +251,7 @@ Deno.serve(async (req) => {
         if (typeof rich[k] !== "string" || rich[k].length > 8000) return json({ error: "too_long", field: k }, 400);
       }
       for (const slot of Object.keys(positions)) {
-        if (!(slot in IMG_SLOTS)) return json({ error: "bad_slot", field: slot }, 400);
+        if (!(has(IMG_SLOTS, slot))) return json({ error: "bad_slot", field: slot }, 400);
         const m = /^(\d{1,3})% (\d{1,3})%$/.exec(positions[slot]);
         if (!m || +m[1] > 100 || +m[2] > 100) return json({ error: "bad_pos", field: slot }, 400);
       }
@@ -282,13 +284,13 @@ Deno.serve(async (req) => {
 
     if (body.action === "upload-image") {
       const slot = body.slot as string, data = body.dataBase64 as string;
-      if (!(slot in IMG_SLOTS)) return json({ error: "bad_slot" }, 400);
+      if (!(has(IMG_SLOTS, slot))) return json({ error: "bad_slot" }, 400);
       if (typeof data !== "string" || data.length > 3_000_000) return json({ error: "image_too_big" }, 400);
       const head = atob(data.slice(0, 32));
       const b = [...head].map((c) => c.charCodeAt(0));
-      const isJpg = b[0] === 0xFF && b[1] === 0xD8;
-      const isPng = b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47;
-      const isWebp = head.slice(0, 4) === "RIFF";
+      const isJpg = b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF;
+      const isPng = b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47 && b[4] === 0x0D && b[5] === 0x0A && b[6] === 0x1A && b[7] === 0x0A;
+      const isWebp = head.slice(0, 4) === "RIFF" && head.slice(8, 12) === "WEBP";
       if (!(isJpg || isPng || isWebp)) return json({ error: "not_image" }, 400);
       const path = IMG_SLOTS[slot];
       let sha: string | undefined;
@@ -376,7 +378,7 @@ Deno.serve(async (req) => {
       if (title !== null && title.length > 80) return json({ error: "too_long", field: "title" }, 400);
       if (desc  !== null && desc.length > 320) return json({ error: "too_long", field: "description" }, 400);
       for (const slot of Object.keys(alts)) {
-        if (!(slot in IMG_SLOTS)) return json({ error: "bad_slot", field: slot }, 400);
+        if (!(has(IMG_SLOTS, slot))) return json({ error: "bad_slot", field: slot }, 400);
         if (typeof alts[slot] !== "string" || alts[slot].length > 160) return json({ error: "too_long", field: slot }, 400);
       }
       const f = await getFile(file);
@@ -466,7 +468,7 @@ Deno.serve(async (req) => {
           const src0 = String((b as any).src || "").trim();
           let src = "", isUp = false;
           if (/^assets\/img\/uploads\/[a-z0-9-]{8,60}\.(jpg|jpeg|png|webp)$/i.test(src0)) { src = src0; isUp = true; }
-          else if (slot in IMG_SLOTS) src = IMG_SLOTS[slot];
+          else if (has(IMG_SLOTS, slot)) src = IMG_SLOTS[slot];
           else return json({ error: "bad_slot", field: slot || src0 }, 400);
           const alt = esc(String((b as any).alt || "").slice(0, 160).trim());
           const iw = parseInt(String((b as any).w || ""), 10);
@@ -480,7 +482,7 @@ Deno.serve(async (req) => {
             const src0 = String(srcRaw || "").trim(), slot = String(slotRaw || "");
             let src = "", isUp = false;
             if (/^assets\/img\/uploads\/[a-z0-9-]{8,60}\.(jpg|jpeg|png|webp)$/i.test(src0)) { src = src0; isUp = true; }
-            else if (slot && slot in IMG_SLOTS) src = IMG_SLOTS[slot];
+            else if (slot && has(IMG_SLOTS, slot)) src = IMG_SLOTS[slot];
             else return "";
             const alt = esc(String(altRaw || "").slice(0, 160).trim());
             return '<img class="eb-col-img" data-eb-col-img="1" ' + (isUp ? 'data-eb-src="' + esc(src) + '"' : 'data-eb-slot="' + slot + '"')
@@ -697,9 +699,9 @@ Deno.serve(async (req) => {
       if (typeof data !== "string" || data.length > 3_000_000) return json({ error: "image_too_big" }, 400);
       const head = atob(data.slice(0, 32));
       const bts = [...head].map((c) => c.charCodeAt(0));
-      const ext = (bts[0] === 0xFF && bts[1] === 0xD8) ? "jpg"
-                : (bts[0] === 0x89 && bts[1] === 0x50 && bts[2] === 0x4E && bts[3] === 0x47) ? "png"
-                : (head.slice(0, 4) === "RIFF") ? "webp" : "";
+      const ext = (bts[0] === 0xFF && bts[1] === 0xD8 && bts[2] === 0xFF) ? "jpg"
+                : (bts[0] === 0x89 && bts[1] === 0x50 && bts[2] === 0x4E && bts[3] === 0x47 && bts[4] === 0x0D && bts[5] === 0x0A && bts[6] === 0x1A && bts[7] === 0x0A) ? "png"
+                : (head.slice(0, 4) === "RIFF" && head.slice(8, 12) === "WEBP") ? "webp" : "";
       if (!ext) return json({ error: "not_image" }, 400);
       const src = "assets/img/uploads/" + crypto.randomUUID() + "." + ext;
       const r = await putFile(src, data, undefined, "Editor: Block-Bild hochgeladen");
