@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="18" fill="#d7120a"/>
-  <g fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
-    <!-- D: Stamm + Bogen -->
-    <path d="M30 24 V73 M30 24 H48 C68 24 68 73 48 73 H30"/>
-    <!-- V: langer rechter Arm bis oben rechts, Spitze unten, kurzer linker Arm -->
-    <path d="M85 20 L63 85 L49 43"/>
-  </g>
-</svg>
