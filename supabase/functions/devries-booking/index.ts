@@ -18,7 +18,7 @@ const SMTP_PASS      = Deno.env.get("SMTP_PASS") || "";
 const MAIL_FROM      = Deno.env.get("MAIL_FROM") || "info@andreasdevries.de";
 const MAIL_FROM_NAME = Deno.env.get("MAIL_FROM_NAME") || "de Vries";
 const OWNER_EMAIL    = Deno.env.get("OWNER_EMAIL") || "info@andreasdevries.de";
-const SITE_URL       = Deno.env.get("SITE_URL") || "https://chaos20140.github.io/de-vries-website";
+const SITE_URL       = Deno.env.get("SITE_URL") || "https://andreasdevries.de";
 const REPLY_TO       = Deno.env.get("REPLY_TO") || "info@andreasdevries.de";
 const FN_BASE        = `${SUPABASE_URL}/functions/v1/devries-booking`; // fuer den .ics-Kalenderlink
 
@@ -32,9 +32,12 @@ const WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
 // (statt "*"). Per Env ALLOW_ORIGIN überschreibbar, falls später eine eigene
 // Domain (CNAME) dazukommt. /confirm ist eine Top-Level-Navigation (kein CORS)
 // und bleibt davon unberührt.
-const ALLOW_ORIGIN = Deno.env.get("ALLOW_ORIGIN") || "https://chaos20140.github.io";
+// Erlaubte Ursprünge für Browser-Aufrufe (CORS), kommagetrennt per Env ALLOW_ORIGINS
+// überschreibbar. Die Antwort spiegelt weiter unten pro Request den passenden Origin aus
+// dieser Liste zurück (exakter Match); hier steht als Standard der erste Eintrag.
+const ALLOW_ORIGINS = (Deno.env.get("ALLOW_ORIGINS") || "https://andreasdevries.de,https://www.andreasdevries.de,https://chaos20140.github.io").split(",").map((s) => s.trim()).filter(Boolean);
 const CORS = {
-  "Access-Control-Allow-Origin": ALLOW_ORIGIN,
+  "Access-Control-Allow-Origin": ALLOW_ORIGINS[0],
   "Vary": "Origin",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -271,6 +274,14 @@ function contactRateOk(): boolean {
 }
 
 Deno.serve(async (req) => {
+  const res = await handle(req);
+  // CORS: den konkreten Origin zurückspiegeln, wenn er in der Allowlist steht (sonst Standard).
+  const origin = req.headers.get("Origin") || "";
+  if (origin && ALLOW_ORIGINS.includes(origin)) res.headers.set("Access-Control-Allow-Origin", origin);
+  return res;
+});
+
+async function handle(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const url = new URL(req.url);
   const path = url.pathname.replace(/^.*\/devries-booking/, "") || "/";
@@ -462,4 +473,4 @@ Deno.serve(async (req) => {
   }
 
   return json({ error: "not_found" }, 404);
-});
+}

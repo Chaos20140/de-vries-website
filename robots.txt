@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://chaos20140.github.io/de-vries-website/sitemap.xml
+Sitemap: https://andreasdevries.de/sitemap.xml
