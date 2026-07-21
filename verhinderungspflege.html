@@ -22,7 +22,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png?v=3">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/img/favicon-16.png?v=3">
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=3">
-<link rel="stylesheet" href="assets/css/style.css?v=78">
+<link rel="stylesheet" href="assets/css/style.css?v=79">
 </head>
 <body>
 
@@ -86,12 +86,9 @@
   <nav class="mobile-nav__body" aria-label="Mobiles Hauptmenü">
     <a class="mnav__link" href="index.html" style="--i:0" data-eds="lbl-start">Start</a>
     <p class="mnav__label" style="--i:1" data-eds="lbl-grp-leistungen">Leistungen</p>
-    <div class="mnav__row" style="--i:3">
-      <a class="mnav__link" href="seniorenbetreuung.html" data-eds="lbl-senioren">Seniorenbetreuung</a>
-      <button type="button" class="mnav__expand" aria-expanded="false" aria-controls="mnavSenioren" aria-label="Unterseiten der Seniorenbetreuung anzeigen">
-        <svg class="mnav__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-      </button>
-    </div>
+    <a class="mnav__link mnav__toggle" href="seniorenbetreuung.html" aria-expanded="false" aria-controls="mnavSenioren" style="--i:3"><span data-eds="lbl-senioren">Seniorenbetreuung</span>
+      <svg class="mnav__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </a>
     <div class="mnav__sub" id="mnavSenioren" style="--i:4">
       <a href="seniorenbetreuung.html" data-eds="lbl-uebersicht">Übersicht</a>
       <a href="entlastungsbetrag.html" data-eds="lbl-entlastung">Entlastungsbetrag</a>
@@ -308,6 +305,6 @@
 </div>
 
 <script src="assets/js/lenis.min.js"></script>
-<script src="assets/js/main.js?v=78"></script>
+<script src="assets/js/main.js?v=79"></script>
 </body>
 </html>

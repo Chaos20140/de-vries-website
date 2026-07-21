@@ -34,10 +34,13 @@
   if (burger) burger.addEventListener("click", function () { setMobile(true); });
   if (mobileNav) {
     $("#mobileClose", mobileNav) && $("#mobileClose", mobileNav).addEventListener("click", function () { setMobile(false); });
-    $$("a[href]", mobileNav).forEach(function (a) { a.addEventListener("click", function () { setMobile(false); }); });
-    // aufklappbare Einträge (z. B. Seniorenbetreuung): Pfeil-Button klappt auf, Label ist ein normaler Link
-    $$(".mnav__expand", mobileNav).forEach(function (btn) {
-      btn.addEventListener("click", function () {
+    // normale Links schließen das Menü — NUR nicht der aufklappbare Eintrag
+    $$("a[href]:not(.mnav__toggle)", mobileNav).forEach(function (a) { a.addEventListener("click", function () { setMobile(false); }); });
+    // aufklappbarer Eintrag (z. B. Seniorenbetreuung): Tippen klappt die Unterseiten auf/zu.
+    // Ist ein <a href> → falls JS mal nicht läuft, führt es zumindest zur Seite statt ins Leere.
+    $$(".mnav__toggle", mobileNav).forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
         var sub = document.getElementById(btn.getAttribute("aria-controls"));
         var open = btn.getAttribute("aria-expanded") === "true";
         btn.setAttribute("aria-expanded", open ? "false" : "true");
