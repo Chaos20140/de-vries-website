@@ -23,7 +23,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png?v=3">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/img/favicon-16.png?v=3">
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=3">
-<link rel="stylesheet" href="assets/css/style.css?v=81">
+<link rel="stylesheet" href="assets/css/style.css?v=82">
 </head>
 <body>
 
@@ -203,7 +203,7 @@
       <h2 data-ed="datenschutz-44">4. Datenerfassung auf dieser Website</h2>
 
       <h3 data-ed="datenschutz-45">Cookies und lokale Speicherung</h3>
-      <p data-ed="datenschutz-46">Diese Website setzt keine Tracking- oder Marketing-Cookies ein. Für die Speicherung Ihrer Cookie-Auswahl nutzen wir ausschließlich eine technisch notwendige lokale Speicherung (Local Storage) in Ihrem Browser. Darin wird lediglich vermerkt, dass Sie den Cookie-Hinweis bestätigt haben; es werden dabei keine personenbezogenen Daten an uns oder Dritte übertragen. Diese Speicherung ist für den von Ihnen ausdrücklich gewünschten Betrieb der Website unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG) und erfolgt auf Grundlage unseres berechtigten Interesses an einer technisch fehlerfreien Bereitstellung (Art. 6 Abs. 1 lit. f DSGVO). Sie können die lokale Speicherung jederzeit über die Einstellungen Ihres Browsers löschen.</p>
+      <p data-ed="datenschutz-46">Diese Website setzt keine Tracking- oder Marketing-Cookies ein. Für die Speicherung Ihrer Cookie-Auswahl nutzen wir ausschließlich eine technisch notwendige lokale Speicherung (Local Storage) in Ihrem Browser. Darin wird lediglich vermerkt, ob Sie den Hinweis bestätigt und ob Sie dem Laden externer Karten (Google Maps) zugestimmt haben; es werden dabei keine personenbezogenen Daten an uns oder Dritte übertragen. Diese Speicherung ist für den von Ihnen ausdrücklich gewünschten Betrieb der Website unbedingt erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG) und erfolgt auf Grundlage unseres berechtigten Interesses an einer technisch fehlerfreien Bereitstellung (Art. 6 Abs. 1 lit. f DSGVO). Ihre Einwilligung zum Laden externer Karten können Sie jederzeit über den Link Cookie-Einstellungen im Seitenfuß ändern oder widerrufen; die lokale Speicherung können Sie zudem über die Einstellungen Ihres Browsers löschen.</p>
 
       <h3 data-ed="datenschutz-47">Kontaktformular</h3>
       <p data-ed="datenschutz-48">Wenn Sie uns über das Kontaktformular Anfragen zukommen lassen, wird Ihre Eingabe in Ihrem E-Mail-Programm geöffnet und per E-Mail an uns übermittelt. Ihre Angaben inklusive der von Ihnen dort angegebenen Kontaktdaten werden zwecks Bearbeitung der Anfrage und für den Fall von Anschlussfragen bei uns gespeichert. Diese Daten geben wir nicht ohne Ihre Einwilligung weiter.</p>
@@ -223,7 +223,7 @@
       <p data-ed="datenschutz-58">Diese Seite nutzt zur einheitlichen Darstellung von Schriftarten so genannte Web Fonts (Fraunces und Manrope). Diese Schriftarten sind lokal auf dem Server eingebunden und werden beim Seitenaufruf ausschließlich von dort geladen. Eine Verbindung zu Servern von Google oder eine Übertragung Ihrer IP-Adresse an Google findet dabei nicht statt.</p>
 
       <h3 data-ed="datenschutz-59">Google Maps</h3>
-      <p data-ed-rich="datenschutz-60">Auf unserer Kontaktseite binden wir Kartenmaterial des Dienstes Google Maps ein. Anbieter ist die Google Ireland Limited („Google“), Gordon House, Barrow Street, Dublin 4, Irland. Zur Nutzung der Funktionen von Google Maps ist es notwendig, Ihre IP-Adresse zu speichern. Diese Informationen werden in der Regel an einen Server von Google in den USA übertragen und dort gespeichert. Der Anbieter dieser Seite hat keinen Einfluss auf diese Datenübertragung. Die Nutzung von Google Maps erfolgt im Interesse einer ansprechenden Darstellung unserer Online-Angebote und einer leichten Auffindbarkeit der von uns auf der Website angegebenen Orte (Art. 6 Abs. 1 lit. f DSGVO). Die Datenübertragung in die USA wird auf das EU-U.S. Data Privacy Framework gestützt. Weitere Informationen zum Umgang mit Nutzerdaten finden Sie in der Datenschutzerklärung von Google unter <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>.</p>
+      <p data-ed-rich="datenschutz-60">Auf unserer Kontaktseite binden wir Kartenmaterial des Dienstes Google Maps ein. Anbieter ist die Google Ireland Limited („Google“), Gordon House, Barrow Street, Dublin 4, Irland. Zur Nutzung der Funktionen von Google Maps ist es notwendig, Ihre IP-Adresse zu speichern. Diese Informationen werden in der Regel an einen Server von Google in den USA übertragen und dort gespeichert. Der Anbieter dieser Seite hat keinen Einfluss auf diese Datenübertragung. Die Karte wird erst geladen, nachdem Sie aktiv zugestimmt haben; Rechtsgrundlage ist Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), die Sie jederzeit über den Link Cookie-Einstellungen im Seitenfuß widerrufen können. Die Datenübertragung in die USA wird auf das EU-U.S. Data Privacy Framework gestützt. Weitere Informationen zum Umgang mit Nutzerdaten finden Sie in der Datenschutzerklärung von Google unter <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>.</p>
     </div>
   </div>
 </section>
@@ -285,14 +285,15 @@
 
 <!-- cookie -->
 <div class="cookie" id="cookie">
-  <p>Diese Website verwendet Cookies, um Ihre Erfahrung zu verbessern. Notwendige Cookies sind für die grundlegenden Funktionen der Website unerlässlich.</p>
+  <p>Wir speichern nur technisch Notwendiges &ndash; kein Tracking. Die Anfahrtskarte (Google Maps) laden wir nur mit Ihrer Zustimmung.</p>
   <div class="cookie__row">
-    <button class="btn" data-cookie>Akzeptieren</button>
-    <button class="btn btn--ghost" data-cookie>Nur notwendige</button>
+    <button class="btn" data-consent="all">Alle akzeptieren</button>
+    <button class="btn btn--ghost" data-consent="necessary">Nur notwendige</button>
   </div>
+  <button class="cookie__settings" type="button" data-consent="settings">Einstellungen</button>
 </div>
 
 <script src="assets/js/lenis.min.js"></script>
-<script src="assets/js/main.js?v=81"></script>
+<script src="assets/js/main.js?v=82"></script>
 </body>
 </html>

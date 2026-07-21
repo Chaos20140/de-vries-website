@@ -268,45 +268,99 @@
     window.addEventListener("resize", function () { requestAnimationFrame(updateDetail); });
   }
 
-  /* ---------- cookie banner ---------- */
+  /* ---------- Einwilligung / Cookie-Einstellungen (echte, speichernde Auswahl) ---------- */
   (function () {
-    var cookie = $("#cookie");
-    if (!cookie) return;
-    var KEY = "dv-cookie-ok";
-    try { if (localStorage.getItem(KEY)) return; } catch (e) {}
-    setTimeout(function () { cookie.classList.add("is-in"); }, 1400);
-    $$("[data-cookie]", cookie).forEach(function (b) {
-      b.addEventListener("click", function () {
-        try { localStorage.setItem(KEY, "1"); } catch (e) {}
-        cookie.classList.remove("is-in");
-      });
-    });
-  })();
-
-  /* ---------- Google Maps erst nach Einwilligung laden (DSGVO, Zwei-Klick) ---------- */
-  (function () {
-    var box = document.querySelector(".map-consent");
-    if (!box) return;
-    var src = box.getAttribute("data-map-embed") || "";
-    if (!/^https:\/\/(maps|www)\.google\.com\//.test(src)) return; // nur echte Google-Maps-Embeds zulassen
-    var MKEY = "dv-map-consent";
-    function load() {
-      var f = document.createElement("iframe");
-      f.src = src;
-      f.title = box.getAttribute("data-map-title") || "Standort auf Google Maps";
-      f.loading = "lazy";
-      f.setAttribute("referrerpolicy", "no-referrer");
-      f.setAttribute("allowfullscreen", "");
-      if (box.parentNode) box.parentNode.replaceChild(f, box);
+    var CKEY = "dv-consent", VER = 1;
+    // Zustand: { v, maps:bool, ts }. null = noch keine Entscheidung getroffen.
+    function read() {
+      try {
+        var raw = localStorage.getItem(CKEY);
+        if (raw) { var o = JSON.parse(raw); if (o && o.v === VER) return o; }
+        // sanfte Migration von den alten Einzel-Flags
+        var old = localStorage.getItem("dv-cookie-ok");
+        var oldMap = localStorage.getItem("dv-map-consent");
+        if (old || oldMap) return { v: VER, maps: oldMap === "1" };
+      } catch (e) {}
+      return null;
     }
-    var already = false;
-    try { already = localStorage.getItem(MKEY) === "1"; } catch (e) {}
-    if (already) { load(); return; }
-    var btn = box.querySelector(".map-consent__btn");
-    if (btn) btn.addEventListener("click", function () {
-      try { localStorage.setItem(MKEY, "1"); } catch (e) {}
-      load();
+    function write(maps) { try { localStorage.setItem(CKEY, JSON.stringify({ v: VER, maps: !!maps, ts: Date.now() })); } catch (e) {} }
+    function decided() { return read() !== null; }
+    function mapsAllowed() { var s = read(); return !!(s && s.maps); }
+
+    // Google-Maps-Platzhalter gemaess Zustand durch das echte iframe ersetzen
+    function applyMaps() {
+      if (!mapsAllowed()) return;
+      $$(".map-consent").forEach(function (box) {
+        var src = box.getAttribute("data-map-embed") || "";
+        if (!/^https:\/\/(maps|www)\.google\.com\//.test(src)) return; // nur echte Google-Maps-Embeds
+        var f = document.createElement("iframe");
+        f.src = src;
+        f.title = box.getAttribute("data-map-title") || "Standort auf Google Maps";
+        f.loading = "lazy";
+        f.setAttribute("referrerpolicy", "no-referrer");
+        f.setAttribute("allowfullscreen", "");
+        if (box.parentNode) box.parentNode.replaceChild(f, box);
+      });
+    }
+
+    var banner = document.getElementById("cookie");
+    function hideBanner() { if (banner) banner.classList.remove("is-in"); }
+
+    function openDialog() {
+      var cur = read() || { maps: false };
+      var ex = document.getElementById("dvConsent"); if (ex) ex.remove();
+      var ov = document.createElement("div");
+      ov.id = "dvConsent"; ov.className = "dvcov";
+      ov.innerHTML =
+        '<div class="dvc" role="dialog" aria-modal="true" aria-labelledby="dvcT">'
+        + '<h3 id="dvcT">Cookie-Einstellungen</h3>'
+        + '<p class="dvc__lead">Diese Website nutzt keine Tracking-Cookies. Gespeichert wird nur technisch Notwendiges. Externe Karten (Google Maps) laden wir ausschliesslich mit Ihrer Zustimmung.</p>'
+        + '<label class="dvc__opt"><span class="dvc__t"><strong>Notwendig</strong><span class="dvc__d">Merkt sich Ihre Auswahl und Grundeinstellungen. Immer aktiv.</span></span><input type="checkbox" checked disabled></label>'
+        + '<label class="dvc__opt"><span class="dvc__t"><strong>Externe Karten (Google Maps)</strong><span class="dvc__d">Laedt die Anfahrtskarte von Google. Dabei wird Ihre IP-Adresse an Google uebertragen.</span></span><input type="checkbox" id="dvcMaps"' + (cur.maps ? " checked" : "") + '></label>'
+        + '<div class="dvc__row"><button type="button" class="btn btn--ghost" data-dvc="nec">Nur notwendige</button><button type="button" class="btn" data-dvc="save">Auswahl speichern</button></div>'
+        + '</div>';
+      document.body.appendChild(ov);
+      ov.addEventListener("click", function (e) { if (e.target === ov) ov.remove(); });
+      ov.querySelector('[data-dvc="save"]').addEventListener("click", function () {
+        var before = mapsAllowed(), now = ov.querySelector("#dvcMaps").checked;
+        write(now); ov.remove(); hideBanner();
+        if (before && !now) location.reload(); else applyMaps(); // Widerruf -> Karte per Reload entfernen
+      });
+      ov.querySelector('[data-dvc="nec"]').addEventListener("click", function () {
+        var before = mapsAllowed();
+        write(false); ov.remove(); hideBanner();
+        if (before) location.reload(); else applyMaps();
+      });
+    }
+    window.dvOpenConsent = openDialog;
+
+    // Banner-Buttons: data-consent="all" | "necessary" | "settings"
+    if (banner) {
+      $$("[data-consent]", banner).forEach(function (b) {
+        b.addEventListener("click", function () {
+          var v = b.getAttribute("data-consent");
+          if (v === "settings") { openDialog(); return; }
+          write(v === "all"); hideBanner(); applyMaps();
+        });
+      });
+    }
+
+    // Footer-Link "Cookie-Einstellungen" (jederzeit aenderbar = DSGVO-Widerruf)
+    var ds = document.querySelector('.footer a[href="datenschutz.html"]');
+    if (ds && ds.parentNode) {
+      var cs = document.createElement("button");
+      cs.type = "button"; cs.className = "footer__cookiebtn"; cs.textContent = "Cookie-Einstellungen";
+      cs.addEventListener("click", openDialog);
+      ds.parentNode.insertBefore(cs, ds.nextSibling);
+    }
+
+    // "Karte laden"-Button auf dem Platzhalter erteilt die Maps-Zustimmung dauerhaft
+    $$(".map-consent__btn").forEach(function (b) {
+      b.addEventListener("click", function () { write(true); applyMaps(); });
     });
+
+    applyMaps();                                  // bereits erteilte Zustimmung sofort anwenden
+    if (banner && !decided()) setTimeout(function () { banner.classList.add("is-in"); }, 1200);
   })();
 
   /* ---------- contact form (mailto fallback + validation) ---------- */
