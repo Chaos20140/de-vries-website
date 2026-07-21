@@ -228,5 +228,33 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ---- Einwilligungs-Protokoll (DSGVO-Nachweis, anonym: keine PII, keine IP) ----
+  if (path === "/consent" && req.method === "POST") {
+    let b: Record<string, unknown>;
+    try { b = await req.json(); } catch { return json({ error: "invalid_json" }, 400); }
+    const clientId = String(b.client_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(clientId)) return json({ error: "bad_client_id" }, 400);
+    const version = Number(b.version);
+    if (!Number.isInteger(version) || version < 1 || version > 999) return json({ error: "bad_version" }, 400);
+    const action = String(b.action || "").slice(0, 20);
+    if (!/^[a-z_]+$/.test(action)) return json({ error: "bad_action" }, 400);
+    // choices: nur bekannte Schluessel, nur Boolean-Werte (eigene Properties)
+    const raw = (b.choices && typeof b.choices === "object") ? b.choices as Record<string, unknown> : {};
+    const choices: Record<string, boolean> = {};
+    for (const k of ["maps"]) if (Object.prototype.hasOwnProperty.call(raw, k)) choices[k] = !!raw[k];
+    // Flood-Schutz (fail-open): global bzw. pro client_id deckeln
+    try {
+      const now = Date.now();
+      const [glob, perClient] = await Promise.all([
+        admin.from("devries_consents").select("*", { count: "exact", head: true }).gte("created_at", new Date(now - 10 * 60 * 1000).toISOString()),
+        admin.from("devries_consents").select("*", { count: "exact", head: true }).eq("client_id", clientId).gte("created_at", new Date(now - 60 * 60 * 1000).toISOString()),
+      ]);
+      if ((glob.count || 0) >= 300 || (perClient.count || 0) >= 30) return json({ error: "rate_limited" }, 429);
+    } catch { /* fail-open */ }
+    const { error } = await admin.from("devries_consents").insert({ client_id: clientId, version, action, choices });
+    if (error) return json({ error: "db_error" }, 500);
+    return json({ ok: true });
+  }
+
   return json({ error: "not_found" }, 404);
 });

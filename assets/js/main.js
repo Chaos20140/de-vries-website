@@ -284,6 +284,24 @@
       return null;
     }
     function write(maps) { try { localStorage.setItem(CKEY, JSON.stringify({ v: VER, maps: !!maps, ts: Date.now() })); } catch (e) {} }
+    // Anonymes Einwilligungs-Protokoll (DSGVO-Nachweis). Best effort: blockiert die UI nie,
+    // speichert keine PII/IP – nur eine zufaellige, browserseitige ID + die Auswahl.
+    function clientId() {
+      var k = "dv-consent-id", id = null;
+      try { id = localStorage.getItem(k); } catch (e) {}
+      if (!id && window.crypto && crypto.randomUUID) { id = crypto.randomUUID(); try { localStorage.setItem(k, id); } catch (e) {} }
+      return id;
+    }
+    function logConsent(action, maps) {
+      var id = clientId(); if (!id) return;
+      try {
+        fetch("https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-booking/consent", {
+          method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true,
+          body: JSON.stringify({ client_id: id, version: VER, action: action, choices: { maps: !!maps } })
+        }).catch(function () {});
+      } catch (e) {}
+    }
+    function commit(maps, action) { write(maps); logConsent(action, maps); }
     function decided() { return read() !== null; }
     function mapsAllowed() { var s = read(); return !!(s && s.maps); }
 
@@ -323,12 +341,12 @@
       ov.addEventListener("click", function (e) { if (e.target === ov) ov.remove(); });
       ov.querySelector('[data-dvc="save"]').addEventListener("click", function () {
         var before = mapsAllowed(), now = ov.querySelector("#dvcMaps").checked;
-        write(now); ov.remove(); hideBanner();
+        commit(now, "custom"); ov.remove(); hideBanner();
         if (before && !now) location.reload(); else applyMaps(); // Widerruf -> Karte per Reload entfernen
       });
       ov.querySelector('[data-dvc="nec"]').addEventListener("click", function () {
         var before = mapsAllowed();
-        write(false); ov.remove(); hideBanner();
+        commit(false, "necessary"); ov.remove(); hideBanner();
         if (before) location.reload(); else applyMaps();
       });
     }
@@ -340,7 +358,7 @@
         b.addEventListener("click", function () {
           var v = b.getAttribute("data-consent");
           if (v === "settings") { openDialog(); return; }
-          write(v === "all"); hideBanner(); applyMaps();
+          commit(v === "all", v === "all" ? "all" : "necessary"); hideBanner(); applyMaps();
         });
       });
     }
@@ -356,7 +374,7 @@
 
     // "Karte laden"-Button auf dem Platzhalter erteilt die Maps-Zustimmung dauerhaft
     $$(".map-consent__btn").forEach(function (b) {
-      b.addEventListener("click", function () { write(true); applyMaps(); });
+      b.addEventListener("click", function () { commit(true, "maps"); applyMaps(); });
     });
 
     applyMaps();                                  // bereits erteilte Zustimmung sofort anwenden
