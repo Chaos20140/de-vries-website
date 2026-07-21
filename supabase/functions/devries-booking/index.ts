@@ -11,7 +11,6 @@ const SERVICE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM    = Deno.env.get("RESEND_FROM") || "de Vries <onboarding@resend.dev>";
 const OWNER_EMAIL    = Deno.env.get("OWNER_EMAIL") || "tolunayusul@gmail.com";
-const FUNCTION_BASE  = Deno.env.get("FUNCTION_BASE") || `${SUPABASE_URL}/functions/v1/devries-booking`;
 const SITE_URL       = Deno.env.get("SITE_URL") || "https://chaos20140.github.io/de-vries-website";
 const REPLY_TO       = Deno.env.get("REPLY_TO") || "info@andreasdevries.de";
 
@@ -63,8 +62,10 @@ function page(title: string, msg: string, ok = true) {
 
 async function mailOwner(b: Record<string, string>) {
   if (!RESEND_API_KEY) return false;
-  const confirm = `${FUNCTION_BASE}/confirm?token=${b.token}&action=confirm`;
-  const decline = `${FUNCTION_BASE}/confirm?token=${b.token}&action=decline`;
+  // Links fuehren auf eine Bestaetigungs-Zwischenseite; die eigentliche Aktion loest
+  // erst ein bewusster Klick dort per POST aus (kein Auto-Confirm durch Mail-Scanner/Prefetch).
+  const confirm = `${SITE_URL}/termin-bestaetigen.html?token=${b.token}&action=confirm`;
+  const decline = `${SITE_URL}/termin-bestaetigen.html?token=${b.token}&action=decline`;
   const body = `
 <div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:auto;color:#1c1714">
   <h2 style="color:#d7120a;margin:0 0 1rem">Neue Terminanfrage</h2>
@@ -191,9 +192,23 @@ Deno.serve(async (req) => {
   }
 
   // ---- Bestätigen / Ablehnen (per geheimem Token) ----
+  // GET aendert NICHTS: Mail-Prefetch/Sicherheits-Scanner rufen Links automatisch per GET auf.
+  // Deshalb leitet GET nur auf die Bestaetigungsseite; die Aktion laeuft ausschliesslich per POST.
   if (path === "/confirm" && req.method === "GET") {
     const token = url.searchParams.get("token") || "";
     const action = url.searchParams.get("action") || "";
+    if (!/^[0-9a-f-]{36}$/i.test(token) || (action !== "confirm" && action !== "decline")) return redirect("invalid");
+    return new Response(null, { status: 302, headers: { ...CORS, "Location": `${SITE_URL}/termin-bestaetigen.html?token=${token}&action=${action}` } });
+  }
+
+  // POST fuehrt die eigentliche Zustandsaenderung aus (nur nach bewusstem Klick auf der Zwischenseite).
+  if (path === "/confirm" && req.method === "POST") {
+    let token = "", action = "";
+    try {
+      const ct = req.headers.get("content-type") || "";
+      if (ct.includes("application/json")) { const j = await req.json(); token = String(j.token || ""); action = String(j.action || ""); }
+      else { const fd = await req.formData(); token = String(fd.get("token") || ""); action = String(fd.get("action") || ""); }
+    } catch { return redirect("invalid"); }
     if (!/^[0-9a-f-]{36}$/i.test(token) || (action !== "confirm" && action !== "decline")) return redirect("invalid");
 
     const { data: bk } = await admin.from("devries_bookings").select("*").eq("token", token).single();
