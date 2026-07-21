@@ -5,12 +5,19 @@
 //   POST /booking       → speichert Anfrage (status=pending), mailt Inhaber (Bestätigen/Ablehnen)
 //   GET  /confirm?token=…&action=confirm|decline → setzt Status, zeigt HTML-Seite
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
-const RESEND_FROM    = Deno.env.get("RESEND_FROM") || "de Vries <onboarding@resend.dev>";
-const OWNER_EMAIL    = Deno.env.get("OWNER_EMAIL") || "tolunayusul@gmail.com";
+// Mailversand ueber den SMTP-Server des eigenen Postfachs (kein Drittanbieter).
+// Diese Werte als Supabase-Secrets setzen; SMTP_PASS ist das Postfach-Passwort.
+const SMTP_HOST      = Deno.env.get("SMTP_HOST") || "";
+const SMTP_PORT      = Number(Deno.env.get("SMTP_PORT") || "465");
+const SMTP_USER      = Deno.env.get("SMTP_USER") || "";
+const SMTP_PASS      = Deno.env.get("SMTP_PASS") || "";
+const MAIL_FROM      = Deno.env.get("MAIL_FROM") || "info@andreasdevries.de";
+const MAIL_FROM_NAME = Deno.env.get("MAIL_FROM_NAME") || "de Vries";
+const OWNER_EMAIL    = Deno.env.get("OWNER_EMAIL") || "info@andreasdevries.de";
 const SITE_URL       = Deno.env.get("SITE_URL") || "https://chaos20140.github.io/de-vries-website";
 const REPLY_TO       = Deno.env.get("REPLY_TO") || "info@andreasdevries.de";
 
@@ -60,66 +67,117 @@ function page(title: string, msg: string, ok = true) {
   );
 }
 
+// ---- E-Mail-Design (markensicher: Tabellen + Inline-Styles, keine Webfonts) ----
+const M_BG = "#faf6f0", M_INK = "#1c1714", M_RED = "#d7120a", M_MUTED = "#8a7f74", M_GREEN = "#3b932b";
+const M_SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif";
+const M_SERIF = "Georgia,'Times New Roman',serif";
+
+function mailRow(label: string, valueSafe: string): string {
+  return `<tr>`
+    + `<td style="padding:11px 0;border-bottom:1px solid rgba(28,23,20,.07);font-family:${M_SANS};font-size:14px;color:${M_MUTED};">${esc(label)}</td>`
+    + `<td style="padding:11px 0;border-bottom:1px solid rgba(28,23,20,.07);font-family:${M_SANS};font-size:14px;color:${M_INK};font-weight:700;text-align:right;">${valueSafe}</td>`
+    + `</tr>`;
+}
+function mailCard(rowsHtml: string): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${M_BG};border-radius:12px;">`
+    + `<tr><td style="padding:4px 18px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rowsHtml}</table></td></tr></table>`;
+}
+// Rahmen mit Kopfbalken, Logo, Eyebrow und Fuss; inner = eigentlicher Inhalt.
+function mailDoc(preheader: string, eyebrow: string, eyebrowColor: string, inner: string): string {
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"></head>`
+    + `<body style="margin:0;padding:0;background:${M_BG};">`
+    + `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(preheader)}</div>`
+    + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${M_BG};"><tr><td align="center" style="padding:30px 14px;">`
+    + `<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid rgba(28,23,20,.10);border-radius:18px;overflow:hidden;">`
+    + `<tr><td style="background:${M_RED};height:5px;line-height:5px;font-size:5px;">&nbsp;</td></tr>`
+    + `<tr><td style="padding:26px 32px 0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>`
+    + `<td style="width:46px;"><div style="width:46px;height:46px;border-radius:11px;background:${M_RED};color:#ffffff;font-family:${M_SERIF};font-weight:bold;font-size:20px;line-height:46px;text-align:center;letter-spacing:1px;">dV</div></td>`
+    + `<td style="padding-left:12px;font-family:${M_SERIF};font-size:20px;font-weight:bold;color:${M_INK};letter-spacing:.4px;">de Vries</td>`
+    + `</tr></table></td></tr>`
+    + `<tr><td style="padding:22px 32px 0;"><p style="margin:0 0 6px;font-family:${M_SANS};font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:${eyebrowColor};">${esc(eyebrow)}</p></td></tr>`
+    + inner
+    + `<tr><td style="padding:24px 32px 30px;border-top:1px solid rgba(28,23,20,.08);"><p style="margin:0;font-family:${M_SANS};font-size:12px;line-height:1.7;color:#9a8f84;">de Vries &middot; An den Flachsrotten 2 &middot; 31020 Salzhemmendorf<br>Tel. 05153 1552 &middot; info@andreasdevries.de</p></td></tr>`
+    + `</table>`
+    + `<p style="margin:14px 0 0;font-family:${M_SANS};font-size:11px;color:#b3a99e;">Seniorenbetreuung &amp; Haushaltshilfe in Salzhemmendorf</p>`
+    + `</td></tr></table></body></html>`;
+}
+
+// Zentraler Versand ueber SMTP (denomailer). Gibt true/false zurueck; wirft nie
+// (eine fehlgeschlagene Mail darf die Buchung nicht verhindern).
+async function sendMail(to: string, subject: string, html: string, replyTo?: string): Promise<boolean> {
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return false; // SMTP noch nicht konfiguriert
+  subject = subject.replace(/[\r\n]+/g, " ").slice(0, 200); // Header-Injection im Betreff verhindern
+  const client = new SMTPClient({
+    connection: {
+      hostname: SMTP_HOST,
+      port: SMTP_PORT,
+      tls: SMTP_PORT === 465,               // 465 = direktes TLS; 587 = STARTTLS
+      auth: { username: SMTP_USER, password: SMTP_PASS },
+    },
+  });
+  try {
+    await client.send({
+      from: `${MAIL_FROM_NAME} <${MAIL_FROM}>`,
+      to,
+      replyTo: replyTo || MAIL_FROM,
+      subject,
+      html,
+      content: "auto",                        // Klartext-Fallback automatisch aus dem HTML
+    });
+    await client.close();
+    return true;
+  } catch (_e) {
+    try { await client.close(); } catch { /* ignore */ }
+    return false;
+  }
+}
+
 async function mailOwner(b: Record<string, string>) {
-  if (!RESEND_API_KEY) return false;
+  if (!SMTP_HOST) return false;
   // Links fuehren auf eine Bestaetigungs-Zwischenseite; die eigentliche Aktion loest
   // erst ein bewusster Klick dort per POST aus (kein Auto-Confirm durch Mail-Scanner/Prefetch).
   const confirm = `${SITE_URL}/termin-bestaetigen.html?token=${b.token}&action=confirm`;
   const decline = `${SITE_URL}/termin-bestaetigen.html?token=${b.token}&action=decline`;
-  const body = `
-<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:auto;color:#1c1714">
-  <h2 style="color:#d7120a;margin:0 0 1rem">Neue Terminanfrage</h2>
-  <table style="width:100%;border-collapse:collapse;font-size:15px">
-    <tr><td style="padding:8px 0;color:#756a60">Leistung</td><td style="padding:8px 0;font-weight:700;text-align:right">${esc(b.service)}</td></tr>
-    <tr><td style="padding:8px 0;color:#756a60">Datum</td><td style="padding:8px 0;font-weight:700;text-align:right">${esc(b.appt_date_de)}</td></tr>
-    <tr><td style="padding:8px 0;color:#756a60">Uhrzeit</td><td style="padding:8px 0;font-weight:700;text-align:right">${esc(b.appt_time)} Uhr</td></tr>
-    <tr><td style="padding:8px 0;color:#756a60">Name</td><td style="padding:8px 0;font-weight:700;text-align:right">${esc(b.name)}</td></tr>
-    <tr><td style="padding:8px 0;color:#756a60">Telefon</td><td style="padding:8px 0;font-weight:700;text-align:right">${esc(b.phone)}</td></tr>
-    <tr><td style="padding:8px 0;color:#756a60">E-Mail</td><td style="padding:8px 0;font-weight:700;text-align:right">${esc(b.email)}</td></tr>
-  </table>
-  ${b.message ? `<p style="background:#f1e9de;padding:12px 14px;border-radius:10px;margin:1rem 0"><strong>Nachricht:</strong><br>${esc(b.message)}</p>` : ""}
-  <div style="margin:1.8rem 0;text-align:center">
-    <a href="${confirm}" style="display:inline-block;background:#d7120a;color:#fff;text-decoration:none;font-weight:700;padding:14px 26px;border-radius:999px;margin:6px">✅ Bestätigen</a>
-    <a href="${decline}" style="display:inline-block;background:#fff;color:#1c1714;text-decoration:none;font-weight:700;padding:14px 26px;border-radius:999px;border:1px solid #ccc;margin:6px">❌ Ablehnen</a>
-  </div>
-  <p style="font-size:12px;color:#999;text-align:center">Erst nach „Bestätigen" wird der Zeit-Slot auf der Website gesperrt.</p>
-</div>`;
-  try {
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: RESEND_FROM, to: [OWNER_EMAIL], subject: `Neue Terminanfrage: ${b.service} am ${b.appt_date_de} ${b.appt_time}`, html: body }),
-    });
-    return r.ok;
-  } catch { return false; }
+  const details = mailCard(
+    mailRow("Leistung", esc(b.service))
+    + mailRow("Datum", esc(b.appt_date_de))
+    + mailRow("Uhrzeit", esc(b.appt_time) + " Uhr")
+    + mailRow("Name", esc(b.name))
+    + mailRow("Telefon", esc(b.phone))
+    + mailRow("E-Mail", esc(b.email)),
+  );
+  const msgBlock = b.message
+    ? `<tr><td style="padding:14px 32px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6ede1;border-radius:12px;"><tr><td style="padding:14px 18px;font-family:${M_SANS};font-size:14px;line-height:1.55;color:#4a423c;"><strong style="color:${M_INK};">Nachricht</strong><br>${esc(b.message).replace(/\n/g, "<br>")}</td></tr></table></td></tr>`
+    : "";
+  const inner = `<tr><td style="padding:2px 32px 0;"><h1 style="margin:0;font-family:${M_SERIF};font-weight:normal;font-size:23px;line-height:1.3;color:${M_INK};">Ein Termin wartet auf Ihre Bestätigung</h1></td></tr>`
+    + `<tr><td style="padding:18px 32px 0;">${details}</td></tr>`
+    + msgBlock
+    + `<tr><td style="padding:24px 32px 4px;" align="center"><table role="presentation" cellpadding="0" cellspacing="0"><tr>`
+    + `<td style="padding:0 6px;"><a href="${confirm}" style="display:inline-block;background:${M_RED};color:#ffffff;text-decoration:none;font-family:${M_SANS};font-weight:700;font-size:14px;padding:13px 28px;border-radius:999px;">Bestätigen</a></td>`
+    + `<td style="padding:0 6px;"><a href="${decline}" style="display:inline-block;background:#ffffff;color:${M_INK};text-decoration:none;font-family:${M_SANS};font-weight:700;font-size:14px;padding:12px 27px;border:1px solid rgba(28,23,20,.2);border-radius:999px;">Ablehnen</a></td>`
+    + `</tr></table></td></tr>`
+    + `<tr><td style="padding:14px 32px 8px;" align="center"><p style="margin:0;font-family:${M_SANS};font-size:12px;color:#9a8f84;">Erst nach dem Bestätigen wird der Zeit-Slot auf der Website gesperrt.</p></td></tr>`;
+  const body = mailDoc(`Neue Terminanfrage von ${b.name} – ${b.appt_date_de}, ${b.appt_time} Uhr`, "Neue Terminanfrage", M_RED, inner);
+  return await sendMail(OWNER_EMAIL, `Neue Terminanfrage: ${b.service} am ${b.appt_date_de} ${b.appt_time}`, body);
 }
 
-// Bestätigungs-Mail an den Kunden (nach „Bestätigen"). Funktioniert nur mit
-// verifizierter Resend-Absender-Domain (RESEND_FROM); sonst lehnt Resend den
-// Versand an fremde Adressen ab → Bestätigung läuft trotzdem durch.
+// Bestätigungs-Mail an den Kunden (nach „Bestätigen"). Versand nur, wenn SMTP
+// konfiguriert ist; schlägt der Versand fehl, läuft die Bestätigung trotzdem durch.
 async function mailCustomer(b: Record<string, string>) {
-  if (!RESEND_API_KEY) return false;
-  const body = `
-<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:auto;color:#1c1714">
-  <div style="width:46px;height:46px;border-radius:9px;background:#d7120a;color:#fff;font-weight:800;font-size:20px;line-height:46px;text-align:center;letter-spacing:1px">DV</div>
-  <h2 style="margin:1rem 0 .5rem">Ihr Termin ist bestätigt ✅</h2>
-  <p style="color:#4a423c;line-height:1.6;margin:0 0 1rem">Guten Tag ${esc(b.name)},<br>vielen Dank für Ihre Anfrage – wir freuen uns, Ihren Wunschtermin zu bestätigen:</p>
-  <table style="width:100%;border-collapse:collapse;font-size:15px;background:#faf6f0;border-radius:12px;overflow:hidden">
-    <tr><td style="padding:12px 14px;color:#756a60">Leistung</td><td style="padding:12px 14px;font-weight:700;text-align:right">${esc(b.service)}</td></tr>
-    <tr><td style="padding:12px 14px;color:#756a60">Datum</td><td style="padding:12px 14px;font-weight:700;text-align:right">${esc(b.appt_date_de)}</td></tr>
-    <tr><td style="padding:12px 14px;color:#756a60">Uhrzeit</td><td style="padding:12px 14px;font-weight:700;text-align:right">${esc(b.appt_time)} Uhr</td></tr>
-  </table>
-  <p style="color:#4a423c;line-height:1.6;margin:1.2rem 0 0">Müssen Sie den Termin verschieben oder absagen? Melden Sie sich gerne unter <strong>05153 - 1552</strong> oder ${esc(REPLY_TO)}.</p>
-  <p style="color:#4a423c;line-height:1.6;margin:1rem 0 0">Herzliche Grüße<br><strong>Ihr de Vries Team</strong><br><span style="color:#756a60">An den Flachsrotten 2 · 31020 Salzhemmendorf</span></p>
-</div>`;
-  try {
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: RESEND_FROM, to: [b.email], reply_to: REPLY_TO, subject: `Ihr Termin bei de Vries ist bestätigt – ${b.appt_date_de}, ${b.appt_time} Uhr`, html: body }),
-    });
-    return r.ok;
-  } catch { return false; }
+  if (!SMTP_HOST) return false;
+  const details = mailCard(
+    mailRow("Leistung", esc(b.service))
+    + mailRow("Datum", esc(b.appt_date_de))
+    + mailRow("Uhrzeit", esc(b.appt_time) + " Uhr"),
+  );
+  const inner = `<tr><td style="padding:6px 32px 0;"><div style="width:50px;height:50px;border-radius:50%;background:#e7f4e3;color:${M_GREEN};font-size:26px;line-height:50px;text-align:center;">&#10003;</div></td></tr>`
+    + `<tr><td style="padding:16px 32px 0;"><h1 style="margin:0 0 10px;font-family:${M_SERIF};font-weight:normal;font-size:24px;line-height:1.3;color:${M_INK};">Ihr Termin steht fest</h1>`
+    + `<p style="margin:0;font-family:${M_SANS};font-size:15px;line-height:1.6;color:#4a423c;">Guten Tag ${esc(b.name)},<br>vielen Dank für Ihre Anfrage – wir freuen uns, Ihren Wunschtermin zu bestätigen.</p></td></tr>`
+    + `<tr><td style="padding:18px 32px 0;">${details}</td></tr>`
+    + `<tr><td style="padding:18px 32px 0;"><p style="margin:0;font-family:${M_SANS};font-size:14px;line-height:1.65;color:#4a423c;">Müssen Sie den Termin verschieben oder absagen? Melden Sie sich gern unter <a href="tel:051531552" style="color:${M_RED};text-decoration:none;font-weight:700;">05153 1552</a> oder <a href="mailto:${esc(REPLY_TO)}" style="color:${M_RED};text-decoration:none;font-weight:700;">${esc(REPLY_TO)}</a>.</p></td></tr>`
+    + `<tr><td style="padding:18px 32px 4px;"><p style="margin:0;font-family:${M_SANS};font-size:15px;line-height:1.6;color:#4a423c;">Herzliche Grüße<br><strong style="color:${M_INK};">Ihr de Vries Team</strong></p></td></tr>`;
+  const body = mailDoc(`Ihr Termin bei de Vries ist bestätigt – ${b.appt_date_de}, ${b.appt_time} Uhr`, "Termin bestätigt", M_GREEN, inner);
+  return await sendMail(b.email, `Ihr Termin bei de Vries ist bestätigt – ${b.appt_date_de}, ${b.appt_time} Uhr`, body, REPLY_TO);
 }
 
 Deno.serve(async (req) => {
