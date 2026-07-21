@@ -9,9 +9,11 @@ const has = (o: Record<string, unknown>, k: string): boolean => Object.prototype
 
 // CORS auf die echte Editor-Domain beschränken (per Env überschreibbar). Auth läuft ohnehin über
 // das Passwort im Body (keine Cookies), aber so kann kein fremder Origin die Antworten auslesen.
-const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "https://chaos20140.github.io";
+// Erlaubte Editor-Ursprünge (kommagetrennt per Env ALLOWED_ORIGINS überschreibbar). Die Antwort
+// spiegelt pro Request den passenden Origin aus dieser Liste zurück (exakter Match); Standard = erster.
+const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "https://andreasdevries.de,https://www.andreasdevries.de,https://chaos20140.github.io").split(",").map((s) => s.trim()).filter(Boolean);
 const CORS = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+  "Access-Control-Allow-Origin": ALLOWED_ORIGINS[0],
   "Vary": "Origin",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -177,6 +179,14 @@ function replaceZoneInner(html: string, zone: string, inner: string): string | n
 }
 
 Deno.serve(async (req) => {
+  const res = await handle(req);
+  // CORS: den konkreten Origin zurückspiegeln, wenn er in der Allowlist steht (sonst Standard).
+  const origin = req.headers.get("Origin") || "";
+  if (origin && ALLOWED_ORIGINS.includes(origin)) res.headers.set("Access-Control-Allow-Origin", origin);
+  return res;
+});
+
+async function handle(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "method" }, 405);
   if (!GH_TOKEN || !EDIT_PW) return json({ error: "not_configured" }, 503);
@@ -629,7 +639,7 @@ Deno.serve(async (req) => {
         const sm = await getFile("sitemap.xml");
         let sitemap = sm.text;
         if (sitemap.indexOf("/" + file + "<") < 0 && sitemap.indexOf("</urlset>") >= 0) {
-          const entry = "  <url>\n    <loc>https://chaos20140.github.io/de-vries-website/" + file + "</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n";
+          const entry = "  <url>\n    <loc>https://andreasdevries.de/" + file + "</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n";
           sitemap = sitemap.replace("</urlset>", entry + "</urlset>");
           files.push({ path: "sitemap.xml", contentB64: utf8B64(sitemap) });
         }
@@ -742,7 +752,7 @@ Deno.serve(async (req) => {
         const sm = await getFile("sitemap.xml");
         let sitemap = sm.text;
         if (sitemap.indexOf("/" + file + "<") < 0 && sitemap.indexOf("</urlset>") >= 0) {
-          const entry = "  <url>\n    <loc>https://chaos20140.github.io/de-vries-website/" + file + "</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n";
+          const entry = "  <url>\n    <loc>https://andreasdevries.de/" + file + "</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n";
           sitemap = sitemap.replace("</urlset>", entry + "</urlset>");
           files.push({ path: "sitemap.xml", contentB64: utf8B64(sitemap) });
         }
@@ -782,4 +792,4 @@ Deno.serve(async (req) => {
   } catch (_e) {
     return json({ error: "server_error" }, 500);
   }
-});
+}
