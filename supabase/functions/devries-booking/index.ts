@@ -5,7 +5,6 @@
 //   POST /booking       → speichert Anfrage (status=pending), mailt Inhaber (Bestätigen/Ablehnen)
 //   GET  /confirm?token=…&action=confirm|decline → setzt Status, zeigt HTML-Seite
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -102,33 +101,72 @@ function mailDoc(preheader: string, eyebrow: string, eyebrowColor: string, inner
     + `</td></tr></table></body></html>`;
 }
 
-// Zentraler Versand ueber SMTP (denomailer). Gibt true/false zurueck; wirft nie
-// (eine fehlgeschlagene Mail darf die Buchung nicht verhindern).
+// Base64 fuer beliebige Bytes (chunked, ohne Call-Stack-Limit).
+function b64(bytes: Uint8Array): string {
+  let bin = "";
+  const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode(...bytes.subarray(i, i + CH));
+  return btoa(bin);
+}
+const cleanAddr = (s: string) => s.replace(/[\r\n<>]/g, "").trim();
+
+// Mailversand ueber direktes SMTP (implizites TLS, Port 465). Die Nachricht wird SELBST
+// als EIN base64-kodierter HTML-Teil gebaut -> rendert zuverlaessig in jedem Client
+// (inkl. Strato-Webmail). Gibt true/false zurueck; wirft nie (Buchung laeuft trotzdem).
 async function sendMail(to: string, subject: string, html: string, replyTo?: string): Promise<boolean> {
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return false; // SMTP noch nicht konfiguriert
   subject = subject.replace(/[\r\n]+/g, " ").slice(0, 200); // Header-Injection im Betreff verhindern
-  const client = new SMTPClient({
-    connection: {
-      hostname: SMTP_HOST,
-      port: SMTP_PORT,
-      tls: SMTP_PORT === 465,               // 465 = direktes TLS; 587 = STARTTLS
-      auth: { username: SMTP_USER, password: SMTP_PASS },
-    },
-  });
+  const rcpt = cleanAddr(to);
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  let conn: Deno.TlsConn | null = null;
+  const timer = setTimeout(() => { try { conn?.close(); } catch { /* */ } }, 20000); // Hard-Timeout gegen Haenger
+  async function reply(): Promise<number> {
+    let data = "";
+    const buf = new Uint8Array(2048);
+    while (true) {
+      const n = await conn!.read(buf);
+      if (n === null) break;
+      data += dec.decode(buf.subarray(0, n));
+      const lines = data.split("\n").map((l) => l.replace(/\r$/, "")).filter(Boolean);
+      const last = lines[lines.length - 1];
+      if (last && /^\d{3} /.test(last)) return parseInt(last.slice(0, 3), 10); // Abschlusszeile erreicht
+    }
+    return 0;
+  }
+  const line = (s: string) => conn!.write(enc.encode(s + "\r\n"));
   try {
-    await client.send({
-      from: `${MAIL_FROM_NAME} <${MAIL_FROM}>`,
-      to,
-      replyTo: replyTo || MAIL_FROM,
-      subject,
-      html,
-      content: "auto",                        // Klartext-Fallback automatisch aus dem HTML
-    });
-    await client.close();
+    conn = await Deno.connectTls({ hostname: SMTP_HOST, port: SMTP_PORT });
+    if (await reply() !== 220) throw 0;
+    await line("EHLO andreasdevries.de"); if (await reply() !== 250) throw 0;
+    await line("AUTH LOGIN"); if (await reply() !== 334) throw 0;
+    await line(b64(enc.encode(SMTP_USER))); if (await reply() !== 334) throw 0;
+    await line(b64(enc.encode(SMTP_PASS))); if (await reply() !== 235) throw 0;
+    await line(`MAIL FROM:<${MAIL_FROM}>`); if (await reply() !== 250) throw 0;
+    await line(`RCPT TO:<${rcpt}>`); if (await reply() !== 250) throw 0;
+    await line("DATA"); if (await reply() !== 354) throw 0;
+    const bodyB64 = b64(enc.encode(html)).replace(/.{76}/g, "$&\r\n");   // Zeilen <= 76 Zeichen
+    const subjEnc = "=?UTF-8?B?" + b64(enc.encode(subject)) + "?=";       // Betreff RFC-2047-kodiert
+    let msg =
+      `From: ${MAIL_FROM_NAME} <${MAIL_FROM}>\r\n` +
+      `To: <${rcpt}>\r\n` +
+      `Reply-To: <${cleanAddr(replyTo || MAIL_FROM)}>\r\n` +
+      `Subject: ${subjEnc}\r\n` +
+      `Date: ${new Date().toUTCString()}\r\n` +
+      `MIME-Version: 1.0\r\n` +
+      `Content-Type: text/html; charset="utf-8"\r\n` +
+      `Content-Transfer-Encoding: base64\r\n\r\n` +
+      bodyB64;
+    msg = msg.replace(/\r\n\./g, "\r\n..");                               // Dot-Stuffing (RFC 5321)
+    await conn.write(enc.encode(msg + "\r\n.\r\n"));
+    if (await reply() !== 250) throw 0;
+    await line("QUIT");
+    conn.close();
     return true;
   } catch (_e) {
-    try { await client.close(); } catch { /* ignore */ }
+    try { conn?.close(); } catch { /* ignore */ }
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
