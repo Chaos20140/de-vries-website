@@ -53,7 +53,7 @@
     var M = {
       "confirmed":        ["ok", "✓", "Termin bestätigt", "Der Termin ist bestätigt – der Zeit-Slot ist jetzt auf der Website gesperrt."],
       "declined":         ["no", "✕", "Termin abgelehnt", "Die Anfrage wurde abgelehnt. Der Zeit-Slot bleibt frei."],
-      "already-confirmed":["ok", "✓", "Bereits bestätigt", "Dieser Termin war bereits bestätigt."],
+      "already-confirmed":["ok", "✓", "Bereits bestätigt", "Dieser Termin ist bestätigt. Sie können ihn hier in Ihren Kalender eintragen."],
       "already-declined": ["neutral", "–", "Bereits abgelehnt", "Diese Anfrage war bereits abgelehnt."],
       "taken":            ["no", "!", "Termin nicht mehr verfügbar", "Dieser Zeit-Slot ist inzwischen belegt – für diese Uhrzeit wurde bereits ein anderer Termin bestätigt. Bitte bieten Sie dem Kunden einen anderen freien Termin an."],
       "notfound":         ["no", "!", "Nicht gefunden", "Diese Terminanfrage wurde nicht gefunden (evtl. bereits bearbeitet oder gelöscht)."],
@@ -66,9 +66,9 @@
     document.getElementById("title").textContent = m[2];
     document.getElementById("msg").textContent = m[3];
     document.title = m[2] + " – de Vries";
-    // Bei bestätigtem Termin: Kalender-Eintrag (.ics) anbieten
+    // Bei bestätigtem Termin (frisch ODER bereits zuvor bestätigt): Kalender-Eintrag (.ics) anbieten
     var id = (new URLSearchParams(location.search).get("id") || "").trim();
-    if (s === "confirmed" && /^[0-9a-f-]{36}$/i.test(id)) {
+    if ((s === "confirmed" || s === "already-confirmed") && /^[0-9a-f-]{36}$/i.test(id)) {
       var cal = document.getElementById("cal");
       cal.href = "https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-booking/ics?id=" + encodeURIComponent(id);
       cal.classList.remove("hidden");

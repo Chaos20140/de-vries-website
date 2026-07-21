@@ -30,8 +30,9 @@
   .btn--go:hover{box-shadow:0 14px 34px -12px rgba(215,18,10,.5)}
   .btn--sec{background:transparent;color:var(--muted);font-weight:600;font-size:.9rem;padding:.5em 1em}
   .btn--sec:hover{color:var(--ink)}
-  .home{display:inline-flex;align-items:center;gap:.5em;margin-top:2rem;padding:.9em 1.6em;border-radius:999px;background:var(--red);color:#fff;text-decoration:none;font-weight:700;font-size:.95rem;transition:transform .2s,box-shadow .3s}
-  .home:hover{transform:translateY(-2px);box-shadow:0 14px 34px -12px rgba(215,18,10,.5)}
+  .acts{margin-top:2rem;display:flex;flex-direction:column;gap:.7rem;align-items:center}
+  .btn--ghost{background:transparent;color:var(--muted);border:1px solid var(--line);font-weight:600}
+  .btn--ghost:hover{color:var(--ink);box-shadow:none;transform:translateY(-1px)}
   .note{margin-top:1.6rem;font-size:.82rem;color:var(--muted);opacity:.85;max-width:34ch;margin-left:auto;margin-right:auto}
   .hidden{display:none}
 </style>
@@ -49,9 +50,15 @@
       <a class="btn btn--sec" href="index.html">Abbrechen</a>
     </form>
     <p class="note hidden" id="note">Zur Sicherheit lösen Sie die Aktion hier per Klick aus – automatische E-Mail-Scanner können so nichts mehr auslösen.</p>
-    <a class="home hidden" id="home" href="index.html">Zur Startseite
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
-    </a>
+    <div class="acts hidden" id="acts">
+      <a class="btn btn--go cal hidden" id="cal" href="#">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        In Kalender eintragen
+      </a>
+      <a class="btn btn--go" id="home" href="index.html">Zur Startseite
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
+      </a>
+    </div>
   </div>
 <script>
   (function () {
@@ -64,14 +71,14 @@
     var msg = document.getElementById("msg");
     var form = document.getElementById("form");
     var note = document.getElementById("note");
-    var home = document.getElementById("home");
+    var acts = document.getElementById("acts");
 
     function state(cls, sym, t, m) {
       mark.className = "mark " + cls; mark.textContent = sym;
       title.textContent = t; msg.textContent = m;
       document.title = t + " – de Vries";
     }
-    function showResult(cls, sym, t, m) { state(cls, sym, t, m); home.classList.remove("hidden"); }
+    function showResult(cls, sym, t, m) { state(cls, sym, t, m); acts.classList.remove("hidden"); }
 
     var valid = /^[0-9a-f-]{36}$/i.test(token) && (action === "confirm" || action === "decline");
     if (!valid) { showResult("no", "!", "Ungültiger Link", "Dieser Bestätigungslink ist ungültig oder unvollständig."); return; }
@@ -95,7 +102,13 @@
     fetch(BASE + "/status?token=" + encodeURIComponent(token))
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        if (d.status === "confirmed") showResult("ok", "✓", "Bereits bestätigt", "Dieser Termin wurde bereits bestätigt – Sie müssen nichts weiter tun.");
+        if (d.status === "confirmed") {
+          showResult("ok", "✓", "Bereits bestätigt", "Dieser Termin ist bestätigt. Sie können ihn hier direkt in Ihren Kalender eintragen.");
+          var cal = document.getElementById("cal");
+          cal.href = BASE + "/ics?token=" + encodeURIComponent(token);
+          cal.classList.remove("hidden");
+          document.getElementById("home").className = "btn btn--ghost"; // Startseite wird sekundaer
+        }
         else if (d.status === "declined") showResult("no", "–", "Bereits abgelehnt", "Diese Terminanfrage wurde bereits abgelehnt.");
         else if (d.status === "notfound" || d.status === "invalid") showResult("no", "!", "Nicht gefunden", "Diese Terminanfrage wurde nicht gefunden (evtl. bereits bearbeitet oder gelöscht).");
         else showForm(); // pending

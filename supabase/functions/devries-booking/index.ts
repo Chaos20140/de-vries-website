@@ -369,11 +369,19 @@ Deno.serve(async (req) => {
     return json({ status: bk ? bk.status : "notfound" });
   }
 
-  // ---- Kalender-Datei (.ics) fuer einen BESTAETIGTEN Termin (per unratbarer id) ----
+  // ---- Kalender-Datei (.ics) fuer einen BESTAETIGTEN Termin ----
+  // Zugriff per unratbarer id ODER per geheimem token. Beide sind unratbare UUIDs;
+  // wer das token hat, ist der Inhaber (hat es per Mail bekommen) und darf den Termin
+  // ohnehin einsehen -> kein neuer Informationsabfluss. Nur bestaetigte Termine.
   if (path === "/ics" && req.method === "GET") {
-    const id = url.searchParams.get("id") || "";
-    if (!/^[0-9a-f-]{36}$/i.test(id)) return new Response("not_found", { status: 404, headers: CORS });
-    const { data: bk } = await admin.from("devries_bookings").select("*").eq("id", id).eq("status", "confirmed").single();
+    const id = (url.searchParams.get("id") || "").trim();
+    const token = (url.searchParams.get("token") || "").trim();
+    const byId = /^[0-9a-f-]{36}$/i.test(id);
+    const byToken = /^[0-9a-f-]{36}$/i.test(token);
+    if (!byId && !byToken) return new Response("not_found", { status: 404, headers: CORS });
+    let q = admin.from("devries_bookings").select("*").eq("status", "confirmed");
+    q = byId ? q.eq("id", id) : q.eq("token", token);
+    const { data: bk } = await q.single();
     if (!bk) return new Response("not_found", { status: 404, headers: CORS });
     return new Response(icsFor(bk), {
       status: 200,
@@ -405,7 +413,11 @@ Deno.serve(async (req) => {
 
     const { data: bk } = await admin.from("devries_bookings").select("*").eq("token", token).single();
     if (!bk) return redirect("notfound");
-    if (bk.status !== "pending") return redirect(bk.status === "confirmed" ? "already-confirmed" : "already-declined");
+    // schon bearbeitet: bei "confirmed" die id mitgeben, damit die Statusseite den Kalender-Knopf anbieten kann
+    if (bk.status !== "pending") {
+      if (bk.status === "confirmed") return new Response(null, { status: 302, headers: { ...CORS, "Location": `${SITE_URL}/termin-status.html?s=already-confirmed&id=${bk.id}` } });
+      return redirect("already-declined");
+    }
 
     if (action === "confirm") {
       const { data: taken } = await admin.from("devries_bookings")
