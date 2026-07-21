@@ -19,6 +19,7 @@ const MAIL_FROM_NAME = Deno.env.get("MAIL_FROM_NAME") || "de Vries";
 const OWNER_EMAIL    = Deno.env.get("OWNER_EMAIL") || "info@andreasdevries.de";
 const SITE_URL       = Deno.env.get("SITE_URL") || "https://chaos20140.github.io/de-vries-website";
 const REPLY_TO       = Deno.env.get("REPLY_TO") || "info@andreasdevries.de";
+const FN_BASE        = `${SUPABASE_URL}/functions/v1/devries-booking`; // fuer den .ics-Kalenderlink
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
@@ -47,6 +48,27 @@ function fmtDate(iso: string) {
   const d = new Date(iso + "T00:00:00");
   if (isNaN(d.getTime())) return iso;
   return `${WD[d.getDay()]}. ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+// ---- Kalender (.ics) ----
+const icsEsc = (s: unknown) => String(s ?? "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+function icsFor(bk: Record<string, string>): string {
+  const d = String(bk.appt_date).replace(/-/g, "");                 // 20271015
+  const sh = String(bk.appt_time).slice(0, 2), sm = String(bk.appt_time).slice(3, 5);
+  const eh = String(Number(sh) + 1).padStart(2, "0");               // +1h Termindauer
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  return [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//de Vries//Termin//DE", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${icsEsc(bk.id)}@andreasdevries.de`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART:${d}T${sh}${sm}00`,
+    `DTEND:${d}T${eh}${sm}00`,
+    `SUMMARY:de Vries – ${icsEsc(bk.service)}`,
+    "LOCATION:An den Flachsrotten 2\\, 31020 Salzhemmendorf",
+    `DESCRIPTION:${icsEsc("Termin bei de Vries.\nLeistung: " + bk.service + "\nName: " + bk.name + "\nTelefon: " + bk.phone)}`,
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
 }
 
 function page(title: string, msg: string, ok = true) {
@@ -212,6 +234,7 @@ async function mailCustomer(b: Record<string, string>) {
     + `<tr><td style="padding:16px 32px 0;"><h1 style="margin:0 0 10px;font-family:${M_SERIF};font-weight:normal;font-size:24px;line-height:1.3;color:${M_INK};">Ihr Termin steht fest</h1>`
     + `<p style="margin:0;font-family:${M_SANS};font-size:15px;line-height:1.6;color:#4a423c;">Guten Tag ${esc(b.name)},<br>vielen Dank für Ihre Anfrage – wir freuen uns, Ihren Wunschtermin zu bestätigen.</p></td></tr>`
     + `<tr><td style="padding:18px 32px 0;">${details}</td></tr>`
+    + `<tr><td style="padding:20px 32px 0;" align="center"><a href="${FN_BASE}/ics?id=${b.id}" style="display:inline-block;white-space:nowrap;background:${M_RED};color:#ffffff;text-decoration:none;font-family:${M_SANS};font-weight:700;font-size:14px;padding:12px 28px;border-radius:999px;">&#128197;&nbsp; Zum Kalender hinzufügen</a></td></tr>`
     + `<tr><td style="padding:18px 32px 0;"><p style="margin:0;font-family:${M_SANS};font-size:14px;line-height:1.65;color:#4a423c;">Müssen Sie den Termin verschieben oder absagen? Melden Sie sich gern unter <a href="tel:051531552" style="color:${M_RED};text-decoration:none;font-weight:700;">05153 1552</a> oder <a href="mailto:${esc(REPLY_TO)}" style="color:${M_RED};text-decoration:none;font-weight:700;">${esc(REPLY_TO)}</a>.</p></td></tr>`
     + `<tr><td style="padding:18px 32px 4px;"><p style="margin:0;font-family:${M_SANS};font-size:15px;line-height:1.6;color:#4a423c;">Herzliche Grüße<br><strong style="color:${M_INK};">Ihr de Vries Team</strong></p></td></tr>`;
   const body = mailDoc(`Ihr Termin bei de Vries ist bestätigt – ${b.appt_date_de}, ${b.appt_time} Uhr`, "Termin bestätigt", M_GREEN, inner);
@@ -296,6 +319,18 @@ Deno.serve(async (req) => {
     return json({ status: bk ? bk.status : "notfound" });
   }
 
+  // ---- Kalender-Datei (.ics) fuer einen BESTAETIGTEN Termin (per unratbarer id) ----
+  if (path === "/ics" && req.method === "GET") {
+    const id = url.searchParams.get("id") || "";
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return new Response("not_found", { status: 404, headers: CORS });
+    const { data: bk } = await admin.from("devries_bookings").select("*").eq("id", id).eq("status", "confirmed").single();
+    if (!bk) return new Response("not_found", { status: 404, headers: CORS });
+    return new Response(icsFor(bk), {
+      status: 200,
+      headers: { ...CORS, "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": 'attachment; filename="termin-de-vries.ics"' },
+    });
+  }
+
   // ---- Bestätigen / Ablehnen (per geheimem Token) ----
   // GET aendert NICHTS: Mail-Prefetch/Sicherheits-Scanner rufen Links automatisch per GET auf.
   // Deshalb leitet GET nur auf die Bestaetigungsseite; die Aktion laeuft ausschliesslich per POST.
@@ -326,7 +361,8 @@ Deno.serve(async (req) => {
       if (taken && taken.length) return redirect("taken");
       await admin.from("devries_bookings").update({ status: "confirmed" }).eq("id", bk.id);
       await mailCustomer(bk);
-      return redirect("confirmed");
+      // mit id -> die Bestaetigt-Seite kann den Kalender-Eintrag (.ics) anbieten
+      return new Response(null, { status: 302, headers: { ...CORS, "Location": `${SITE_URL}/termin-status.html?s=confirmed&id=${bk.id}` } });
     } else {
       await admin.from("devries_bookings").update({ status: "declined" }).eq("id", bk.id);
       return redirect("declined");
