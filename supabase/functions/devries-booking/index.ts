@@ -90,7 +90,7 @@ function mailDoc(preheader: string, eyebrow: string, eyebrowColor: string, inner
     + `<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid rgba(28,23,20,.10);border-radius:18px;overflow:hidden;">`
     + `<tr><td style="background:${M_RED};height:5px;line-height:5px;font-size:5px;">&nbsp;</td></tr>`
     + `<tr><td style="padding:26px 32px 0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>`
-    + `<td style="width:46px;"><div style="width:46px;height:46px;border-radius:11px;background:${M_RED};color:#ffffff;font-family:${M_SERIF};font-weight:bold;font-size:20px;line-height:46px;text-align:center;letter-spacing:1px;">dV</div></td>`
+    + `<td style="width:48px;"><img src="${SITE_URL}/assets/img/apple-touch-icon.png" width="48" height="48" alt="de Vries" style="display:block;border:0;border-radius:11px;"></td>`
     + `<td style="padding-left:12px;font-family:${M_SERIF};font-size:20px;font-weight:bold;color:${M_INK};letter-spacing:.4px;">de Vries</td>`
     + `</tr></table></td></tr>`
     + `<tr><td style="padding:22px 32px 0;"><p style="margin:0 0 6px;font-family:${M_SANS};font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:${eyebrowColor};">${esc(eyebrow)}</p></td></tr>`

@@ -531,7 +531,7 @@
             form.reset(); form.service.value = ""; form.date.value = ""; form.time.value = ""; selISO = "";
             updateSummary(); renderCal(); syncConsent();
           } else if (res.s === 409) {
-            fail("Dieser Zeit-Slot ist leider gerade vergeben. Bitte wählen Sie eine andere Uhrzeit.");
+            fail("Dieser Termin ist leider nicht mehr verfügbar. Bitte wählen Sie einen anderen freien Termin.");
           } else {
             fail("Es ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut oder rufen Sie uns an: 05153 - 1552.");
           }
