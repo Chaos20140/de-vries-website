@@ -276,8 +276,9 @@ em { font-style: italic; }
 .mnav__toggle[aria-expanded="true"] .mnav__chev { transform: rotate(180deg); opacity: 1; }
 
 /* sub-group — aufklappbar, dezente Einrückung */
-.mnav__sub { display: flex; flex-direction: column; padding-left: 1.15rem; max-height: 0; margin: 0; opacity: 0; overflow: hidden; transition: max-height 0.35s var(--ease), opacity 0.3s var(--ease), margin 0.35s var(--ease); }
-.mnav__sub.is-open { max-height: 240px; opacity: 1; margin: 0.1rem 0 0.35rem; }
+.mnav__sub { display: none; flex-direction: column; padding-left: 1.15rem; margin: 0.15rem 0 0.4rem; }
+.mnav__sub.is-open { display: flex; animation: subIn 0.3s var(--ease); }
+@keyframes subIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .mnav__sub a { font-family: var(--body); font-size: 1rem; font-weight: 500; color: rgba(250,246,240,0.58); padding: 0.45rem 0; transition: color var(--t-fast); }
 .mnav__sub a:hover, .mnav__sub a:focus-visible { color: var(--paper); }
 .mnav__sub a[aria-current="page"] { color: var(--red); }
@@ -298,7 +299,7 @@ em { font-style: italic; }
 @keyframes navIn { to { opacity: 1; transform: translateX(0); } }
 @media (prefers-reduced-motion: reduce) {
   .mnav__link, .mnav__label, .mobile-nav__foot > * { opacity: 1; transform: none; animation: none; }
-  .mnav__sub { transition: none; }
+  .mnav__sub.is-open { animation: none; }
 }
 
 @media (max-width: 1280px){
