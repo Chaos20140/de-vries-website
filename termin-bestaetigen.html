@@ -15,40 +15,47 @@
   :root{--red:#d7120a;--green:#3b932b;--ink:#1c1714;--muted:#756a60;--paper:#faf6f0;--line:rgba(28,23,20,.12)}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;display:grid;place-items:center;padding:1.5rem;line-height:1.6}
-  .card{background:#fff;border:1px solid var(--line);border-radius:18px;max-width:460px;width:100%;padding:clamp(2rem,1.4rem+2vw,3rem);text-align:center;box-shadow:0 40px 80px -50px rgba(28,23,20,.4)}
-  .logo{display:inline-grid;place-items:center;width:52px;height:52px;border-radius:11px;background:var(--red);color:#fff;font-family:"Fraunces",serif;font-weight:600;font-size:1.5rem;letter-spacing:.04em;margin-bottom:1.6rem}
-  .mark{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;margin:0 auto 1.3rem;font-size:1.8rem}
+  .card{background:#fff;border:1px solid var(--line);border-radius:20px;max-width:440px;width:100%;padding:clamp(2.6rem,2rem+3vw,3.8rem) clamp(1.8rem,1.2rem+3vw,3rem);text-align:center;box-shadow:0 40px 80px -50px rgba(28,23,20,.4)}
+  .logo{display:inline-grid;place-items:center;width:52px;height:52px;border-radius:11px;background:var(--red);color:#fff;font-family:"Fraunces",serif;font-weight:600;font-size:1.5rem;letter-spacing:.04em;margin-bottom:1.8rem}
+  .mark{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;margin:0 auto 1.5rem;font-size:1.9rem}
   .mark.ok{background:#e7f4e3;color:var(--green)}
   .mark.no{background:#f4d9d6;color:var(--red)}
   .mark.neutral{background:#f1e9de;color:var(--muted)}
-  h1{font-family:"Fraunces",serif;font-weight:500;font-size:clamp(1.6rem,1.3rem+1.2vw,2.1rem);letter-spacing:-.02em;margin-bottom:.8rem}
-  p{color:var(--muted);font-size:1.02rem}
-  .act{margin-top:1.8rem;display:flex;flex-direction:column;gap:.7rem;align-items:center}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5em;padding:.95em 1.8em;border-radius:999px;border:0;cursor:pointer;text-decoration:none;font-family:inherit;font-weight:700;font-size:1rem;transition:transform .2s,box-shadow .3s}
+  h1{font-family:"Fraunces",serif;font-weight:500;font-size:clamp(1.55rem,1.3rem+1.2vw,2rem);letter-spacing:-.02em;margin-bottom:.9rem}
+  p{color:var(--muted);font-size:1rem;max-width:34ch;margin-left:auto;margin-right:auto}
+  .act{margin-top:2rem;display:flex;flex-direction:column;gap:.8rem;align-items:center}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5em;padding:.95em 2em;border-radius:999px;border:0;cursor:pointer;text-decoration:none;font-family:inherit;font-weight:700;font-size:1rem;white-space:nowrap;transition:transform .2s,box-shadow .3s}
   .btn:hover{transform:translateY(-2px)}
   .btn--go{background:var(--red);color:#fff}
   .btn--go:hover{box-shadow:0 14px 34px -12px rgba(215,18,10,.5)}
   .btn--sec{background:transparent;color:var(--muted);font-weight:600;font-size:.9rem;padding:.5em 1em}
   .btn--sec:hover{color:var(--ink)}
-  .note{margin-top:1.4rem;font-size:.82rem;color:var(--muted);opacity:.85}
+  .home{display:inline-flex;align-items:center;gap:.5em;margin-top:2rem;padding:.9em 1.6em;border-radius:999px;background:var(--red);color:#fff;text-decoration:none;font-weight:700;font-size:.95rem;transition:transform .2s,box-shadow .3s}
+  .home:hover{transform:translateY(-2px);box-shadow:0 14px 34px -12px rgba(215,18,10,.5)}
+  .note{margin-top:1.6rem;font-size:.82rem;color:var(--muted);opacity:.85;max-width:34ch;margin-left:auto;margin-right:auto}
+  .hidden{display:none}
 </style>
 </head>
 <body>
   <div class="card">
     <div class="logo">dV</div>
-    <div class="mark neutral" id="mark">?</div>
+    <div class="mark neutral" id="mark">…</div>
     <h1 id="title">Einen Moment …</h1>
-    <p id="msg"></p>
-    <form class="act" id="form" method="POST" action="https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-booking/confirm" style="display:none">
+    <p id="msg">Ihre Anfrage wird geprüft.</p>
+    <form class="act hidden" id="form" method="POST" action="https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-booking/confirm">
       <input type="hidden" name="token" id="tk">
       <input type="hidden" name="action" id="ac">
       <button type="submit" class="btn btn--go" id="go">Bestätigen</button>
       <a class="btn btn--sec" href="index.html">Abbrechen</a>
     </form>
-    <p class="note" id="note" style="display:none">Zur Sicherheit lösen Sie die Aktion hier per Klick aus – automatische E-Mail-Scanner können so nichts mehr auslösen.</p>
+    <p class="note hidden" id="note">Zur Sicherheit lösen Sie die Aktion hier per Klick aus – automatische E-Mail-Scanner können so nichts mehr auslösen.</p>
+    <a class="home hidden" id="home" href="index.html">Zur Startseite
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
+    </a>
   </div>
 <script>
   (function () {
+    var BASE = "https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-booking";
     var p = new URLSearchParams(location.search);
     var token = (p.get("token") || "").trim();
     var action = (p.get("action") || "").trim();
@@ -57,32 +64,43 @@
     var msg = document.getElementById("msg");
     var form = document.getElementById("form");
     var note = document.getElementById("note");
+    var home = document.getElementById("home");
+
+    function state(cls, sym, t, m) {
+      mark.className = "mark " + cls; mark.textContent = sym;
+      title.textContent = t; msg.textContent = m;
+      document.title = t + " – de Vries";
+    }
+    function showResult(cls, sym, t, m) { state(cls, sym, t, m); home.classList.remove("hidden"); }
+
     var valid = /^[0-9a-f-]{36}$/i.test(token) && (action === "confirm" || action === "decline");
-    if (!valid) {
-      mark.className = "mark no"; mark.textContent = "!";
-      title.textContent = "Ungültiger Link";
-      msg.textContent = "Dieser Bestätigungslink ist ungültig oder unvollständig.";
-      return;
+    if (!valid) { showResult("no", "!", "Ungültiger Link", "Dieser Bestätigungslink ist ungültig oder unvollständig."); return; }
+
+    function showForm() {
+      document.getElementById("tk").value = token;
+      document.getElementById("ac").value = action;
+      var go = document.getElementById("go");
+      if (action === "confirm") {
+        state("ok", "✓", "Termin bestätigen?", "Möchten Sie diese Terminanfrage bestätigen? Der Zeit-Slot wird dann auf der Website gesperrt und der Kunde erhält eine Bestätigung.");
+        go.textContent = "Ja, Termin bestätigen";
+      } else {
+        state("no", "–", "Termin ablehnen?", "Möchten Sie diese Terminanfrage ablehnen? Der Zeit-Slot bleibt frei.");
+        go.textContent = "Ja, Termin ablehnen";
+      }
+      form.classList.remove("hidden");
+      note.classList.remove("hidden");
     }
-    document.getElementById("tk").value = token;
-    document.getElementById("ac").value = action;
-    var go = document.getElementById("go");
-    if (action === "confirm") {
-      mark.className = "mark ok"; mark.textContent = "✓";
-      title.textContent = "Termin bestätigen?";
-      msg.textContent = "Möchten Sie diese Terminanfrage bestätigen? Der Zeit-Slot wird dann auf der Website gesperrt und der Kunde erhält eine Bestätigung.";
-      go.textContent = "Ja, Termin bestätigen";
-      go.className = "btn btn--go";
-    } else {
-      mark.className = "mark no"; mark.textContent = "–";
-      title.textContent = "Termin ablehnen?";
-      msg.textContent = "Möchten Sie diese Terminanfrage ablehnen? Der Zeit-Slot bleibt frei.";
-      go.textContent = "Ja, Termin ablehnen";
-      go.className = "btn btn--go";
-    }
-    form.style.display = "flex";
-    note.style.display = "block";
-    document.title = title.textContent + " – de Vries";
+
+    // Aktuellen Status pruefen: schon bearbeitet -> kein Button mehr, nur Hinweis.
+    fetch(BASE + "/status?token=" + encodeURIComponent(token))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.status === "confirmed") showResult("ok", "✓", "Bereits bestätigt", "Dieser Termin wurde bereits bestätigt – Sie müssen nichts weiter tun.");
+        else if (d.status === "declined") showResult("no", "–", "Bereits abgelehnt", "Diese Terminanfrage wurde bereits abgelehnt.");
+        else if (d.status === "notfound" || d.status === "invalid") showResult("no", "!", "Nicht gefunden", "Diese Terminanfrage wurde nicht gefunden (evtl. bereits bearbeitet oder gelöscht).");
+        else showForm(); // pending
+      })
+      .catch(function () { showForm(); }); // Netzfehler: Formular zeigen (der Server prüft den Status ohnehin nochmal)
   })();
 </script>
 </body>

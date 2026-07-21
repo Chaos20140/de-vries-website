@@ -190,10 +190,10 @@ async function mailOwner(b: Record<string, string>) {
   const inner = `<tr><td style="padding:2px 32px 0;"><h1 style="margin:0;font-family:${M_SERIF};font-weight:normal;font-size:23px;line-height:1.3;color:${M_INK};">Ein Termin wartet auf Ihre Bestätigung</h1></td></tr>`
     + `<tr><td style="padding:18px 32px 0;">${details}</td></tr>`
     + msgBlock
-    + `<tr><td style="padding:24px 32px 4px;" align="center"><table role="presentation" cellpadding="0" cellspacing="0"><tr>`
-    + `<td style="padding:0 6px;"><a href="${confirm}" style="display:inline-block;background:${M_RED};color:#ffffff;text-decoration:none;font-family:${M_SANS};font-weight:700;font-size:14px;padding:13px 28px;border-radius:999px;">Bestätigen</a></td>`
-    + `<td style="padding:0 6px;"><a href="${decline}" style="display:inline-block;background:#ffffff;color:${M_INK};text-decoration:none;font-family:${M_SANS};font-weight:700;font-size:14px;padding:12px 27px;border:1px solid rgba(28,23,20,.2);border-radius:999px;">Ablehnen</a></td>`
-    + `</tr></table></td></tr>`
+    + `<tr><td style="padding:24px 32px 4px;">`
+    + `<a href="${confirm}" style="display:block;width:210px;margin:0 auto;box-sizing:border-box;text-align:center;white-space:nowrap;background:${M_RED};color:#ffffff;text-decoration:none;font-family:${M_SANS};font-weight:700;font-size:15px;padding:14px 0;border-radius:999px;">Bestätigen</a>`
+    + `<a href="${decline}" style="display:block;width:210px;margin:12px auto 0;box-sizing:border-box;text-align:center;white-space:nowrap;background:#ffffff;color:${M_INK};text-decoration:none;font-family:${M_SANS};font-weight:700;font-size:15px;padding:13px 0;border:1px solid rgba(28,23,20,.2);border-radius:999px;">Ablehnen</a>`
+    + `</td></tr>`
     + `<tr><td style="padding:14px 32px 8px;" align="center"><p style="margin:0;font-family:${M_SANS};font-size:12px;color:#9a8f84;">Erst nach dem Bestätigen wird der Zeit-Slot auf der Website gesperrt.</p></td></tr>`;
   const body = mailDoc(`Neue Terminanfrage von ${b.name} – ${b.appt_date_de}, ${b.appt_time} Uhr`, "Neue Terminanfrage", M_RED, inner);
   return await sendMail(OWNER_EMAIL, `Neue Terminanfrage: ${b.service} am ${b.appt_date_de} ${b.appt_time}`, body);
@@ -285,6 +285,15 @@ Deno.serve(async (req) => {
 
     const emailed = await mailOwner({ token: data.token, service, appt_date_de, appt_time: time, name, phone, email, message });
     return json({ ok: true, id: data.id, emailed });
+  }
+
+  // ---- Status einer Anfrage (read-only, ohne PII) fuer die Bestaetigungsseite ----
+  // Damit die Seite weiss, ob bereits bestaetigt/abgelehnt wurde, und dann keinen Button mehr zeigt.
+  if (path === "/status" && req.method === "GET") {
+    const token = url.searchParams.get("token") || "";
+    if (!/^[0-9a-f-]{36}$/i.test(token)) return json({ status: "invalid" });
+    const { data: bk } = await admin.from("devries_bookings").select("status").eq("token", token).single();
+    return json({ status: bk ? bk.status : "notfound" });
   }
 
   // ---- Bestätigen / Ablehnen (per geheimem Token) ----
