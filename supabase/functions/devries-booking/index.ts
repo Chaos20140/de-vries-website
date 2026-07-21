@@ -3,6 +3,7 @@
 //   GET  /health        → { status:"ok" }
 //   GET  /booked-slots  → { slots:[{date,time}] }  (nur BESTÄTIGTE, ohne PII)
 //   POST /booking       → speichert Anfrage (status=pending), mailt Inhaber (Bestätigen/Ablehnen)
+//   POST /contact       → Kontaktformular: schickt die Nachricht direkt per Mail an den Inhaber
 //   GET  /confirm?token=…&action=confirm|decline → setzt Status, zeigt HTML-Seite
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -241,6 +242,34 @@ async function mailCustomer(b: Record<string, string>) {
   return await sendMail(b.email, `Ihr Termin bei de Vries ist bestätigt – ${b.appt_date_de}, ${b.appt_time} Uhr`, body, REPLY_TO);
 }
 
+// Kontaktanfrage vom Website-Formular direkt an den Inhaber. Reply-To = Absender,
+// damit der Inhaber einfach auf die Mail antworten kann. Kein Speichern (keine PII in der DB).
+async function mailContact(c: { name: string; email: string; message: string }): Promise<boolean> {
+  if (!SMTP_HOST) return false;
+  const details = mailCard(
+    mailRow("Name", esc(c.name))
+    + mailRow("E-Mail", `<a href="mailto:${esc(c.email)}" style="color:${M_RED};text-decoration:none;font-weight:700;">${esc(c.email)}</a>`),
+  );
+  const msgBlock = `<tr><td style="padding:16px 32px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6ede1;border-radius:12px;"><tr><td style="padding:16px 18px;font-family:${M_SANS};font-size:15px;line-height:1.6;color:#4a423c;"><strong style="color:${M_INK};">Nachricht</strong><br>${esc(c.message).replace(/\n/g, "<br>")}</td></tr></table></td></tr>`;
+  const inner = `<tr><td style="padding:2px 32px 0;"><h1 style="margin:0;font-family:${M_SERIF};font-weight:normal;font-size:23px;line-height:1.3;color:${M_INK};">Neue Nachricht über das Kontaktformular</h1></td></tr>`
+    + `<tr><td style="padding:18px 32px 0;">${details}</td></tr>`
+    + msgBlock
+    + `<tr><td style="padding:18px 32px 4px;" align="center"><p style="margin:0;font-family:${M_SANS};font-size:12px;line-height:1.6;color:#9a8f84;">Antworten Sie einfach auf diese E-Mail – Ihre Antwort geht direkt an ${esc(c.name)}.</p></td></tr>`;
+  const body = mailDoc(`Neue Kontaktanfrage von ${c.name}`, "Kontaktanfrage", M_RED, inner);
+  return await sendMail(OWNER_EMAIL, `Kontaktanfrage über die Website – ${c.name}`, body, c.email);
+}
+
+// Kontaktformular: einfache Flut-Bremse pro Isolate (ergänzt die CORS-Sperre auf die eigene Domain).
+// Max. 8 Nachrichten je 10 Minuten – großzügig für echte Anfragen, kappt aber Spam-Fluten.
+const _contactHits: number[] = [];
+function contactRateOk(): boolean {
+  const now = Date.now();
+  while (_contactHits.length && _contactHits[0] < now - 10 * 60 * 1000) _contactHits.shift();
+  if (_contactHits.length >= 8) return false;
+  _contactHits.push(now);
+  return true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const url = new URL(req.url);
@@ -310,6 +339,27 @@ Deno.serve(async (req) => {
     return json({ ok: true, id: data.id, emailed });
   }
 
+  // ---- Kontaktformular: Nachricht direkt per Mail an den Inhaber ----
+  if (path === "/contact" && req.method === "POST") {
+    let b: Record<string, string>;
+    try { b = await req.json(); } catch { return json({ error: "invalid_json" }, 400); }
+    const name = (b.name || "").trim();
+    const email = (b.email || "").trim();
+    const message = (b.message || "").trim();
+
+    const fields: string[] = [];
+    if (!name || name.length > 120) fields.push("name");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 160) fields.push("email");
+    if (!message || message.length > 4000) fields.push("message");
+    if (fields.length) return json({ error: "validation", fields }, 422);
+
+    if (!contactRateOk()) return json({ error: "rate_limited" }, 429);
+
+    const mailed = await mailContact({ name, email, message });
+    if (!mailed) return json({ error: "mail_failed" }, 502); // Frontend zeigt dann Telefon/Direkt-Mail als Ausweichweg
+    return json({ ok: true });
+  }
+
   // ---- Status einer Anfrage (read-only, ohne PII) fuer die Bestaetigungsseite ----
   // Damit die Seite weiss, ob bereits bestaetigt/abgelehnt wurde, und dann keinen Button mehr zeigt.
   if (path === "/status" && req.method === "GET") {
@@ -327,7 +377,9 @@ Deno.serve(async (req) => {
     if (!bk) return new Response("not_found", { status: 404, headers: CORS });
     return new Response(icsFor(bk), {
       status: 200,
-      headers: { ...CORS, "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": 'attachment; filename="termin-de-vries.ics"' },
+      // inline (statt attachment) -> iOS/Safari zeigt die "Zum Kalender hinzufuegen"-Vorschau direkt,
+      // statt die Datei nur in "Dateien" abzulegen.
+      headers: { ...CORS, "Content-Type": "text/calendar; charset=utf-8; method=PUBLISH", "Content-Disposition": 'inline; filename="termin-de-vries.ics"' },
     });
   }
 

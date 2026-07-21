@@ -381,11 +381,12 @@
     if (banner && !decided()) setTimeout(function () { banner.classList.add("is-in"); }, 1200);
   })();
 
-  /* ---------- contact form (mailto fallback + validation) ---------- */
+  /* ---------- contact form (direkter Mailversand über die Supabase-Funktion) ---------- */
   (function () {
     var form = $("#contactForm");
     if (!form) return;
     var status = $("#formStatus");
+    var FN = "https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-booking/contact";
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var name = form.name.value.trim();
@@ -393,15 +394,32 @@
       var msg = form.message.value.trim();
       var consent = form.consent ? form.consent.checked : true;
       function fail(t) { status.textContent = t; status.className = "form__status err"; }
+      function ok(t) { status.textContent = t; status.className = "form__status ok"; }
       if (!name || !email || !msg) return fail("Bitte füllen Sie alle Pflichtfelder aus.");
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail("Bitte geben Sie eine gültige E-Mail-Adresse an.");
       if (!consent) return fail("Bitte stimmen Sie der Datenschutzerklärung zu.");
-      var subject = encodeURIComponent("Kontaktanfrage über die Website – " + name);
-      var body = encodeURIComponent("Name: " + name + "\nE-Mail: " + email + "\n\nNachricht:\n" + msg);
-      window.location.href = "mailto:info@andreasdevries.de?subject=" + subject + "&body=" + body;
-      status.textContent = "Ihr E-Mail-Programm wird geöffnet. Vielen Dank für Ihre Anfrage!";
-      status.className = "form__status ok";
-      form.reset();
+      var btn = form.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      status.textContent = "Wird gesendet …"; status.className = "form__status";
+      var offline = "Nachricht konnte nicht gesendet werden. Bitte rufen Sie uns an (05153 1552) oder schreiben Sie an info@andreasdevries.de.";
+      fetch(FN, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name, email: email, message: msg })
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; });
+      }).then(function (res) {
+        if (btn) btn.disabled = false;
+        if (res.ok) {
+          ok("Vielen Dank! Ihre Nachricht wurde gesendet – wir melden uns schnellstmöglich bei Ihnen.");
+          form.reset();
+        } else {
+          fail(offline);
+        }
+      }).catch(function () {
+        if (btn) btn.disabled = false;
+        fail(offline);
+      });
     });
   })();
 
