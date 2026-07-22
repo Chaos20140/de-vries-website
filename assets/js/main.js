@@ -1662,7 +1662,8 @@
     ["Footer-Links", ["lbl-galabau", "de Vries GaLa-Bau"], ["lbl-impressum", "Impressum"], ["lbl-datenschutz", "Datenschutz"], ["lbl-kontaktformular", "Kontaktformular"]],
     ["Menü-Gruppen (mobil)", ["lbl-grp-leistungen", "Gruppe: Leistungen"], ["lbl-grp-mehr", "Gruppe: Mehr"]],
     ["Footer-Adresse & Öffnungszeiten", ["foot-addr-street", "Straße & Hausnr."], ["foot-addr-city", "PLZ & Ort"], ["foot-hours-label", "Überschrift (z. B. Öffnungszeiten)"], ["foot-hours-days", "Tage (z. B. Montag – Freitag)"], ["foot-hours-time", "Uhrzeit (z. B. 8:00 bis 16:00 Uhr)"]],
-    ["Kontaktdaten (auf allen Seiten)", ["contact-phone", "Telefon (ändert Anzeige + Anruf-Link)"], ["contact-email", "E-Mail (ändert Anzeige + Mail-Link)"]]
+    ["Kontaktdaten (auf allen Seiten)", ["contact-phone", "Telefon (ändert Anzeige + Anruf-Link)"], ["contact-email", "E-Mail (ändert Anzeige + Mail-Link)"]],
+    ["Cookie-Hinweis", ["cookie-text", "Hinweistext"], ["cookie-btn-all", "Knopf: Alle akzeptieren"], ["cookie-btn-necessary", "Knopf: Nur notwendige"], ["cookie-btn-settings", "Knopf: Einstellungen"]]
   ];
   function openShared() {
     if (document.getElementById("dvPanel")) return;
@@ -1687,9 +1688,15 @@
     var menuList = document.getElementById("dvMenuList");
     function menuRow(text, href) {
       var d = document.createElement("div"); d.className = "dv-menurow";
-      d.innerHTML = '<input class="mt" maxlength="40" placeholder="Menüname"><input class="mh" maxlength="200" placeholder="Ziel, z. B. kontakt.html"><button type="button" class="mx" title="entfernen">✕</button>';
+      d.innerHTML = '<input class="mt" maxlength="40" placeholder="Menüname"><input class="mh" maxlength="200" placeholder="Ziel, z. B. kontakt (wird zu kontakt.html)">'
+        + '<button type="button" class="mx mup" title="nach oben">▲</button>'
+        + '<button type="button" class="mx mdn" title="nach unten">▼</button>'
+        + '<button type="button" class="mx" title="entfernen">✕</button>';
       d.querySelector(".mt").value = text || ""; d.querySelector(".mh").value = href || "";
-      d.querySelector(".mx").onclick = function () { d.remove(); };
+      // Reihenfolge: die gespeicherte Reihenfolge entspricht der Reihenfolge dieser Zeilen
+      d.querySelector(".mup").onclick = function () { var p = d.previousElementSibling; if (p) menuList.insertBefore(d, p); };
+      d.querySelector(".mdn").onclick = function () { var n = d.nextElementSibling; if (n) menuList.insertBefore(n, d); };
+      d.querySelectorAll(".mx")[2].onclick = function () { d.remove(); };
       menuList.appendChild(d);
     }
     document.getElementById("dvMenuAdd").onclick = function () { menuRow("", ""); };
