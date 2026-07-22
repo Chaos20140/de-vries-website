@@ -273,6 +273,54 @@ function contactRateOk(): boolean {
   return true;
 }
 
+// ---- Bewerbungen ----
+// Erlaubte Unterlagen. Der MIME-Typ vom Client allein reicht NICHT – zusaetzlich
+// werden die ersten Bytes geprueft (Magic Bytes), damit z. B. kein Skript als PDF
+// getarnt hochgeladen werden kann.
+const APPLY_TYPES: Record<string, { ext: string; magic: (b: Uint8Array) => boolean }> = {
+  "application/pdf": { ext: "pdf", magic: (b) => b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 },
+  "image/jpeg": { ext: "jpg", magic: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  "image/png": { ext: "png", magic: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 },
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": { ext: "docx", magic: (b) => b[0] === 0x50 && b[1] === 0x4b },
+};
+const MAX_FILES = 3, MAX_FILE_BYTES = 3 * 1024 * 1024; // 3 Dateien à max. 3 MB
+
+function b64ToBytes(s: string): Uint8Array {
+  const bin = atob(s.replace(/^data:[^,]*,/, "")); // evtl. Data-URL-Praefix abschneiden
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+// Mail an den Inhaber: alle Angaben + zeitlich begrenzte Links zu den Unterlagen.
+async function mailApplication(a: Record<string, string>, links: { name: string; url: string }[]): Promise<boolean> {
+  if (!SMTP_HOST) return false;
+  const row = (l: string, v: string) => v ? mailRow(l, esc(v)) : "";
+  const details = mailCard(
+    row("Name", a.first + " " + a.last)
+    + row("Geburtsdatum", a.birth ? fmtDate(a.birth) : "")
+    + row("E-Mail", a.email) + row("Telefon", a.phone)
+    + row("Anschrift", [a.street, [a.zip, a.city].filter(Boolean).join(" ")].filter(Boolean).join(", "))
+    + row("Gewünschte Tätigkeit", a.position)
+    + row("Führerschein", a.license)
+    + row("Verfügbar ab", a.avail),
+  );
+  const msgBlock = a.message
+    ? `<tr><td style="padding:16px 32px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6ede1;border-radius:12px;"><tr><td style="padding:16px 18px;font-family:${M_SANS};font-size:15px;line-height:1.6;color:#4a423c;"><strong style="color:${M_INK};">Anschreiben</strong><br>${esc(a.message).replace(/\n/g, "<br>")}</td></tr></table></td></tr>`
+    : "";
+  const fileBlock = links.length
+    ? `<tr><td style="padding:16px 32px 0;"><p style="margin:0 0 8px;font-family:${M_SANS};font-size:13px;font-weight:700;color:${M_INK};">Unterlagen (${links.length})</p>`
+      + links.map((l) => `<a href="${esc(l.url)}" style="display:block;margin-bottom:6px;font-family:${M_SANS};font-size:14px;color:${M_RED};text-decoration:none;font-weight:700;">&#128206; ${esc(l.name)}</a>`).join("")
+      + `<p style="margin:6px 0 0;font-family:${M_SANS};font-size:12px;color:#9a8f84;">Die Links sind 30 Tage gültig. Bitte laden Sie die Unterlagen bei Bedarf herunter.</p></td></tr>`
+    : `<tr><td style="padding:16px 32px 0;"><p style="margin:0;font-family:${M_SANS};font-size:13px;color:#9a8f84;">Keine Unterlagen angehängt.</p></td></tr>`;
+  const inner = `<tr><td style="padding:2px 32px 0;"><h1 style="margin:0;font-family:${M_SERIF};font-weight:normal;font-size:23px;line-height:1.3;color:${M_INK};">Neue Bewerbung</h1></td></tr>`
+    + `<tr><td style="padding:18px 32px 0;">${details}</td></tr>`
+    + msgBlock + fileBlock
+    + `<tr><td style="padding:18px 32px 4px;" align="center"><p style="margin:0;font-family:${M_SANS};font-size:12px;line-height:1.6;color:#9a8f84;">Antworten Sie einfach auf diese E-Mail – Ihre Antwort geht direkt an ${esc(a.first)} ${esc(a.last)}.</p></td></tr>`;
+  const body = mailDoc(`Neue Bewerbung von ${a.first} ${a.last}`, "Bewerbung", M_RED, inner);
+  return await sendMail(OWNER_EMAIL, `Bewerbung: ${a.first} ${a.last}${a.position ? " – " + a.position : ""}`, body, a.email);
+}
+
 Deno.serve(async (req) => {
   const res = await handle(req);
   // CORS: den konkreten Origin zurückspiegeln, wenn er in der Allowlist steht (sonst Standard).
@@ -369,6 +417,64 @@ async function handle(req: Request): Promise<Response> {
     const mailed = await mailContact({ name, email, message });
     if (!mailed) return json({ error: "mail_failed" }, 502); // Frontend zeigt dann Telefon/Direkt-Mail als Ausweichweg
     return json({ ok: true });
+  }
+
+  // ---- Bewerbung: Angaben + Unterlagen (privater Bucket) + Mail an den Inhaber ----
+  if (path === "/apply" && req.method === "POST") {
+    let b: Record<string, unknown>;
+    try { b = await req.json(); } catch { return json({ error: "invalid_json" }, 400); }
+    const S = (k: string, max: number) => String((b as Record<string, unknown>)[k] ?? "").trim().slice(0, max);
+    const first = S("first_name", 80), last = S("last_name", 80), email = S("email", 160);
+    const phone = S("phone", 60), street = S("street", 120), zip = S("zip", 12), city = S("city", 80);
+    const birth = S("birth_date", 10), position = S("position", 120), license = S("license", 40);
+    const avail = S("available_from", 60), message = S("message", 4000);
+
+    const bad: string[] = [];
+    if (!first) bad.push("first_name");
+    if (!last) bad.push("last_name");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) bad.push("email");
+    if (birth && !/^\d{4}-\d{2}-\d{2}$/.test(birth)) bad.push("birth_date");
+    if (zip && !/^\d{4,5}$/.test(zip)) bad.push("zip");
+    if (bad.length) return json({ error: "validation", fields: bad }, 422);
+    if (!contactRateOk()) return json({ error: "rate_limited" }, 429);
+
+    // Unterlagen pruefen (Typ + Magic Bytes + Groesse) und in den PRIVATEN Bucket legen
+    const rawFiles = Array.isArray(b.files) ? b.files as Record<string, unknown>[] : [];
+    if (rawFiles.length > MAX_FILES) return json({ error: "too_many_files" }, 422);
+    const stored: { name: string; path: string; size: number }[] = [];
+    const folder = crypto.randomUUID();
+    for (const f of rawFiles) {
+      const type = String(f?.type || "");
+      const spec = Object.prototype.hasOwnProperty.call(APPLY_TYPES, type) ? APPLY_TYPES[type] : null;
+      if (!spec) return json({ error: "bad_file_type", field: String(f?.name || "") }, 422);
+      let bytes: Uint8Array;
+      try { bytes = b64ToBytes(String(f?.data || "")); } catch { return json({ error: "bad_file" }, 422); }
+      if (!bytes.length || bytes.length > MAX_FILE_BYTES) return json({ error: "file_too_large", field: String(f?.name || "") }, 422);
+      if (!spec.magic(bytes)) return json({ error: "bad_file_content", field: String(f?.name || "") }, 422);
+      // Dateiname entschaerfen; Endung kommt aus dem geprueften Typ, nicht vom Client
+      const safe = String(f?.name || "datei").replace(/[^\w.\- ]+/g, "_").replace(/\.[^.]*$/, "").slice(0, 60) || "datei";
+      const p = `${folder}/${stored.length + 1}-${safe}.${spec.ext}`;
+      const up = await admin.storage.from("bewerbungen").upload(p, bytes, { contentType: type, upsert: false });
+      if (up.error) return json({ error: "upload_failed" }, 500);
+      stored.push({ name: `${safe}.${spec.ext}`, path: p, size: bytes.length });
+    }
+
+    const { data: row, error } = await admin.from("devries_applications").insert({
+      first_name: first, last_name: last, birth_date: birth || null, email, phone: phone || null,
+      street: street || null, zip: zip || null, city: city || null,
+      position: position || null, license: license || null, available_from: avail || null,
+      message: message || null, files: stored,
+    }).select("id").single();
+    if (error) return json({ error: "db_error" }, 500);
+
+    // Zeitlich begrenzte Links (30 Tage) – die Dateien selbst bleiben privat
+    const links: { name: string; url: string }[] = [];
+    for (const s of stored) {
+      const sg = await admin.storage.from("bewerbungen").createSignedUrl(s.path, 60 * 60 * 24 * 30);
+      if (sg.data && sg.data.signedUrl) links.push({ name: s.name, url: sg.data.signedUrl });
+    }
+    const sent = await mailApplication({ first, last, birth, email, phone, street, zip, city, position, license, avail, message }, links);
+    return json({ ok: true, id: row.id, emailed: sent });
   }
 
   // ---- Status einer Anfrage (read-only, ohne PII) fuer die Bestaetigungsseite ----
