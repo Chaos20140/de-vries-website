@@ -53,7 +53,25 @@
   .appcard{border:1px solid #e4ddd4;border-radius:14px;padding:.9rem 1rem;margin-bottom:.7rem;background:#fff}
   .apphead{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;margin-bottom:.45rem}
   .appline{font-size:.9rem;margin:.12rem 0}
-  .appmsg{margin:.5rem 0;padding:.6rem .75rem;background:#faf6f0;border-radius:10px;font-size:.9rem;white-space:pre-wrap}
+  /* overflow-wrap:anywhere + min-width:0 -> auch lange Wortketten ohne Leerzeichen brechen um */
+  .appmsg{margin:.5rem 0;padding:.6rem .75rem;background:#faf6f0;border-radius:10px;font-size:.9rem;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:16rem;overflow-y:auto}
+  .appline,.apphead b{overflow-wrap:anywhere;min-width:0}
+  .appcard,.appline{max-width:100%}
+  .tools{display:flex;flex-wrap:wrap;gap:.45rem;align-items:center;margin:.2rem 0 .8rem}
+  .tools input[type=search]{flex:1 1 170px;min-width:130px;padding:.5em .8em;border:1px solid #e4ddd4;border-radius:999px;font:inherit;background:#fff}
+  .chip{padding:.35em .9em;border:1px solid #e4ddd4;border-radius:999px;background:#fff;cursor:pointer;font:inherit;font-size:.84rem}
+  .chip.on{background:#1c1714;color:#fff;border-color:#1c1714}
+  .csv{margin-left:auto;padding:.45em .9em;border:1px solid #e4ddd4;border-radius:999px;background:#fff;cursor:pointer;font:inherit;font-size:.84rem;font-weight:700}
+  .rows{border:1px solid #e4ddd4;border-radius:12px;overflow:hidden}
+  .rw{display:grid;grid-template-columns:auto 1fr auto;gap:.6rem;align-items:center;padding:.65rem .8rem;border-bottom:1px solid #f0eae2;cursor:pointer;background:#fff}
+  .rw:last-child{border-bottom:0}
+  .rw:hover{background:#faf6f0}
+  .rw .nm{font-weight:700;overflow-wrap:anywhere}
+  .rw .meta{font-size:.78rem;color:#8a7f74}
+  .badge{font-size:.7rem;font-weight:700;padding:.25em .7em;border-radius:999px;background:#eef4ff;color:#2b5fd9;white-space:nowrap}
+  .badge.gesichtet{background:#fff3e0;color:#a86500}
+  .badge.erledigt{background:#e7f4e3;color:#3b932b}
+  .detail{padding:.2rem .8rem .8rem;background:#fff;border-bottom:1px solid #f0eae2}
   .appfile{display:inline-block;margin:.2rem .4rem .2rem 0;font-size:.88rem;color:#d7120a;text-decoration:none;font-weight:700}
   .approw{display:flex;gap:.5rem;align-items:center;margin-top:.6rem;flex-wrap:wrap}
   .approw select,.approw button{padding:.4em .7em;border:1px solid #e4ddd4;border-radius:9px;background:#fff;cursor:pointer;font:inherit}
@@ -118,7 +136,15 @@
     <div class="view hidden" id="view-bewerbungen">
       <button class="back" data-back>← Übersicht</button>
       <div class="grp">Bewerbungen</div>
-      <p class="muted" style="margin:-.2rem 0 .6rem">Die Download-Links gelten aus Sicherheitsgründen nur 1&nbsp;Stunde – danach die Seite neu laden.</p>
+      <div class="tools">
+        <input type="search" id="appSearch" placeholder="Suchen … (Name, Ort, E-Mail)">
+        <button class="chip on" data-appf="alle">alle</button>
+        <button class="chip" data-appf="neu">neu</button>
+        <button class="chip" data-appf="gesichtet">gesichtet</button>
+        <button class="chip" data-appf="erledigt">erledigt</button>
+        <button class="csv" id="appCsv">CSV-Export</button>
+      </div>
+      <p class="muted" style="margin:-.4rem 0 .6rem">Zeile anklicken für alle Angaben. Download-Links gelten aus Sicherheitsgründen nur 1&nbsp;Stunde.</p>
       <div id="appList"><p class="muted">Wird geladen …</p></div>
     </div>
 
@@ -272,6 +298,7 @@
     document.querySelectorAll("[data-back]").forEach(function(b){
       b.onclick=function(){ showView("home"); loadCounts(); };
     });
+    wireApps();
   }
   function loadCounts(){
     callFn({action:"list-contacts"}).then(function(r){
@@ -376,18 +403,70 @@
     row.appendChild(sel); row.appendChild(del); d.appendChild(row);
     return d;
   }
+  function dtTime(v){ try{ var d=new Date(v);
+    return d.toLocaleDateString("de-DE")+", "+d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}); }catch(e){ return ""; } }
+  var allApps=[], appFilter="alle", appQuery="";
+  function appMatches(a){
+    if(appFilter!=="alle" && (a.status||"neu")!==appFilter) return false;
+    if(!appQuery) return true;
+    return [a.first_name,a.last_name,a.city,a.zip,a.email,a.position].join(" ").toLowerCase().indexOf(appQuery)>=0;
+  }
+  function renderApps(){
+    var box=$("appList"); if(!box) return;
+    box.innerHTML="";
+    var list=allApps.filter(appMatches);
+    if(!list.length){ var n=document.createElement("p"); n.className="muted";
+      n.textContent=allApps.length?"Keine Treffer.":"Noch keine Bewerbungen eingegangen."; box.appendChild(n); return; }
+    var wrap=document.createElement("div"); wrap.className="rows";
+    list.forEach(function(a){
+      var row=document.createElement("div"); row.className="rw";
+      var b=document.createElement("span"); b.className="badge "+(a.status||"neu"); b.textContent=a.status||"neu";
+      var mid=document.createElement("div");
+      var nm=document.createElement("div"); nm.className="nm"; nm.textContent=(a.first_name||"")+" "+(a.last_name||"");
+      var mt=document.createElement("div"); mt.className="meta";
+      mt.textContent=dtTime(a.created_at)+(a.city?" · "+a.city:"")+(a.position?" · "+a.position:"");
+      mid.appendChild(nm); mid.appendChild(mt);
+      var ch=document.createElement("span"); ch.className="meta"; ch.textContent="▾";
+      row.appendChild(b); row.appendChild(mid); row.appendChild(ch);
+      var det=null;
+      row.onclick=function(){
+        if(det){ det.remove(); det=null; ch.textContent="▾"; return; }
+        det=document.createElement("div"); det.className="detail"; det.appendChild(appCard(a));
+        row.parentNode.insertBefore(det,row.nextSibling); ch.textContent="▴";
+      };
+      wrap.appendChild(row);
+    });
+    box.appendChild(wrap);
+  }
   function loadApps(){
     var box=$("appList"); if(!box) return;
     callFn({action:"list-applications"}).then(function(r){
-      box.innerHTML="";
-      if(!r.ok){ var e=document.createElement("p"); e.className="muted";
+      if(!r.ok){ box.innerHTML=""; var e=document.createElement("p"); e.className="muted";
         e.textContent="Konnte nicht geladen werden ("+((r.d&&r.d.error)||r.status)+")."; box.appendChild(e); return; }
-      var items=(r.d&&r.d.items)||[];
-      var c=$("appCount"); if(c) c.textContent=items.length+(items.length===1?" Bewerbung":" Bewerbungen");
-      if(!items.length){ var n=document.createElement("p"); n.className="muted";
-        n.textContent="Noch keine Bewerbungen eingegangen."; box.appendChild(n); return; }
-      items.forEach(function(a){ box.appendChild(appCard(a)); });
+      allApps=(r.d&&r.d.items)||[];
+      renderApps();
     });
+  }
+  function wireApps(){
+    var s=$("appSearch"); if(s) s.oninput=function(){ appQuery=s.value.trim().toLowerCase(); renderApps(); };
+    document.querySelectorAll("[data-appf]").forEach(function(c){
+      c.onclick=function(){ appFilter=c.getAttribute("data-appf");
+        document.querySelectorAll("[data-appf]").forEach(function(x){ x.classList.toggle("on", x===c); });
+        renderApps(); };
+    });
+    var cs=$("appCsv"); if(cs) cs.onclick=exportAppsCsv;
+  }
+  function exportAppsCsv(){
+    var cols=["created_at","status","first_name","last_name","birth_date","email","phone","street","zip","city","position","license","available_from","message"];
+    // CSV-Injection verhindern: fuehrende = + - @ wuerden in Excel als Formel ausgefuehrt
+    function cell(v){ v=(v==null?"":String(v));
+      if(/^[=+\-@]/.test(v)) v="'"+v;
+      return '"'+v.replace(/"/g,'""')+'"'; }
+    var rows=[cols.join(";")];
+    allApps.filter(appMatches).forEach(function(a){ rows.push(cols.map(function(c){ return cell(a[c]); }).join(";")); });
+    var blob=new Blob(["﻿"+rows.join("\r\n")],{type:"text/csv;charset=utf-8"});
+    var url=URL.createObjectURL(blob), link=document.createElement("a");
+    link.href=url; link.download="bewerbungen.csv"; link.click(); URL.revokeObjectURL(url);
   }
 
   function callFn(p){

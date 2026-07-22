@@ -168,8 +168,8 @@
           <label for="license">Führerschein</label>
           <select id="license" name="license">
             <option value="">Bitte wählen</option>
-            <option value="Ja, Klasse B">Ja, Klasse B</option>
-            <option value="Ja, andere Klasse">Ja, andere Klasse</option>
+            <option value="Ja, mit eigenem Fahrzeug">Ja, mit eigenem Fahrzeug</option>
+            <option value="Ja, ohne eigenes Fahrzeug">Ja, ohne eigenes Fahrzeug</option>
             <option value="Nein">Nein</option>
           </select>
         </div>
@@ -301,8 +301,14 @@
     function fail(t) { status.textContent = t; status.className = "form__status err"; }
     function ok(t) { status.textContent = t; status.className = "form__status ok"; }
     var v = function (id) { return (document.getElementById(id).value || "").trim(); };
-    if (!v("first_name") || !v("last_name")) return fail("Bitte Vor- und Nachnamen angeben.");
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v("email"))) return fail("Bitte eine gültige E-Mail-Adresse angeben.");
+    // Namen: Buchstaben (inkl. Umlaute/Akzente), Bindestrich, Apostroph, Leerzeichen – mind. 2 Zeichen
+    var NAME_OK = /^[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ .'\-]{1,}$/;
+    if (!NAME_OK.test(v("first_name"))) return fail("Bitte einen gültigen Vornamen angeben (mindestens 2 Buchstaben, keine Ziffern).");
+    if (!NAME_OK.test(v("last_name"))) return fail("Bitte einen gültigen Nachnamen angeben (mindestens 2 Buchstaben, keine Ziffern).");
+    // E-Mail: genau ein @, Punkt in der Domain, Endung aus mindestens zwei Buchstaben
+    if (!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)*\.[A-Za-z]{2,}$/.test(v("email"))) return fail("Bitte eine gültige E-Mail-Adresse angeben, z. B. name@beispiel.de");
+    if (v("phone") && !/^[\d\s+()\/-]{5,}$/.test(v("phone"))) return fail("Bitte eine gültige Telefonnummer angeben (nur Ziffern und + ( ) / -).");
+    if (v("zip") && !/^\d{4,5}$/.test(v("zip"))) return fail("Bitte eine gültige PLZ angeben (4 oder 5 Ziffern).");
     if (!document.getElementById("consent").checked) return fail("Bitte stimmen Sie der Verarbeitung Ihrer Daten zu.");
     var fs = fileInput.files || [];
     if (fs.length > MAXF) return fail("Bitte höchstens " + MAXF + " Dateien auswählen.");
