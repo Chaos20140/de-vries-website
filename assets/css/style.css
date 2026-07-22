@@ -199,7 +199,13 @@ em { font-style: italic; }
 .topbar__contact { display: flex; gap: 1.6rem; flex-wrap: wrap; font-weight: 700; }
 .topbar__social { display: flex; gap: 1rem; }
 .topbar__social a:hover { color: var(--red); }
-@media (max-width: 680px){ .topbar__contact span.lbl { display:none; } .topbar { font-size: 0.76rem; } }
+@media (max-width: 680px){
+  /* Beschriftungen IN den Links nur optisch ausblenden, nicht entfernen: sonst bestehen
+     Telefon-/Mail-Link mobil nur aus einem Symbol und haben fuer Screenreader keinen Namen. */
+  .topbar__contact a span.lbl { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  .topbar__contact > span.lbl { display:none; }   /* reine Info (Öffnungszeiten) darf mobil weg */
+  .topbar { font-size: 0.76rem; }
+}
 
 /* ---------- 5. NAV ---------- */
 .nav {
