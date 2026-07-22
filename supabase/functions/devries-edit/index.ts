@@ -39,6 +39,14 @@ function safeHref(h: string): boolean {
   return /^https?:\/\//i.test(h) || /^mailto:/i.test(h) || /^tel:/i.test(h)
       || /^[\w./-]+\.html(#[\w-]+)?$/i.test(h) || /^#[\w-]+$/.test(h);
 }
+// Bequemlichkeit: Ein bloßer Seitenname ("kontakt") wird zu "kontakt.html".
+// Die strenge Prüfung in safeHref() bleibt unverändert – normalisiert wird DAVOR,
+// und nur wenn der Wert ausschließlich aus harmlosen Zeichen besteht.
+function normHref(h: string): string {
+  h = (h || "").trim();
+  return /^[a-z0-9][\w-]*$/i.test(h) ? h + ".html" : h;
+}
+
 // Rich-Text-Sanitizer (Escape-First-Allowlist): zuerst ALLES neutralisieren, dann
 // nur eine winzige Allowlist sicherer Inline-Tags + sichere Links wiederherstellen.
 // Alles andere (script, on*-Handler, style, beliebige Tags) bleibt neutralisierter
@@ -444,7 +452,7 @@ async function handle(req: Request): Promise<Response> {
           + " eb-fs-" + (fsv === "s" || fsv === "l" || fsv === "xl" ? fsv : "m"); // Textgröße
         if (type === "button") {
           const text = esc(String((b as any).text || "").slice(0, 80).trim());
-          const href = String((b as any).href || "").trim();
+          const href = normHref(String((b as any).href || ""));
           if (!text) continue;
           if (!safeHref(href)) return json({ error: "bad_href" }, 400);
           const ghost = (b as any).variant === "ghost";
@@ -517,7 +525,7 @@ async function handle(req: Request): Promise<Response> {
           // Leistungs-Kachel (design-konform wie die eingebauten .scard)
           const title = esc(String((b as any).title || "").slice(0, 80).trim()) || "Neue Leistung";
           const text = esc(String((b as any).text || "").slice(0, 600).trim());
-          const href = String((b as any).href || "").trim();
+          const href = normHref(String((b as any).href || ""));
           if (href && href !== "#" && !safeHref(href)) return json({ error: "bad_href" }, 400);
           const num = esc(String((b as any).num || "").replace(/\s+/g, " ").trim().slice(0, 4)); // frei wählbar (z. B. 05, 5, A1)
           const cItems = Array.isArray((b as any).items) ? (b as any).items : [];
@@ -557,7 +565,7 @@ async function handle(req: Request): Promise<Response> {
         let out = "";
         for (const it of arr) {
           const text = esc(String((it && it.text) || "").slice(0, 60).trim());
-          const href = String((it && it.href) || "").trim();
+          const href = normHref(String((it && it.href) || ""));
           if (!text) continue;
           if (href && href !== "#" && !safeHref(href)) return json({ error: "bad_href" }, 400);
           const ext = /^https?:\/\//i.test(href);

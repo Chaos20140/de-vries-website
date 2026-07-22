@@ -563,9 +563,13 @@ em { font-style: italic; }
 
 /* ---------- Einzugsgebiet / Serpentinen-Route ---------- */
 .route { position: relative; max-width: 740px; margin: 2.6rem auto 0; }
-/* Desktop: Route bricht aus der Inhaltsspalte aus und reicht fast bis an die Seitenränder */
+/* Desktop: Route zentriert, aber auf ihre gezeichnete Breite begrenzt.
+   Wichtig: Die Karte hat ein festes Seitenverhältnis (760:1480). Zog man sie früher
+   auf die volle Fensterbreite (2000px), wurde sie ~2500px HOCH – der Einzugsgebiet-
+   Bereich brauchte dadurch über 4 Bildschirmseiten Scrollen. Die Begrenzung rückt
+   die Ortschaften zusammen und halbiert die Höhe. */
 @media (min-width: 641px){
-  .route { width: min(100vw, 2000px); max-width: none; margin-top: 3rem; margin-inline: 0; left: 50%; transform: translateX(-50%); }
+  .route { width: min(100vw, 700px); max-width: none; margin-top: 2.4rem; margin-inline: 0; left: 50%; transform: translateX(-50%); }
 }
 .route__svg { display: block; width: 100%; height: auto; overflow: visible; }
 .route__road { stroke: var(--line-strong); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1 15; }
