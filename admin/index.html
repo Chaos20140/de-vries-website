@@ -113,6 +113,8 @@
 (function(){
   var FN="https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-edit";
   var FLAG="dv_edit", PWK="dv_edit_pw", TSK="dv_edit_ts";
+  // Altlast entfernen: frueher lag das Passwort im localStorage und ueberlebte Browser-Neustarts.
+  try{ localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK); }catch(e){}
   var $=function(id){return document.getElementById(id);};
   function setS(m,k){ var e=$("status"); e.textContent=m; e.className="status"+(k?(" "+k):""); }
 
@@ -132,9 +134,9 @@
 
   function sessionValid(){
     try{
-      if(localStorage.getItem(FLAG)!=="1") return false;
-      var ts=parseInt(localStorage.getItem(TSK),10)||0;
-      return (Date.now()-ts) < 3*3600*1000;
+      if(sessionStorage.getItem(FLAG)!=="1") return false;
+      var ts=parseInt(sessionStorage.getItem(TSK),10)||0;
+      return (Date.now()-ts) < 60*60*1000; // 60 Min statt 3 h
     }catch(e){ return false; }
   }
 
@@ -191,7 +193,7 @@
   }
 
   function callFn(p){
-    p.password = localStorage.getItem(PWK) || "";
+    p.password = sessionStorage.getItem(PWK) || "";
     return fetch(FN,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)})
       .then(function(r){ return r.json().catch(function(){return {};}).then(function(d){ return {status:r.status, ok:r.ok, d:d}; }); });
   }
@@ -234,9 +236,10 @@
       if(r.status===401){ setS("Falsches Passwort.","err"); b.disabled=false; return; }
       if(r.status===429){ setS("Zu viele Versuche – bitte später erneut.","err"); b.disabled=false; return; }
       if(r.status===503){ setS("Editor ist noch nicht eingerichtet (Secrets fehlen).","err"); b.disabled=false; return; }
-      localStorage.setItem(FLAG,"1");
-      localStorage.setItem(PWK,pw);
-      localStorage.setItem(TSK,String(Date.now()));
+      // Sitzung nur im sessionStorage: gilt fuer diesen Tab und ist beim Schliessen weg.
+      sessionStorage.setItem(FLAG,"1");
+      sessionStorage.setItem(PWK,pw);
+      sessionStorage.setItem(TSK,String(Date.now()));
       showDash();
     }catch(e){ setS("Verbindungsfehler.","err"); b.disabled=false; }
   }
@@ -244,7 +247,8 @@
   $("go").addEventListener("click",go);
   $("pw").addEventListener("keydown",function(e){ if(e.key==="Enter") go(); });
   $("logout").addEventListener("click",function(){
-    try{ localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK); }catch(e){}
+    try{ sessionStorage.removeItem(FLAG); sessionStorage.removeItem(PWK); sessionStorage.removeItem(TSK); }catch(e){}
+    try{ localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK); }catch(e){} // Altlasten
     $("dash").classList.add("hidden"); $("login").classList.remove("hidden");
     var pwEl=$("pw"); if(pwEl) pwEl.value=""; setS("");
   });

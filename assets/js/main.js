@@ -655,12 +655,20 @@
    ============================================================ */
 (function () {
   var FLAG = "dv_edit", PWK = "dv_edit_pw", TSK = "dv_edit_ts";
-  try { if (localStorage.getItem(FLAG) !== "1") return; } catch (e) { return; }
-  if (Date.now() - (parseInt(localStorage.getItem(TSK), 10) || 0) > 3 * 3600 * 1000) {
-    localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK); return;
+  // Sitzung liegt im sessionStorage (nur dieser Tab, wird beim Schliessen verworfen) –
+  // NICHT im localStorage, damit das Passwort nicht dauerhaft auf der Platte liegt.
+  // Altlasten aus der frueheren localStorage-Variante hier aktiv entfernen.
+  try {
+    if (localStorage.getItem(FLAG) || localStorage.getItem(PWK) || localStorage.getItem(TSK)) {
+      localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK);
+    }
+  } catch (e) {}
+  try { if (sessionStorage.getItem(FLAG) !== "1") return; } catch (e) { return; }
+  if (Date.now() - (parseInt(sessionStorage.getItem(TSK), 10) || 0) > 60 * 60 * 1000) { // 60 Min statt 3 h
+    sessionStorage.removeItem(FLAG); sessionStorage.removeItem(PWK); sessionStorage.removeItem(TSK); return;
   }
   var FN = "https://vxwjgxdlnwhatnbhjabw.supabase.co/functions/v1/devries-edit";
-  var pw = localStorage.getItem(PWK) || "";
+  var pw = sessionStorage.getItem(PWK) || "";
   var file = (location.pathname.split("/").pop() || "index.html"); if (file.indexOf(".html") < 0) file = "index.html";
   var pending = {}; // slot -> base64 (neues Bild)
   var pendingPos = {}; // slot -> "X% Y%" (Bildausschnitt/Position)
@@ -1630,7 +1638,8 @@
     document.getElementById("dvExit").addEventListener("click", function () {
       if (hasUnsaved() && !window.confirm("Es gibt ungespeicherte Änderungen. Wirklich verlassen? Die Änderungen gehen dann verloren.")) return;
       leaving = true;
-      localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK);
+      sessionStorage.removeItem(FLAG); sessionStorage.removeItem(PWK); sessionStorage.removeItem(TSK);
+      try { localStorage.removeItem(FLAG); localStorage.removeItem(PWK); localStorage.removeItem(TSK); } catch (e) {} // Altlasten
       location.href = location.pathname; // ohne Cache-Buster, normaler Stand
     });
     // Strg/Cmd+S speichert; Warnung vor Datenverlust beim ungewollten Verlassen
