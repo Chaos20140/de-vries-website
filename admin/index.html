@@ -457,14 +457,38 @@
     var cs=$("appCsv"); if(cs) cs.onclick=exportAppsCsv;
   }
   function exportAppsCsv(){
-    var cols=["created_at","status","first_name","last_name","birth_date","email","phone","street","zip","city","position","license","available_from","message"];
     // CSV-Injection verhindern: fuehrende = + - @ wuerden in Excel als Formel ausgefuehrt
     function cell(v){ v=(v==null?"":String(v));
       if(/^[=+\-@]/.test(v)) v="'"+v;
       return '"'+v.replace(/"/g,'""')+'"'; }
-    var rows=[cols.join(";")];
-    allApps.filter(appMatches).forEach(function(a){ rows.push(cols.map(function(c){ return cell(a[c]); }).join(";")); });
-    var blob=new Blob(["﻿"+rows.join("\r\n")],{type:"text/csv;charset=utf-8"});
+    // Telefon/PLZ als TEXT erzwingen, sonst macht Excel 1,7677E+10 daraus und frisst die
+    // fuehrende Null. Nur rein numerische Werte werden so verpackt -> nichts kann ausbrechen.
+    function numText(v){ v=(v==null?"":String(v)).trim();
+      if(!v) return '""';
+      if(!/^[\d +()\/.-]+$/.test(v)) return cell(v);
+      return '"="""'+v+'"""'; }
+    function datum(v,mitZeit){ if(!v) return '""';
+      try{ var d=new Date(v);
+        var s=d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});
+        if(mitZeit) s+=", "+d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+        return cell(s);
+      }catch(e){ return cell(v); } }
+    // Zeilenumbrueche raus, sonst wird die Excel-Zeile bildschirmhoch
+    function text1(v){ return cell((v==null?"":String(v)).replace(/\s*\r?\n\s*/g," / ").replace(/[ \t]+/g," ").trim()); }
+
+    var head=["Eingegangen am","Status","Vorname","Nachname","Geburtsdatum","E-Mail","Telefon",
+              "Straße & Hausnummer","PLZ","Ort","Gewünschte Tätigkeit","Führerschein","Verfügbar ab","Anschreiben"];
+    var rows=[head.map(cell).join(";")];
+    allApps.filter(appMatches).forEach(function(a){
+      rows.push([
+        datum(a.created_at,true), cell(a.status), cell(a.first_name), cell(a.last_name),
+        datum(a.birth_date,false), cell(a.email), numText(a.phone), cell(a.street),
+        numText(a.zip), cell(a.city), cell(a.position), cell(a.license),
+        cell(a.available_from), text1(a.message)
+      ].join(";"));
+    });
+    // sep=; sagt Excel verbindlich, dass Semikolon das Trennzeichen ist
+    var blob=new Blob(["﻿sep=;\r\n"+rows.join("\r\n")],{type:"text/csv;charset=utf-8"});
     var url=URL.createObjectURL(blob), link=document.createElement("a");
     link.href=url; link.download="bewerbungen.csv"; link.click(); URL.revokeObjectURL(url);
   }
