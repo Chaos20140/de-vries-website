@@ -1691,6 +1691,13 @@
       }
     }
     html += '<div class="grp">Eigene Menüpunkte</div><p class="sub" style="margin:-.1rem 0 .35rem">Zusätzliche Links im Menü (oben &amp; mobil) – gelten auf allen Seiten. Max. 8.</p><div id="dvMenuList"></div><button type="button" class="eb-footaddbtn" id="dvMenuAdd" style="margin-top:.25rem">＋ Menüpunkt</button>';
+    // Eigene Footer-Links je Spalte – hier zentral pflegen und sortieren (statt nur unten im Footer)
+    html += '<div class="grp">Eigene Footer-Links</div><p class="sub" style="margin:-.1rem 0 .35rem">Zusätzliche Links in den Footer-Spalten – gelten auf allen Seiten. Mit ▲▼ sortieren. Max. 12 je Spalte.</p>';
+    ["leistungen", "informationen", "kontakt"].forEach(function (col) {
+      html += '<label>Spalte „' + col.charAt(0).toUpperCase() + col.slice(1) + '“</label>'
+        + '<div id="dvFoot-' + col + '"></div>'
+        + '<button type="button" class="eb-footaddbtn" data-footadd="' + col + '" style="margin:.15rem 0 .5rem">＋ Link</button>';
+    });
     html += '<div class="row"><button class="cancel" id="dvPx">Abbrechen</button><button class="ok" id="dvPok">Übernehmen</button></div></div>';
     var wrap = document.createElement("div"); wrap.id = "dvPanel"; wrap.innerHTML = html;
     document.body.appendChild(wrap);
@@ -1714,20 +1721,68 @@
     fetch("menu.json", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : []; }).then(function (list) {
       if (Array.isArray(list)) list.forEach(function (m) { if (m && m.text) menuRow(m.text, m.href); });
     }).catch(function () {});
+
+    // ---- Eigene Footer-Links: Zeile bauen, vorhandene uebernehmen, Sortierung per ▲▼ ----
+    function footRow(col, text, href) {
+      var list = document.getElementById("dvFoot-" + col); if (!list) return;
+      var d = document.createElement("div"); d.className = "dv-menurow dv-footrow"; d.setAttribute("data-col", col);
+      d.innerHTML = '<input class="mt" maxlength="60" placeholder="Link-Text"><input class="mh" maxlength="200" placeholder="Ziel, z. B. kontakt">'
+        + '<button type="button" class="mx mup" title="nach oben">▲</button>'
+        + '<button type="button" class="mx mdn" title="nach unten">▼</button>'
+        + '<button type="button" class="mx" title="entfernen">✕</button>';
+      d.querySelector(".mt").value = text || ""; d.querySelector(".mh").value = href || "";
+      d.querySelector(".mup").onclick = function () { var p = d.previousElementSibling; if (p) list.insertBefore(d, p); };
+      d.querySelector(".mdn").onclick = function () { var n = d.nextElementSibling; if (n) list.insertBefore(n, d); };
+      d.querySelectorAll(".mx")[2].onclick = function () { d.remove(); };
+      list.appendChild(d);
+    }
+    var fzones = document.querySelectorAll("[data-foot-zone]");
+    for (var fzi = 0; fzi < fzones.length; fzi++) {
+      var fcol = fzones[fzi].getAttribute("data-foot-zone");
+      var flinks = fzones[fzi].querySelectorAll('[data-eb="flink"]');
+      for (var fli = 0; fli < flinks.length; fli++) {
+        var fh = flinks[fli].getAttribute("href") || "";
+        footRow(fcol, flinks[fli].textContent.trim(), fh === "#" ? "" : fh);
+      }
+    }
+    var faddBtns = wrap.querySelectorAll("[data-footadd]");
+    for (var fab = 0; fab < faddBtns.length; fab++) {
+      (function (b) { b.onclick = function () { footRow(b.getAttribute("data-footadd"), "", ""); }; })(faddBtns[fab]);
+    }
+
     function close() { wrap.remove(); }
     document.getElementById("dvPx").addEventListener("click", close);
     wrap.addEventListener("click", function (e) { if (e.target === wrap) close(); });
     document.getElementById("dvPok").addEventListener("click", function () {
       var shared = {}, ins = wrap.querySelectorAll("input[data-k]");
       for (var m = 0; m < ins.length; m++) { shared[ins[m].getAttribute("data-k")] = ins[m].value.replace(/\s+/g, " ").trim(); }
-      var menuItems = [], rows = wrap.querySelectorAll(".dv-menurow");
+      // :not(.dv-footrow) – die Footer-Zeilen nutzen dieselbe Zeilen-Optik, gehoeren aber nicht ins Menue
+      var menuItems = [], rows = wrap.querySelectorAll(".dv-menurow:not(.dv-footrow)");
       for (var mi = 0; mi < rows.length; mi++) { var mt = rows[mi].querySelector(".mt").value.replace(/\s+/g, " ").trim(), mh = rows[mi].querySelector(".mh").value.trim(); if (mt && mh) menuItems.push({ text: mt, href: mh }); }
+      // Footer-Links je Spalte, in der angezeigten Reihenfolge
+      var footLinks = { leistungen: [], informationen: [], kontakt: [] }, frows = wrap.querySelectorAll(".dv-footrow");
+      for (var fr = 0; fr < frows.length; fr++) {
+        var fcl = frows[fr].getAttribute("data-col");
+        var ftx = frows[fr].querySelector(".mt").value.replace(/\s+/g, " ").trim();
+        var fhr = frows[fr].querySelector(".mh").value.trim();
+        if (ftx && footLinks[fcl]) footLinks[fcl].push({ text: ftx, href: fhr || "#" });
+      }
       var ok = document.getElementById("dvPok"); ok.disabled = true; ok.textContent = "Speichert …";
       call({ action: "save-shared", shared: shared }).then(function (res) {
         var sharedFine = res.ok || (res.status === 400 && res.d && res.d.error === "marker_missing"); // keine Label-Änderung ist ok
         if (!sharedFine) { ok.disabled = false; ok.textContent = "Übernehmen"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); return; }
         call({ action: "save-menu", items: menuItems }).then(function (r2) {
-          if (r2.ok) { close(); msg("✓ Menü/Footer gespeichert (alle Seiten) – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); toast("✓ Menü & Footer gespeichert (alle Seiten). Neuaufbau in ~1-3 Min.", "ok"); }
+          if (r2.ok) {
+            // zum Schluss die Footer-Links (inkl. Reihenfolge) speichern
+            call({ action: "save-footer", links: footLinks }).then(function (r3) {
+              if (r3.ok) { close(); msg("✓ Menü/Footer gespeichert (alle Seiten) – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); toast("✓ Menü & Footer gespeichert (alle Seiten). Neuaufbau in ~1-3 Min.", "ok"); }
+              else {
+                ok.disabled = false; ok.textContent = "Übernehmen";
+                var e3 = (r3.d && r3.d.error) || r3.status;
+                toast(e3 === "bad_href" ? "Ungültiges Ziel bei einem Footer-Link. Erlaubt: z. B. kontakt, https://…, mailto:… oder tel:…" : "Footer-Fehler: " + e3, "err");
+              }
+            }).catch(function () { ok.disabled = false; ok.textContent = "Übernehmen"; toast("Verbindungsfehler.", "err"); });
+          }
           else {
             ok.disabled = false; ok.textContent = "Übernehmen";
             var e2 = (r2.d && r2.d.error) || r2.status, m2;
