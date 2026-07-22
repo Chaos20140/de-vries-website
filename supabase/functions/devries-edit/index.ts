@@ -574,16 +574,23 @@ async function handle(req: Request): Promise<Response> {
         rendered[col] = out;
       }
       const changed: { path: string; contentB64: string }[] = [];
+      let foundMarker = false; // gab es die Zonen ueberhaupt? (echter Fehler) …
       for (const page of [...PAGES, ...(await extraPages())]) {
         const pf = await getFile(page);
         let h = pf.text, ch = false;
         for (const col of COLS) {
           const re = new RegExp('(<div class="eb-footadd" data-foot-zone="' + col + '"[^>]*>)([\\s\\S]*?)(</div>)');
-          if (re.test(h)) { const nh = h.replace(re, (_m, a, _o, c) => a + rendered[col] + c); if (nh !== h) { h = nh; ch = true; } }
+          if (re.test(h)) {
+            foundMarker = true;
+            const nh = h.replace(re, (_m, a, _o, c) => a + rendered[col] + c);
+            if (nh !== h) { h = nh; ch = true; }
+          }
         }
         if (ch) changed.push({ path: page, contentB64: utf8B64(h) });
       }
-      if (!changed.length) return json({ error: "marker_missing" }, 400);
+      if (!foundMarker) return json({ error: "marker_missing" }, 400);
+      // … oder war schlicht nichts zu aendern? Das ist KEIN Fehler.
+      if (!changed.length) return json({ ok: true, updated: 0 });
       const okc = await commitMulti(changed, "Editor: Footer-Links aktualisiert");
       return okc ? json({ ok: true, updated: changed.length }) : json({ error: "commit_failed" }, 500);
     }
