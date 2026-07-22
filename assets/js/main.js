@@ -1388,7 +1388,9 @@
     for (var m0 = 0; m0 < mg.length; m0++) mg[m0].style.transform = "";
     var st = document.createElement("style");
     st.textContent =
-      '[data-ed],[data-ed-img]{outline:2px dashed rgba(215,18,10,.55);outline-offset:2px}'
+      // data-ed-rich MUSS hier mit rein: diese Absätze (mit Links/Kursiv) sind editierbar,
+      // waren aber ohne Markierung nicht als solche erkennbar.
+      '[data-ed],[data-ed-rich],[data-ed-img]{outline:2px dashed rgba(215,18,10,.55);outline-offset:2px}'
       + '[data-ed]:hover,[data-ed-img]:hover{outline-style:solid;outline-color:#d7120a}'
       + '[data-ed]{cursor:text}[data-ed-img]{cursor:pointer}'
       + '[data-ed][contenteditable]:focus{outline:2px solid #d7120a;background:rgba(215,18,10,.08)}'
