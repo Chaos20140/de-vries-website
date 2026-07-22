@@ -33,7 +33,7 @@
 /* ---------- 1. TOKENS ---------- */
 :root {
   /* brand + palette (taken verbatim from andreasdevries.de) */
-  --red: #d7120a;
+  --red: #d7120a; --red-text: #b8100a;
   --red-deep: #a50d07;
   --red-soft: #f4d9d6;
   --green: #57b046;       /* Garten accent */
@@ -138,7 +138,7 @@ em { font-style: italic; }
 .eyebrow {
   display: inline-flex; align-items: center; gap: 0.6em;
   font-family: var(--body); font-size: var(--fs-eyebrow); font-weight: 700;
-  letter-spacing: 0.22em; text-transform: uppercase; color: var(--red);
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--red-text);
 }
 .eyebrow::before { content: ""; width: 2.2em; height: 1px; background: var(--red); display: inline-block; }
 .eyebrow.is-center::after { content: ""; width: 2.2em; height: 1px; background: var(--red); display: inline-block; }
@@ -360,7 +360,7 @@ em { font-style: italic; }
 
 /* ---------- 7. SECTION HEAD ---------- */
 .section__head { display: grid; grid-template-columns: auto 1fr; gap: clamp(1.2rem,0.6rem + 2vw,3rem); align-items: start; margin-bottom: clamp(2.4rem,1.4rem + 3vw,4.5rem); }
-.section__index { font-family: var(--display); font-size: clamp(1.4rem,1rem + 1.2vw,2.2rem); color: var(--red); font-feature-settings: "tnum"; line-height: 1; padding-top: 0.15em; }
+.section__index { font-family: var(--display); font-size: clamp(1.4rem,1rem + 1.2vw,2.2rem); color: var(--red-text); font-feature-settings: "tnum"; line-height: 1; padding-top: 0.15em; }
 .section__head h2 { max-width: 20ch; }
 .section__head .lead { margin-top: 1.4rem; max-width: 56ch; }
 .section__head--center { grid-template-columns: 1fr; justify-items: center; text-align: center; }
@@ -835,3 +835,7 @@ em { font-style: italic; }
   [data-reveal], [data-stagger] > *, .reveal-words .word > span, .hero__title .line > span { opacity: 1 !important; transform: none !important; }
   .hero__media-frame img, .phero__media img { transform: none !important; }
 }
+
+/* Diese Ueberschriften wurden von h4 auf h3 gehoben (Reihenfolge ohne Sprung),
+   sollen optisch aber gleich bleiben. */
+.footer__col h3, .tnode h3 { font-size: var(--fs-h4); letter-spacing: -0.01em; }
