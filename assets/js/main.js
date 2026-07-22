@@ -1717,7 +1717,15 @@
         if (!sharedFine) { ok.disabled = false; ok.textContent = "Übernehmen"; msg(res.status === 401 ? "Falsches Passwort – über /admin neu anmelden." : "Fehler: " + (res.d.error || res.status)); return; }
         call({ action: "save-menu", items: menuItems }).then(function (r2) {
           if (r2.ok) { close(); msg("✓ Menü/Footer gespeichert (alle Seiten) – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); toast("✓ Menü & Footer gespeichert (alle Seiten). Neuaufbau in ~1-3 Min.", "ok"); }
-          else { ok.disabled = false; ok.textContent = "Übernehmen"; toast(r2.status === 401 ? "Falsches Passwort – neu anmelden." : "Menüpunkte-Fehler: " + ((r2.d && r2.d.error) || r2.status), "err"); }
+          else {
+            ok.disabled = false; ok.textContent = "Übernehmen";
+            var e2 = (r2.d && r2.d.error) || r2.status, m2;
+            if (r2.status === 401) m2 = "Falsches Passwort – neu anmelden.";
+            // Konkret sagen, WELCHER Menüpunkt ein ungültiges Ziel hat (statt nur "bad_href")
+            else if (e2 === "bad_href") m2 = 'Ungültiges Ziel bei „' + ((r2.d && r2.d.field) || "?") + '“. Erlaubt: z. B. kontakt, kontakt.html, https://…, mailto:… oder tel:…';
+            else m2 = "Menüpunkte-Fehler: " + e2;
+            toast(m2, "err");
+          }
         }).catch(function () { ok.disabled = false; ok.textContent = "Übernehmen"; toast("Verbindungsfehler.", "err"); });
       }).catch(function () { ok.disabled = false; ok.textContent = "Übernehmen"; msg("Verbindungsfehler."); });
     });

@@ -597,7 +597,7 @@ async function handle(req: Request): Promise<Response> {
         const text = String((it && it.text) || "").replace(/\s+/g, " ").trim().slice(0, 40);
         const href = String((it && it.href) || "").trim();
         if (!text) continue;
-        if (!safeHref(href)) return json({ error: "bad_href" }, 400);
+        if (!safeHref(href)) return json({ error: "bad_href", field: text }, 400);
         clean.push({ text, href });
       }
       let sha: string | undefined;
