@@ -41,6 +41,13 @@
   .foot{margin-top:1.3rem;padding-top:1rem;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:1rem}
   .muted{color:var(--muted);font-size:.82rem}
   .hidden{display:none}
+  .appcard{border:1px solid #e4ddd4;border-radius:14px;padding:.9rem 1rem;margin-bottom:.7rem;background:#fff}
+  .apphead{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;margin-bottom:.45rem}
+  .appline{font-size:.9rem;margin:.12rem 0}
+  .appmsg{margin:.5rem 0;padding:.6rem .75rem;background:#faf6f0;border-radius:10px;font-size:.9rem;white-space:pre-wrap}
+  .appfile{display:inline-block;margin:.2rem .4rem .2rem 0;font-size:.88rem;color:#d7120a;text-decoration:none;font-weight:700}
+  .approw{display:flex;gap:.5rem;align-items:center;margin-top:.6rem;flex-wrap:wrap}
+  .approw select,.approw button{padding:.4em .7em;border:1px solid #e4ddd4;border-radius:9px;background:#fff;cursor:pointer;font:inherit}
 </style>
 </head>
 <body>
@@ -70,6 +77,10 @@
 
     <div class="grp">Seiten</div>
     <div class="grid" id="pages"></div>
+
+    <div class="grp">Bewerbungen <span class="pill" id="appCount" style="margin-left:.5rem"></span></div>
+    <p class="muted" style="margin:-.2rem 0 .6rem">Eingegangene Bewerbungen samt Unterlagen. Die Download-Links gelten aus Sicherheitsgründen nur 1&nbsp;Stunde – danach die Seite neu laden.</p>
+    <div id="appList"><p class="muted">Wird geladen …</p></div>
 
     <div class="grp">Was du bearbeiten kannst</div>
     <div class="cap"><span class="ic">✍️</span><div><b>Texte &amp; Absätze</b> – rot umrandete Stellen anklicken und tippen.</div></div>
@@ -167,6 +178,7 @@
     renderMainGrid([]);   // sofort die eingebauten Seiten zeigen …
     loadMyPages();        // … dann eigene Seiten nachladen und einfügen
     loadMedia();
+    loadApps();
   }
 
   function loadMedia(){
@@ -189,6 +201,55 @@
         };
         d.appendChild(im); d.appendChild(b); g.appendChild(d);
       });
+    });
+  }
+
+  function appCard(a){
+    var d=document.createElement("div"); d.className="appcard";
+    var head=document.createElement("div"); head.className="apphead";
+    var nm=document.createElement("b"); nm.textContent=(a.first_name||"")+" "+(a.last_name||"");
+    var wn=document.createElement("span"); wn.className="muted";
+    try{ wn.textContent=new Date(a.created_at).toLocaleDateString("de-DE"); }catch(e){}
+    head.appendChild(nm); head.appendChild(wn); d.appendChild(head);
+    // Bewerberdaten kommen von aussen -> konsequent textContent, niemals innerHTML
+    function line(l,v){ if(!v) return; var r=document.createElement("div"); r.className="appline";
+      var s=document.createElement("span"); s.className="muted"; s.textContent=l+": "; r.appendChild(s);
+      r.appendChild(document.createTextNode(v)); d.appendChild(r); }
+    line("Tätigkeit", a.position); line("E-Mail", a.email); line("Telefon", a.phone);
+    var geb=""; try{ geb=a.birth_date? new Date(a.birth_date).toLocaleDateString("de-DE"):""; }catch(e){}
+    line("Geburtsdatum", geb);
+    line("Anschrift", [a.street,[a.zip,a.city].filter(Boolean).join(" ")].filter(Boolean).join(", "));
+    line("Führerschein", a.license); line("Verfügbar ab", a.available_from);
+    if(a.message){ var m=document.createElement("div"); m.className="appmsg"; m.textContent=a.message; d.appendChild(m); }
+    (a.files||[]).forEach(function(f){ if(!f.url) return;
+      var lk=document.createElement("a"); lk.href=f.url; lk.target="_blank"; lk.rel="noopener";
+      lk.className="appfile"; lk.textContent="📎 "+f.name; d.appendChild(lk); });
+    var row=document.createElement("div"); row.className="approw";
+    var sel=document.createElement("select");
+    ["neu","gesichtet","erledigt"].forEach(function(s){ var o=document.createElement("option");
+      o.value=s; o.textContent=s; if(a.status===s) o.selected=true; sel.appendChild(o); });
+    sel.onchange=function(){ callFn({action:"set-application-status", id:a.id, status:sel.value})
+      .then(function(r){ setS(r.ok?"Status gespeichert.":"Status konnte nicht gespeichert werden.", r.ok?"ok":"err"); }); };
+    var del=document.createElement("button"); del.textContent="Löschen";
+    del.onclick=function(){
+      if(!window.confirm("Diese Bewerbung und ALLE zugehörigen Unterlagen endgültig löschen?")) return;
+      callFn({action:"delete-application", id:a.id}).then(function(r){
+        if(r.ok){ setS("Bewerbung gelöscht.","ok"); loadApps(); } else setS("Löschen fehlgeschlagen.","err"); });
+    };
+    row.appendChild(sel); row.appendChild(del); d.appendChild(row);
+    return d;
+  }
+  function loadApps(){
+    var box=$("appList"); if(!box) return;
+    callFn({action:"list-applications"}).then(function(r){
+      box.innerHTML="";
+      if(!r.ok){ var e=document.createElement("p"); e.className="muted";
+        e.textContent="Konnte nicht geladen werden ("+((r.d&&r.d.error)||r.status)+")."; box.appendChild(e); return; }
+      var items=(r.d&&r.d.items)||[];
+      var c=$("appCount"); if(c) c.textContent=items.length+(items.length===1?" Bewerbung":" Bewerbungen");
+      if(!items.length){ var n=document.createElement("p"); n.className="muted";
+        n.textContent="Noch keine Bewerbungen eingegangen."; box.appendChild(n); return; }
+      items.forEach(function(a){ box.appendChild(appCard(a)); });
     });
   }
 

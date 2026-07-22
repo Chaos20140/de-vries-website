@@ -848,6 +848,48 @@ async function handle(req: Request): Promise<Response> {
       } catch { return json({ ok: true }); }
     }
 
+    // ---- Bewerbungsverwaltung (nur nach Passwortpruefung erreichbar) ----
+    if (body.action === "list-applications") {
+      const { data, error } = await admin.from("devries_applications")
+        .select("id, created_at, first_name, last_name, birth_date, email, phone, street, zip, city, position, license, available_from, message, files, status")
+        .order("created_at", { ascending: false }).limit(200);
+      if (error) return json({ error: "db_error" }, 500);
+      const items: Record<string, unknown>[] = [];
+      for (const r of (data || [])) {
+        const fs = Array.isArray(r.files) ? r.files as Record<string, unknown>[] : [];
+        const links: { name: string; url: string; size: number }[] = [];
+        for (const f of fs) {
+          const p = String(f.path || "");
+          if (!p) continue;
+          // Kurzlebige Links (1 Stunde) – die Dateien bleiben privat
+          const sg = await admin.storage.from("bewerbungen").createSignedUrl(p, 60 * 60);
+          links.push({ name: String(f.name || "Datei"), url: (sg.data && sg.data.signedUrl) || "", size: Number(f.size || 0) });
+        }
+        items.push({ ...r, files: links });
+      }
+      return json({ ok: true, items });
+    }
+
+    if (body.action === "set-application-status") {
+      const id = String(body.id || "");
+      const st = String(body.status || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "bad_id" }, 400);
+      if (["neu", "gesichtet", "erledigt"].indexOf(st) < 0) return json({ error: "bad_status" }, 400);
+      const { error } = await admin.from("devries_applications").update({ status: st }).eq("id", id);
+      return error ? json({ error: "db_error" }, 500) : json({ ok: true });
+    }
+
+    if (body.action === "delete-application") {
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "bad_id" }, 400);
+      const { data: row } = await admin.from("devries_applications").select("files").eq("id", id).single();
+      const fs = row && Array.isArray(row.files) ? row.files as Record<string, unknown>[] : [];
+      const paths = fs.map((f) => String(f.path || "")).filter(Boolean);
+      if (paths.length) await admin.storage.from("bewerbungen").remove(paths); // Unterlagen mit loeschen
+      const { error } = await admin.from("devries_applications").delete().eq("id", id);
+      return error ? json({ error: "db_error" }, 500) : json({ ok: true });
+    }
+
     return json({ error: "bad_action" }, 400);
   } catch (_e) {
     return json({ error: "server_error" }, 500);
