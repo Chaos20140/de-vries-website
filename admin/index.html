@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Bearbeiten – de Vries</title>
+<title>Verwaltung – de Vries</title>
 <style>
   :root{--red:#d7120a;--ink:#1c1714;--muted:#756a60;--paper:#faf6f0;--line:rgba(28,23,20,.14);--ok:#3b932b}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -41,6 +41,15 @@
   .foot{margin-top:1.3rem;padding-top:1rem;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:1rem}
   .muted{color:var(--muted);font-size:.82rem}
   .hidden{display:none}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin:.2rem 0 .4rem}
+  @media (max-width:760px){ .tiles{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:460px){ .tiles{grid-template-columns:1fr} }
+  .tile{display:flex;flex-direction:column;align-items:flex-start;gap:.25rem;padding:1rem;border:1px solid #e4ddd4;border-radius:14px;background:#fff;cursor:pointer;text-align:left;font:inherit;transition:transform .15s,box-shadow .2s}
+  .tile:hover{transform:translateY(-2px);box-shadow:0 12px 26px -18px rgba(28,23,20,.5)}
+  .tile .tic{font-size:1.3rem}
+  .tile b{font-size:1.02rem}
+  .tile .tsub{font-size:.83rem;color:#8a7f74}
+  .back{background:transparent;border:0;color:#d7120a;font:inherit;font-weight:700;cursor:pointer;padding:.2rem 0;margin-bottom:.5rem}
   .appcard{border:1px solid #e4ddd4;border-radius:14px;padding:.9rem 1rem;margin-bottom:.7rem;background:#fff}
   .apphead{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;margin-bottom:.45rem}
   .appline{font-size:.9rem;margin:.12rem 0}
@@ -70,17 +79,26 @@
   <!-- DASHBOARD -->
   <div class="card dash hidden" id="dash">
     <div class="head">
-      <div style="display:flex;align-items:center;gap:.7rem"><div class="logo" style="margin:0">dV</div><h1>Bearbeiten</h1></div>
+      <div style="display:flex;align-items:center;gap:.7rem"><div class="logo" style="margin:0">dV</div><h1>Verwaltung</h1></div>
       <span class="pill">● Modus aktiv</span>
     </div>
-    <p class="sub">Wähle eine Seite – sie öffnet direkt im Bearbeitungsmodus. Der Modus bleibt beim Wechseln zwischen Seiten aktiv.</p>
+    <p class="sub">Wähle einen Bereich. Unter „Seite bearbeiten“ wechselst du in den Bearbeitungsmodus auf der Website.</p>
 
+    <div class="view" id="view-home">
+      <div class="tiles">
+        <button class="tile" data-view="anfragen"><span class="tic">✉️</span><b>Anfragen</b><span class="tsub" id="cntContacts">…</span></button>
+        <button class="tile" data-view="bewerbungen"><span class="tic">📄</span><b>Bewerbungen</b><span class="tsub" id="cntApps">…</span></button>
+        <button class="tile" data-view="termine"><span class="tic">📅</span><b>Termine</b><span class="tsub" id="cntBookings">…</span></button>
+        <button class="tile" data-view="mediathek"><span class="tic">🖼️</span><b>Mediathek</b><span class="tsub">Bilder verwalten</span></button>
+        <button class="tile" data-view="seiten"><span class="tic">🗂️</span><b>Seiten &amp; Menü</b><span class="tsub">Eigene Seiten anlegen</span></button>
+        <button class="tile" data-view="bearbeiten"><span class="tic">✏️</span><b>Seite bearbeiten</b><span class="tsub">Texte &amp; Bilder direkt ändern</span></button>
+      </div>
+    </div>
+
+    <div class="view hidden" id="view-bearbeiten">
+    <button class="back" data-back>← Übersicht</button>
     <div class="grp">Seiten</div>
     <div class="grid" id="pages"></div>
-
-    <div class="grp">Bewerbungen <span class="pill" id="appCount" style="margin-left:.5rem"></span></div>
-    <p class="muted" style="margin:-.2rem 0 .6rem">Eingegangene Bewerbungen samt Unterlagen. Die Download-Links gelten aus Sicherheitsgründen nur 1&nbsp;Stunde – danach die Seite neu laden.</p>
-    <div id="appList"><p class="muted">Wird geladen …</p></div>
 
     <div class="grp">Was du bearbeiten kannst</div>
     <div class="cap"><span class="ic">✍️</span><div><b>Texte &amp; Absätze</b> – rot umrandete Stellen anklicken und tippen.</div></div>
@@ -89,6 +107,30 @@
     <div class="cap"><span class="ic">🔍</span><div><b>SEO &amp; Titel</b> – Seitentitel, Google-Beschreibung &amp; Bild-Alt-Texte je Seite.</div></div>
     <div class="cap"><span class="ic">🧭</span><div><b>Menü &amp; Footer</b> – Beschriftungen, die auf allen Seiten gleich sind.</div></div>
 
+    </div><!-- /view-bearbeiten -->
+
+    <div class="view hidden" id="view-anfragen">
+      <button class="back" data-back>← Übersicht</button>
+      <div class="grp">Anfragen aus dem Kontaktformular</div>
+      <div id="contactList"><p class="muted">Wird geladen …</p></div>
+    </div>
+
+    <div class="view hidden" id="view-bewerbungen">
+      <button class="back" data-back>← Übersicht</button>
+      <div class="grp">Bewerbungen</div>
+      <p class="muted" style="margin:-.2rem 0 .6rem">Die Download-Links gelten aus Sicherheitsgründen nur 1&nbsp;Stunde – danach die Seite neu laden.</p>
+      <div id="appList"><p class="muted">Wird geladen …</p></div>
+    </div>
+
+    <div class="view hidden" id="view-termine">
+      <button class="back" data-back>← Übersicht</button>
+      <div class="grp">Terminanfragen</div>
+      <p class="muted" style="margin:-.2rem 0 .6rem">Bestätigen und Ablehnen läuft weiterhin über die Links in der Benachrichtigungs-Mail.</p>
+      <div id="bookingList"><p class="muted">Wird geladen …</p></div>
+    </div>
+
+    <div class="view hidden" id="view-seiten">
+    <button class="back" data-back>← Übersicht</button>
     <div class="grp">Eigene Seiten</div>
     <p class="muted" style="margin:-.2rem 0 .6rem">Neue Unterseite aus Vorlage anlegen (direkt bearbeitbar). Danach z. B. per Button darauf verlinken.</p>
     <label for="npSlug">Adresse (nur Kleinbuchstaben, z. B. preise)</label>
@@ -110,9 +152,14 @@
     <button class="btn" id="dupGo">⧉ Duplizieren</button>
     <div class="status" id="dupStatus"></div>
 
+    </div><!-- /view-seiten -->
+
+    <div class="view hidden" id="view-mediathek">
+    <button class="back" data-back>← Übersicht</button>
     <div class="grp">Mediathek</div>
     <p class="muted" style="margin:-.2rem 0 .6rem">Hochgeladene Block-Bilder. Ungenutzte kannst du hier löschen (verwendete sind geschützt).</p>
     <div id="mediaGrid" class="mediagrid"></div>
+    </div><!-- /view-mediathek -->
 
     <div class="foot">
       <span class="muted">Änderungen sind nach dem Speichern in ~1–3 Min live. Sitzung endet automatisch nach 3 Std.</span>
@@ -178,7 +225,9 @@
     renderMainGrid([]);   // sofort die eingebauten Seiten zeigen …
     loadMyPages();        // … dann eigene Seiten nachladen und einfügen
     loadMedia();
-    loadApps();
+    wireNav();
+    showView("home");
+    loadCounts();
   }
 
   function loadMedia(){
@@ -200,6 +249,94 @@
           }).catch(function(){ b.disabled=false; window.alert("Verbindungsfehler."); });
         };
         d.appendChild(im); d.appendChild(b); g.appendChild(d);
+      });
+    });
+  }
+
+  // ---- Navigation zwischen Uebersicht und den Bereichen ----
+  var VIEWS = ["home","anfragen","bewerbungen","termine","mediathek","seiten","bearbeiten"];
+  function showView(name){
+    VIEWS.forEach(function(v){
+      var el=document.getElementById("view-"+v); if(!el) return;
+      el.classList.toggle("hidden", v!==name);
+    });
+    if(name==="anfragen") loadContacts();
+    if(name==="bewerbungen") loadApps();
+    if(name==="termine") loadBookings();
+    window.scrollTo(0,0);
+  }
+  function wireNav(){
+    document.querySelectorAll(".tile[data-view]").forEach(function(t){
+      t.onclick=function(){ showView(t.getAttribute("data-view")); };
+    });
+    document.querySelectorAll("[data-back]").forEach(function(b){
+      b.onclick=function(){ showView("home"); loadCounts(); };
+    });
+  }
+  function loadCounts(){
+    callFn({action:"list-contacts"}).then(function(r){
+      var n=(r.ok&&r.d.items)?r.d.items.filter(function(x){return x.status==="neu";}).length:0;
+      var e=$("cntContacts"); if(e) e.textContent=n+" neu";
+    });
+    callFn({action:"list-applications"}).then(function(r){
+      var n=(r.ok&&r.d.items)?r.d.items.filter(function(x){return x.status==="neu";}).length:0;
+      var e=$("cntApps"); if(e) e.textContent=n+" neu";
+    });
+    callFn({action:"list-bookings"}).then(function(r){
+      var n=(r.ok&&r.d.items)?r.d.items.filter(function(x){return x.status==="pending";}).length:0;
+      var e=$("cntBookings"); if(e) e.textContent=n+" offen";
+    });
+  }
+  // ---- Anfragen ----
+  function simpleCard(title, when, lines, msg, statusSel, delBtn){
+    var d=document.createElement("div"); d.className="appcard";
+    var head=document.createElement("div"); head.className="apphead";
+    var nm=document.createElement("b"); nm.textContent=title;
+    var wn=document.createElement("span"); wn.className="muted"; wn.textContent=when;
+    head.appendChild(nm); head.appendChild(wn); d.appendChild(head);
+    lines.forEach(function(p){ if(!p[1]) return;
+      var r=document.createElement("div"); r.className="appline";
+      var s=document.createElement("span"); s.className="muted"; s.textContent=p[0]+": ";
+      r.appendChild(s); r.appendChild(document.createTextNode(p[1])); d.appendChild(r); });
+    if(msg){ var m=document.createElement("div"); m.className="appmsg"; m.textContent=msg; d.appendChild(m); }
+    var row=document.createElement("div"); row.className="approw";
+    if(statusSel) row.appendChild(statusSel);
+    if(delBtn) row.appendChild(delBtn);
+    d.appendChild(row); return d;
+  }
+  function dt(v){ try{ return new Date(v).toLocaleDateString("de-DE"); }catch(e){ return ""; } }
+  function loadContacts(){
+    var box=$("contactList"); if(!box) return;
+    callFn({action:"list-contacts"}).then(function(r){
+      box.innerHTML="";
+      var items=(r.ok&&r.d.items)||[];
+      if(!r.ok){ var e=document.createElement("p"); e.className="muted"; e.textContent="Konnte nicht geladen werden."; box.appendChild(e); return; }
+      if(!items.length){ var n=document.createElement("p"); n.className="muted"; n.textContent="Noch keine Anfragen."; box.appendChild(n); return; }
+      items.forEach(function(c){
+        var sel=document.createElement("select");
+        ["neu","gesichtet","erledigt"].forEach(function(s){ var o=document.createElement("option"); o.value=s; o.textContent=s; if(c.status===s)o.selected=true; sel.appendChild(o); });
+        sel.onchange=function(){ callFn({action:"set-contact-status",id:c.id,status:sel.value}).then(function(x){ setS(x.ok?"Status gespeichert.":"Fehler.", x.ok?"ok":"err"); }); };
+        var del=document.createElement("button"); del.textContent="Löschen";
+        del.onclick=function(){ if(!window.confirm("Diese Anfrage löschen?")) return;
+          callFn({action:"delete-contact",id:c.id}).then(function(x){ if(x.ok){ setS("Gelöscht.","ok"); loadContacts(); } else setS("Löschen fehlgeschlagen.","err"); }); };
+        box.appendChild(simpleCard(c.name, dt(c.created_at), [["E-Mail",c.email]], c.message, sel, del));
+      });
+    });
+  }
+  // ---- Termine ----
+  function loadBookings(){
+    var box=$("bookingList"); if(!box) return;
+    callFn({action:"list-bookings"}).then(function(r){
+      box.innerHTML="";
+      var items=(r.ok&&r.d.items)||[];
+      if(!r.ok){ var e=document.createElement("p"); e.className="muted"; e.textContent="Konnte nicht geladen werden."; box.appendChild(e); return; }
+      if(!items.length){ var n=document.createElement("p"); n.className="muted"; n.textContent="Noch keine Terminanfragen."; box.appendChild(n); return; }
+      items.forEach(function(b){
+        var del=document.createElement("button"); del.textContent="Löschen";
+        del.onclick=function(){ if(!window.confirm("Diesen Termin löschen? Der Zeit-Slot wird dadurch wieder frei.")) return;
+          callFn({action:"delete-booking",id:b.id}).then(function(x){ if(x.ok){ setS("Gelöscht.","ok"); loadBookings(); } else setS("Löschen fehlgeschlagen.","err"); }); };
+        box.appendChild(simpleCard(b.name, (b.appt_date_de||b.appt_date||"")+" "+(b.appt_time||"")+" Uhr",
+          [["Leistung",b.service],["Status",b.status],["Telefon",b.phone],["E-Mail",b.email]], b.message, null, del));
       });
     });
   }

@@ -414,6 +414,10 @@ async function handle(req: Request): Promise<Response> {
 
     if (!contactRateOk()) return json({ error: "rate_limited" }, 429);
 
+    // Zusaetzlich speichern, damit die Anfrage im Adminbereich verwaltet werden kann.
+    // Fail-open: Wenn das Speichern klemmt, soll die Mail trotzdem rausgehen.
+    try { await admin.from("devries_contacts").insert({ name, email, message }); } catch { /* ignore */ }
+
     const mailed = await mailContact({ name, email, message });
     if (!mailed) return json({ error: "mail_failed" }, 502); // Frontend zeigt dann Telefon/Direkt-Mail als Ausweichweg
     return json({ ok: true });

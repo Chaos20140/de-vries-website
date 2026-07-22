@@ -890,6 +890,41 @@ async function handle(req: Request): Promise<Response> {
       return error ? json({ error: "db_error" }, 500) : json({ ok: true });
     }
 
+    // ---- Kontaktanfragen ----
+    if (body.action === "list-contacts") {
+      const { data, error } = await admin.from("devries_contacts")
+        .select("id, created_at, name, email, message, status")
+        .order("created_at", { ascending: false }).limit(300);
+      return error ? json({ error: "db_error" }, 500) : json({ ok: true, items: data || [] });
+    }
+    if (body.action === "set-contact-status") {
+      const id = String(body.id || ""), st = String(body.status || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "bad_id" }, 400);
+      if (["neu", "gesichtet", "erledigt"].indexOf(st) < 0) return json({ error: "bad_status" }, 400);
+      const { error } = await admin.from("devries_contacts").update({ status: st }).eq("id", id);
+      return error ? json({ error: "db_error" }, 500) : json({ ok: true });
+    }
+    if (body.action === "delete-contact") {
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "bad_id" }, 400);
+      const { error } = await admin.from("devries_contacts").delete().eq("id", id);
+      return error ? json({ error: "db_error" }, 500) : json({ ok: true });
+    }
+
+    // ---- Termine (nur ansehen/aufraeumen; Bestaetigen laeuft ueber die Mail-Links) ----
+    if (body.action === "list-bookings") {
+      const { data, error } = await admin.from("devries_bookings")
+        .select("id, created_at, service, appt_date, appt_date_de, appt_time, name, phone, email, message, status")
+        .order("appt_date", { ascending: false }).limit(300);
+      return error ? json({ error: "db_error" }, 500) : json({ ok: true, items: data || [] });
+    }
+    if (body.action === "delete-booking") {
+      const id = String(body.id || "");
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: "bad_id" }, 400);
+      const { error } = await admin.from("devries_bookings").delete().eq("id", id);
+      return error ? json({ error: "db_error" }, 500) : json({ ok: true });
+    }
+
     return json({ error: "bad_action" }, 400);
   } catch (_e) {
     return json({ error: "server_error" }, 500);
