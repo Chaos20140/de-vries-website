@@ -1695,7 +1695,8 @@
     html += '<div class="grp">Eigene Footer-Links</div><p class="sub" style="margin:-.1rem 0 .35rem">Zusätzliche Links in den Footer-Spalten – gelten auf allen Seiten. Mit ▲▼ sortieren. Max. 12 je Spalte.</p>';
     ["leistungen", "informationen", "kontakt"].forEach(function (col) {
       html += '<label>Spalte „' + col.charAt(0).toUpperCase() + col.slice(1) + '“</label>'
-        + '<div id="dvFoot-' + col + '"></div>'
+        + '<div id="dvFootFix-' + col + '"></div>'   // feste Links: nur sortierbar
+        + '<div id="dvFoot-' + col + '"></div>'      // eigene Links: voll bearbeitbar
         + '<button type="button" class="eb-footaddbtn" data-footadd="' + col + '" style="margin:.15rem 0 .5rem">＋ Link</button>';
     });
     html += '<div class="row"><button class="cancel" id="dvPx">Abbrechen</button><button class="ok" id="dvPok">Übernehmen</button></div></div>';
@@ -1736,9 +1737,30 @@
       d.querySelectorAll(".mx")[2].onclick = function () { d.remove(); };
       list.appendChild(d);
     }
+    // Feste Footer-Links: nur Reihenfolge aenderbar. Der Text haengt an data-eds und wird
+    // weiter oben (Menue/Footer-Beschriftungen) gepflegt -> hier bewusst schreibgeschuetzt.
+    function fixRow(col, key, text) {
+      var list = document.getElementById("dvFootFix-" + col); if (!list) return;
+      var d = document.createElement("div"); d.className = "dv-menurow dv-fixrow";
+      d.setAttribute("data-col", col); d.setAttribute("data-key", key);
+      d.innerHTML = '<input class="mt" readonly style="opacity:.7;cursor:default" title="Text wird oben unter „Menü“/„Footer-Links“ geändert">'
+        + '<button type="button" class="mx mup" title="nach oben">▲</button>'
+        + '<button type="button" class="mx mdn" title="nach unten">▼</button>';
+      d.querySelector(".mt").value = text;
+      d.querySelector(".mup").onclick = function () { var p = d.previousElementSibling; if (p) list.insertBefore(d, p); };
+      d.querySelector(".mdn").onclick = function () { var n = d.nextElementSibling; if (n) list.insertBefore(n, d); };
+      list.appendChild(d);
+    }
     var fzones = document.querySelectorAll("[data-foot-zone]");
     for (var fzi = 0; fzi < fzones.length; fzi++) {
       var fcol = fzones[fzi].getAttribute("data-foot-zone");
+      var parentCol = fzones[fzi].parentElement;
+      if (parentCol) {
+        var fixed = parentCol.querySelectorAll("a[data-eds]");
+        for (var fx = 0; fx < fixed.length; fx++) {
+          fixRow(fcol, fixed[fx].getAttribute("data-eds"), fixed[fx].textContent.trim());
+        }
+      }
       var flinks = fzones[fzi].querySelectorAll('[data-eb="flink"]');
       for (var fli = 0; fli < flinks.length; fli++) {
         var fh = flinks[fli].getAttribute("href") || "";
@@ -1757,7 +1779,7 @@
       var shared = {}, ins = wrap.querySelectorAll("input[data-k]");
       for (var m = 0; m < ins.length; m++) { shared[ins[m].getAttribute("data-k")] = ins[m].value.replace(/\s+/g, " ").trim(); }
       // :not(.dv-footrow) – die Footer-Zeilen nutzen dieselbe Zeilen-Optik, gehoeren aber nicht ins Menue
-      var menuItems = [], rows = wrap.querySelectorAll(".dv-menurow:not(.dv-footrow)");
+      var menuItems = [], rows = wrap.querySelectorAll(".dv-menurow:not(.dv-footrow):not(.dv-fixrow)");
       for (var mi = 0; mi < rows.length; mi++) { var mt = rows[mi].querySelector(".mt").value.replace(/\s+/g, " ").trim(), mh = rows[mi].querySelector(".mh").value.trim(); if (mt && mh) menuItems.push({ text: mt, href: mh }); }
       // Footer-Links je Spalte, in der angezeigten Reihenfolge
       var footLinks = { leistungen: [], informationen: [], kontakt: [] }, frows = wrap.querySelectorAll(".dv-footrow");
@@ -1767,6 +1789,12 @@
         var fhr = frows[fr].querySelector(".mh").value.trim();
         if (ftx && footLinks[fcl]) footLinks[fcl].push({ text: ftx, href: fhr || "#" });
       }
+      // Reihenfolge der FESTEN Footer-Links je Spalte (nur Schluessel, kein Text/Ziel)
+      var footOrder = { leistungen: [], informationen: [], kontakt: [] }, xrows = wrap.querySelectorAll(".dv-fixrow");
+      for (var xr = 0; xr < xrows.length; xr++) {
+        var xc = xrows[xr].getAttribute("data-col"), xk = xrows[xr].getAttribute("data-key");
+        if (xc && xk && footOrder[xc]) footOrder[xc].push(xk);
+      }
       var ok = document.getElementById("dvPok"); ok.disabled = true; ok.textContent = "Speichert …";
       call({ action: "save-shared", shared: shared }).then(function (res) {
         var sharedFine = res.ok || (res.status === 400 && res.d && res.d.error === "marker_missing"); // keine Label-Änderung ist ok
@@ -1775,7 +1803,13 @@
           if (r2.ok) {
             // zum Schluss die Footer-Links (inkl. Reihenfolge) speichern
             call({ action: "save-footer", links: footLinks }).then(function (r3) {
-              if (r3.ok) { close(); msg("✓ Menü/Footer gespeichert (alle Seiten) – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); toast("✓ Menü & Footer gespeichert (alle Seiten). Neuaufbau in ~1-3 Min.", "ok"); }
+              if (r3.ok) {
+                // zuletzt die Reihenfolge der festen Footer-Links
+                call({ action: "save-footer-order", order: footOrder }).then(function (r4) {
+                  if (r4.ok) { close(); msg("✓ Menü/Footer gespeichert (alle Seiten) – Neuaufbau ~1–3 Min, dann auf Aktualisieren klicken."); toast("✓ Menü & Footer gespeichert (alle Seiten). Neuaufbau in ~1-3 Min.", "ok"); }
+                  else { ok.disabled = false; ok.textContent = "Übernehmen"; toast("Footer-Reihenfolge: " + ((r4.d && r4.d.error) || r4.status), "err"); }
+                }).catch(function () { ok.disabled = false; ok.textContent = "Übernehmen"; toast("Verbindungsfehler.", "err"); });
+              }
               else {
                 ok.disabled = false; ok.textContent = "Übernehmen";
                 var e3 = (r3.d && r3.d.error) || r3.status;

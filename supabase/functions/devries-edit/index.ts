@@ -588,6 +588,51 @@ async function handle(req: Request): Promise<Response> {
       return okc ? json({ ok: true, updated: changed.length }) : json({ error: "commit_failed" }, 500);
     }
 
+    if (body.action === "save-footer-order") {
+      // Reihenfolge der FESTEN Footer-Links: die <a data-eds="…"> zwischen der Spalten-
+      // Ueberschrift und dem eb-footadd-Marker. Es wird AUSSCHLIESSLICH umsortiert –
+      // Text/Ziel bleiben unveraendert, damit die data-eds-Kopplung ans Menue haelt.
+      const order = (body.order || {}) as Record<string, string[]>;
+      const OCOLS = ["leistungen", "informationen", "kontakt"];
+      for (const col of OCOLS) {
+        const arr = order[col];
+        if (arr === undefined) continue;
+        if (!Array.isArray(arr) || arr.length > 30) return json({ error: "bad_order", field: col }, 400);
+        for (const k of arr) {
+          if (typeof k !== "string" || !/^[a-z0-9-]{1,48}$/.test(k)) return json({ error: "bad_key", field: col }, 400);
+        }
+      }
+      const ordChanged: { path: string; contentB64: string }[] = [];
+      for (const page of [...PAGES, ...(await extraPages())]) {
+        const pf = await getFile(page);
+        let h = pf.text, ch = false;
+        for (const col of OCOLS) {
+          const arr = order[col];
+          if (!Array.isArray(arr) || !arr.length) continue;
+          const re = new RegExp('(<h4[^>]*data-eds="lbl-foot-' + col + '"[^>]*>[\\s\\S]*?</h4>)([\\s\\S]*?)(<div[^>]*data-foot-zone="' + col + '")');
+          const m = re.exec(h);
+          if (!m) continue;
+          const anchors = m[2].match(/<a\b[\s\S]*?<\/a>/g) || [];
+          if (!anchors.length) continue;
+          const keyOf = (a: string) => { const km = /data-eds="([a-z0-9-]+)"/.exec(a); return km ? km[1] : ""; };
+          const byKey: Record<string, string> = {};
+          for (const a of anchors) { const k = keyOf(a); if (k) byKey[k] = a; }
+          const used = new Set<string>();
+          let out = "";
+          for (const k of arr) if (byKey[k] && !used.has(k)) { out += "\n        " + byKey[k]; used.add(k); }
+          // Nicht genannte Links hinten anhaengen -> es kann NIE einer verloren gehen
+          for (const a of anchors) { const k = keyOf(a); if (!k || !used.has(k)) { out += "\n        " + a; if (k) used.add(k); } }
+          const rebuilt = m[1] + out + "\n        " + m[3];
+          const nh = h.replace(re, () => rebuilt); // Funktion -> $-Zeichen im Inhalt sind ungefaehrlich
+          if (nh !== h) { h = nh; ch = true; }
+        }
+        if (ch) ordChanged.push({ path: page, contentB64: utf8B64(h) });
+      }
+      if (!ordChanged.length) return json({ ok: true, updated: 0 });
+      const okOrd = await commitMulti(ordChanged, "Editor: Footer-Reihenfolge aktualisiert");
+      return okOrd ? json({ ok: true, updated: ordChanged.length }) : json({ error: "commit_failed" }, 500);
+    }
+
     if (body.action === "save-menu") {
       // Eigene Menüpunkte -> menu.json (veröffentlicht). Client blendet sie ins Haupt-/Mobil-Menü ein.
       const items = Array.isArray(body.items) ? body.items : [];
